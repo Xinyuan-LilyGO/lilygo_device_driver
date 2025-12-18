@@ -1,1 +1,1 @@
-# espidf_lilygo_device
+# lilygo_device_driver
