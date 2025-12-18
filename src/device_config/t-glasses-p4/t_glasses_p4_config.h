@@ -1,0 +1,166 @@
+/*
+ * @Description: t_glasses_p4_config
+ * @Author: LILYGO_L
+ * @Date: 2024-12-06 10:32:28
+ * @LastEditTime: 2025-12-18 17:02:48
+ */
+#pragma once
+
+////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
+
+// IIC
+#define IIC_1_SDA 13
+#define IIC_1_SCL 12
+#define IIC_2_SDA 45
+#define IIC_2_SCL 46
+
+// SDIO
+#define SDIO_1_CLK 43
+#define SDIO_1_CMD 44
+#define SDIO_1_D0 39
+#define SDIO_1_D1 40
+#define SDIO_1_D2 41
+#define SDIO_1_D3 42
+
+#define SDIO_2_CLK 18
+#define SDIO_2_CMD 19
+#define SDIO_2_D0 14
+#define SDIO_2_D1 15
+#define SDIO_2_D2 16
+#define SDIO_2_D3 17
+
+// SPI
+#define SPI_1_SCLK 33
+#define SPI_1_MOSI 32
+#define SPI_1_MISO 31
+
+// BOOT
+#define ESP32P4_BOOT 35
+
+#define POWER_EN_3_3_V 7
+#define POWER_EN_5_0_V 54
+
+#define ESP32C6_EN 53
+
+// BQ27220
+#define BQ27220_SDA IIC_1_SDA
+#define BQ27220_SCL IIC_1_SCL
+
+// SGM38121
+#define SGM38121_SDA IIC_2_SDA
+#define SGM38121_SCL IIC_2_SCL
+
+// ES8311
+#define ES8311_SDA IIC_2_SDA
+#define ES8311_SCL IIC_2_SCL
+#define ES8311_ADC_DATA 50
+#define ES8311_DAC_DATA 52
+#define ES8311_BCLK 51
+#define ES8311_MCLK 48
+#define ES8311_WS_LRCK 47
+
+// SD
+// SDMMC
+#define SD_SDIO_CLK SDIO_1_CLK
+#define SD_SDIO_CMD SDIO_1_CMD
+#define SD_SDIO_D0 SDIO_1_D0
+#define SD_SDIO_D1 SDIO_1_D1
+#define SD_SDIO_D2 SDIO_1_D2
+#define SD_SDIO_D3 SDIO_1_D3
+// SDSPI
+#define SD_SCLK SDIO_1_CLK
+#define SD_MOSI SDIO_1_CMD
+#define SD_MISO SDIO_1_D0
+#define SD_CS SDIO_1_D3
+
+// GZ030PCC02
+#define GZ030PCC02_SDA IIC_2_SDA
+#define GZ030PCC02_SCL IIC_2_SCL
+#define GZ030PCC02_RST 21
+
+
+// BHI260AP
+#define BHI260AP_SDA IIC_2_SDA
+#define BHI260AP_SCL IIC_2_SCL
+
+// SY6970
+#define SY6970_SDA IIC_1_SDA
+#define SY6970_SCL IIC_1_SCL
+
+// AW86224
+#define AW86224_SDA IIC_2_SDA
+#define AW86224_SCL IIC_2_SCL
+
+// BMM350
+#define BMM350_SDA IIC_2_SDA
+#define BMM350_SCL IIC_2_SCL
+
+// USB
+#define USB_HIGH_SPEED_EN 9
+
+// SX1262
+#define SX1262_CS 34
+#define SX1262_BUSY 28
+#define SX1262_INT 29
+#define SX1262_RST 27
+#define SX1262_SCLK SPI_1_SCLK
+#define SX1262_MOSI SPI_1_MOSI
+#define SX1262_MISO SPI_1_MISO
+
+////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
+
+////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
+// SY6970
+#define SY6970_IIC_ADDRESS 0x6A
+
+// BQ27220
+#define BQ27220_IIC_ADDRESS 0x55
+
+// SGM38121
+#define SGM38121_IIC_ADDRESS 0x28
+
+// ES8311
+#define ES8311_IIC_ADDRESS 0x18
+
+// GZ030PCC02
+#define GZ030PCC02_SCREEN_WIDTH 1280
+#define GZ030PCC02_SCREEN_HEIGHT 720
+#define GZ030PCC02_SCREEN_MIPI_DSI_DPI_CLK_MHZ 60
+// #define GZ030PCC02_SCREEN_MIPI_DSI_DPI_CLK_MHZ 45
+#define GZ030PCC02_SCREEN_MIPI_DSI_HSYNC 40
+#define GZ030PCC02_SCREEN_MIPI_DSI_HBP 220
+#define GZ030PCC02_SCREEN_MIPI_DSI_HFP 110
+#define GZ030PCC02_SCREEN_MIPI_DSI_VSYNC 5
+#define GZ030PCC02_SCREEN_MIPI_DSI_VBP 20
+#define GZ030PCC02_SCREEN_MIPI_DSI_VFP 5
+#define GZ030PCC02_SCREEN_DATA_LANE_NUM 2
+#define GZ030PCC02_SCREEN_LANE_BIT_RATE_MBPS 1000
+#define GZ030PCC02_IIC_ADDRESS 0x54
+
+// CAMERA
+// #define CAMERA_WIDTH 1920
+// #define CAMERA_HEIGHT 1080
+#define CAMERA_WIDTH 1280
+#define CAMERA_HEIGHT 720
+// #define CAMERA_WIDTH 800
+// #define CAMERA_HEIGHT 800
+// #define CAMERA_WIDTH 640
+// #define CAMERA_HEIGHT 480
+
+#define CAMERA_DATA_LANE_NUM 2
+#define CAMERA_LANE_BIT_RATE_MBPS 1000
+#define CAMERA_MIPI_DSI_DPI_CLK_MHZ 60
+
+// BHI260AP
+#define BHI260AP_IIC_ADDRESS 0x28
+
+// AW86224
+#define AW86224_IIC_ADDRESS 0x58
+
+// BMM350
+#define BMM350_IIC_ADDRESS 0x14
+
+// SD
+#define SD_BASE_PATH "/sdcard"
+
+////////////////////////////////////////////////// other define config //////////////////////////////////////////////////

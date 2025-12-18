@@ -1,0 +1,7 @@
+version: "1.0.0"
+license: "GPL-3.0"
+description: "This is a library for managing Lilygo devices."
+url: "https://github.com/Xinyuan-LilyGO/lilygo_device_driver.git"
+
+dependencies:
+  idf: '>=5.4'
