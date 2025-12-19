@@ -1,0 +1,10 @@
+menu "lilygo_device_driver configuration"
+
+    choice
+        prompt "Select the device to build"
+        default DEVICE_T_GLASSES_P4
+            config DEVICE_T_GLASSES_P4
+                bool "T-Glasses-P4"
+    endchoice
+
+endmenu

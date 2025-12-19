@@ -1,5 +1,13 @@
 if(CONFIG_DEVICE_T_GLASSES_P4)
-    set(src_dirs "device_config/t-glasses-p4/")
+    set(
+            src_dirs 
+            "./src/"
+            "./src/chip/esp32p4/"
+            "./src/device/t-glasses-p4/"
+            "./src/screen/gz030pcc02/"
+            "./src/camera/ov2710/"
+            "./src/camera/sc2336/"
+    )
 endif()
     
 idf_component_register(
@@ -7,4 +15,7 @@ idf_component_register(
         ${src_dirs} 
         INCLUDE_DIRS 
         ${src_dirs} 
+        REQUIRES 
+        "driver"
+        "esp_lcd"
     )
