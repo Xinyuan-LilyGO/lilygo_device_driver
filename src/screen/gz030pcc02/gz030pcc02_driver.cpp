@@ -2,7 +2,7 @@
  * @Description: gz030pcc02_driver
  * @Author: LILYGO_L
  * @Date: 2025-09-17 10:24:21
- * @LastEditTime: 2025-12-19 11:06:10
+ * @LastEditTime: 2025-12-19 17:14:21
  * @License: GPL 3.0
  */
 #include "soc/soc_caps.h"
@@ -63,6 +63,12 @@ esp_err_t esp_lcd_new_panel_gz030pcc02(const esp_lcd_panel_io_handle_t io, const
         gpio_config_t io_conf = {
             .pin_bit_mask = 1ULL << panel_dev_config->reset_gpio_num,
             .mode = GPIO_MODE_OUTPUT,
+            .pull_up_en = GPIO_PULLUP_ENABLE,
+            .pull_down_en = GPIO_PULLDOWN_DISABLE,
+            .intr_type = GPIO_INTR_DISABLE,
+#if SOC_GPIO_SUPPORT_PIN_HYS_FILTER
+            .hys_ctrl_mode = GPIO_HYS_SOFT_ENABLE,
+#endif
         };
         ESP_GOTO_ON_ERROR(gpio_config(&io_conf), err, TAG, "configure GPIO for RST line failed");
     }
@@ -133,15 +139,16 @@ static esp_err_t panel_gz030pcc02_init(esp_lcd_panel_t *panel)
 static esp_err_t panel_gz030pcc02_reset(esp_lcd_panel_t *panel)
 {
     gz030pcc02_panel_t *gz030pcc02 = (gz030pcc02_panel_t *)panel->user_data;
-    esp_lcd_panel_io_handle_t io = gz030pcc02->io;
 
     // Perform hardware reset
     if (gz030pcc02->reset_gpio_num >= 0)
     {
         gpio_set_level(static_cast<gpio_num_t>(gz030pcc02->reset_gpio_num), gz030pcc02->flags.reset_level);
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(100));
         gpio_set_level(static_cast<gpio_num_t>(gz030pcc02->reset_gpio_num), !gz030pcc02->flags.reset_level);
-        vTaskDelay(pdMS_TO_TICKS(20));
+        vTaskDelay(pdMS_TO_TICKS(100));
+        gpio_set_level(static_cast<gpio_num_t>(gz030pcc02->reset_gpio_num), gz030pcc02->flags.reset_level);
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 
     return ESP_OK;

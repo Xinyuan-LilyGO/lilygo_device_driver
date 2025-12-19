@@ -2,10 +2,14 @@
  * @Description: esp32p4_driver
  * @Author: LILYGO_L
  * @Date: 2025-12-18 17:59:41
- * @LastEditTime: 2025-12-19 09:24:23
+ * @LastEditTime: 2025-12-19 16:49:14
  * @License: GPL 3.0
  */
 #pragma once
+
+#include "esp_lcd_panel_ops.h"
+#include "esp_lcd_mipi_dsi.h"
+#include "../../config.h"
 
 namespace Lilygo_Device_Driver
 {
@@ -18,4 +22,8 @@ namespace Lilygo_Device_Driver
     bool Camera_Init(esp_lcd_panel_handle_t *mipi_dpi_panel);
 
     bool Init_Ldo_Channel_Power(uint8_t chan_id, uint32_t voltage_mv);
+
+    bool Sdmmc_Init(const char *base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
+
+    bool Sdspi_Init(const char *base_path, spi_host_device_t host_id, int max_freq_khz = SDMMC_FREQ_DEFAULT);
 }

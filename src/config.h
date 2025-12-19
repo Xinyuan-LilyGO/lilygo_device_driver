@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2025-12-19 10:52:38
- * @LastEditTime: 2025-12-19 11:28:56
+ * @LastEditTime: 2025-12-19 16:27:42
  * @License: GPL 3.0
  */
 #pragma once
@@ -14,6 +14,10 @@
 
 #if defined CONFIG_IDF_INIT_VERSION
 
+#include "driver/sdmmc_host.h"
+#include "driver/spi_master.h"
+#include "esp_vfs_fat.h"
+#include "sdmmc_cmd.h"
 
 #elif defined ARDUINO
 

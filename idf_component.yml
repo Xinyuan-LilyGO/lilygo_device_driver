@@ -4,4 +4,4 @@ description: "This is a library for managing Lilygo devices."
 url: "https://github.com/Xinyuan-LilyGO/lilygo_device_driver.git"
 
 dependencies:
-  idf: '>=5.4'
+  idf: '>=5.5'

@@ -2,10 +2,12 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2025-12-19 10:50:07
- * @LastEditTime: 2025-12-19 11:12:32
+ * @LastEditTime: 2025-12-19 16:17:32
  * @License: GPL 3.0
  */
 #pragma once
+
+#include "config.h"
 
 namespace Lilygo_Device_Driver
 {

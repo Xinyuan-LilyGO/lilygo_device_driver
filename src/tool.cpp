@@ -5,7 +5,6 @@
  * @LastEditTime: 2025-12-19 11:28:45
  * @License: GPL 3.0
  */
-#include "config.h"
 #include "tool.h"
 
 namespace Lilygo_Device_Driver
