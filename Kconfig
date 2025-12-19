@@ -1,4 +1,4 @@
-menu "lilygo_device_driver configuration"
+menu "Lilygo_Device_Driver Configuration"
 
     choice
         prompt "Select the device to build"
