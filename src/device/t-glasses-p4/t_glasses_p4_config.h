@@ -2,7 +2,7 @@
  * @Description: t_glasses_p4_config
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2025-12-18 17:02:48
+ * @LastEditTime: 2026-01-12 10:12:52
  */
 #pragma once
 
@@ -78,7 +78,6 @@
 #define GZ030PCC02_SCL IIC_2_SCL
 #define GZ030PCC02_RST 21
 
-
 // BHI260AP
 #define BHI260AP_SDA IIC_2_SDA
 #define BHI260AP_SCL IIC_2_SCL
@@ -106,6 +105,12 @@
 #define SX1262_SCLK SPI_1_SCLK
 #define SX1262_MOSI SPI_1_MOSI
 #define SX1262_MISO SPI_1_MISO
+
+// ECX336C
+#define ECX336C_SCLK 33
+#define ECX336C_MOSI 31
+#define ECX336C_MISO 32
+#define ECX336C_CS 30
 
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
@@ -162,5 +167,28 @@
 
 // SD
 #define SD_BASE_PATH "/sdcard"
+
+// ECX336CN
+#define ECX336CN_PIXEL_CLOCK_HZ (uint32_t)(27.027 * 1000 * 1000)
+#define ECX336CN_WIDTH 640
+#define ECX336CN_HEIGHT 400
+#define ECX336CN_HSYNC_BACK_PORCH 40
+#define ECX336CN_HSYNC_FRONT_PORCH 20
+#define ECX336CN_HSYNC_PULSE_WIDTH 1
+#define ECX336CN_VSYNC_BACK_PORCH 10
+#define ECX336CN_VSYNC_FRONT_PORCH 5
+#define ECX336CN_VSYNC_PULSE_WIDTH 1
+#define ECX336CN_DATA_BUS_WIDTH 24
+
+// ICN6211
+#define ICN6211_SCREEN_MIPI_DSI_DPI_CLK_MHZ 27
+#define ICN6211_SCREEN_MIPI_DSI_HSYNC 2
+#define ICN6211_SCREEN_MIPI_DSI_HBP 36
+#define ICN6211_SCREEN_MIPI_DSI_HFP 36
+#define ICN6211_SCREEN_MIPI_DSI_VSYNC 2
+#define ICN6211_SCREEN_MIPI_DSI_VBP 20
+#define ICN6211_SCREEN_MIPI_DSI_VFP 20
+#define ICN6211_SCREEN_DATA_LANE_NUM 2
+#define ICN6211_SCREEN_LANE_BIT_RATE_MBPS 864
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////

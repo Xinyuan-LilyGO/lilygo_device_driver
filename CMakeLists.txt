@@ -5,6 +5,7 @@ if(CONFIG_DEVICE_T_GLASSES_P4)
             "./src/chip/esp32p4/"
             "./src/device/t-glasses-p4/"
             "./src/screen/gz030pcc02/"
+            "./src/screen/icn6211/"
             "./src/camera/ov2710/"
             "./src/camera/sc2336/"
     )

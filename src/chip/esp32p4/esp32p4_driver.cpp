@@ -2,7 +2,7 @@
  * @Description: esp32p4_driver
  * @Author: LILYGO_L
  * @Date: 2025-12-18 17:59:32
- * @LastEditTime: 2025-12-19 17:37:32
+ * @LastEditTime: 2026-01-09 17:59:30
  * @License: GPL 3.0
  */
 #include "esp_ldo_regulator.h"
@@ -103,6 +103,37 @@ namespace Lilygo_Device_Driver
             assert_log(Log_Level::CHIP, __FILE__, __LINE__, "esp_lcd_new_panel_gz030pcc02 fail (error code: %#X)\n", assert);
             return false;
         }
+#elif defined CONFIG_SCREEN_TYPE_ICN6211_ECX336CN
+        icn6211_vendor_config_t vendor_config =
+            {
+                .init_cmds = NULL,
+                .init_cmds_size = 0,
+                .mipi_config =
+                    {
+                        .dsi_bus = mipi_dsi_bus,
+                        .dpi_config = &dpi_config,
+                        .lane_num = 2,
+                    },
+            };
+        esp_lcd_panel_dev_config_t dev_config =
+            {
+                .reset_gpio_num = -1,
+                .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
+                .data_endian = LCD_RGB_DATA_ENDIAN_BIG,
+                .bits_per_pixel = bits_per_pixel,
+                .flags =
+                    {
+                        .reset_active_high = 1,
+                    },
+                .vendor_config = &vendor_config,
+            };
+        assert = esp_lcd_new_panel_icn6211(mipi_dbi_io, &dev_config, mipi_dpi_panel);
+        if (assert != ESP_OK)
+        {
+            assert_log(Log_Level::CHIP, __FILE__, __LINE__, "esp_lcd_new_panel_icn6211 fail (error code: %#X)\n", assert);
+            return false;
+        }
+
 #else
 #error "unknown macro definition, please select the correct macro definition."
 #endif
