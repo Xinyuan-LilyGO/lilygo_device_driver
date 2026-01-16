@@ -2,7 +2,7 @@
  * @Description: icn6211_driver
  * @Author: LILYGO_L
  * @Date: 2025-09-17 10:24:21
- * @LastEditTime: 2026-01-12 13:49:45
+ * @LastEditTime: 2026-01-16 17:46:51
  * @License: GPL 3.0
  */
 #include "soc/soc_caps.h"
@@ -182,7 +182,7 @@ static esp_err_t panel_icn6211_init(esp_lcd_panel_t *panel)
 {
     icn6211_panel_t *icn6211 = (icn6211_panel_t *)panel->user_data;
 
-    ESP_RETURN_ON_ERROR(panel_icn6211_send_init_cmds(icn6211), TAG, "send init commands failed");
+    // ESP_RETURN_ON_ERROR(panel_icn6211_send_init_cmds(icn6211), TAG, "send init commands failed");
     ESP_RETURN_ON_ERROR(icn6211->init(panel), TAG, "init MIPI DPI panel failed");
 
     return ESP_OK;
