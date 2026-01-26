@@ -1,8 +1,8 @@
 /*
- * @Description: t_display_p4_air_config
+ * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-01-24 16:54:26
+ * @LastEditTime: 2026-01-26 09:57:52
  * @License: GPL 3.0
  */
 
