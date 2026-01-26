@@ -7,6 +7,8 @@ menu "Lilygo_Device_Driver Configuration"
                 bool "T-Glasses-P4"
             config DEVICE_T_DISPLAY_P4_AIR
                 bool "T-Display-P4-Air"
+            config DEVICE_T_SPE
+                bool "T-Spe"
     endchoice
 
 endmenu

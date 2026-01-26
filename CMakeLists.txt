@@ -14,6 +14,12 @@ elseif(CONFIG_DEVICE_T_DISPLAY_P4_AIR)
             "./src/chip/esp32p4/"
             "./src/device/t_display_p4_air/"
         )
+elseif(CONFIG_DEVICE_T_SPE)
+    set(
+            src_dirs 
+            "./src/"
+            "./src/device/t_spe/"
+        )
 endif()
     
 idf_component_register(
