@@ -3,12 +3,17 @@ if(CONFIG_DEVICE_T_GLASSES_P4)
             src_dirs 
             "./src/"
             "./src/chip/esp32p4/"
-            "./src/device/t-glasses-p4/"
-            "./src/screen/gz030pcc02/"
-            "./src/screen/icn6211/"
+            "./src/device/t_glasses_p4/"
             "./src/camera/ov2710/"
             "./src/camera/sc2336/"
     )
+elseif(CONFIG_DEVICE_T_DISPLAY_P4_AIR)
+    set(
+            src_dirs 
+            "./src/"
+            "./src/chip/esp32p4/"
+            "./src/device/t_display_p4_air/"
+        )
 endif()
     
 idf_component_register(
@@ -18,6 +23,5 @@ idf_component_register(
         ${src_dirs} 
         REQUIRES 
         "driver"
-        "esp_lcd"
         "fatfs"
     )

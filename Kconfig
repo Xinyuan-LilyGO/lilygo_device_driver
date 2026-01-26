@@ -5,6 +5,8 @@ menu "Lilygo_Device_Driver Configuration"
         default DEVICE_T_GLASSES_P4
             config DEVICE_T_GLASSES_P4
                 bool "T-Glasses-P4"
+            config DEVICE_T_DISPLAY_P4_AIR
+                bool "T-Display-P4-Air"
     endchoice
 
 endmenu

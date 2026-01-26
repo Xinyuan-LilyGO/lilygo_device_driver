@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2025-12-19 10:52:38
- * @LastEditTime: 2025-12-19 16:27:42
+ * @LastEditTime: 2026-01-22 09:16:49
  * @License: GPL 3.0
  */
 #pragma once
@@ -13,6 +13,7 @@
 #include <stdarg.h>
 
 #if defined CONFIG_IDF_INIT_VERSION
+#define LILYGO_DEVICE_DRIVER_DEVELOPMENT_FRAMEWORK_ESPIDF
 
 #include "driver/sdmmc_host.h"
 #include "driver/spi_master.h"
@@ -22,7 +23,7 @@
 #elif defined ARDUINO
 
 #else
-#error "development framework not selected"
+#error "no macro definition is set"
 #endif
 
 #include "tool.h"

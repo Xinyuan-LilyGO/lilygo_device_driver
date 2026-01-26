@@ -2,11 +2,20 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2025-12-19 10:32:32
- * @LastEditTime: 2025-12-19 11:21:13
+ * @LastEditTime: 2026-01-22 11:39:26
  * @License: GPL 3.0
  */
 
 #pragma once
 
-#include "esp32p4_driver.h"
+#include "sdkconfig.h"
+
+#if defined CONFIG_DEVICE_T_GLASSES_P4
 #include "t_glasses_p4_driver.h"
+
+#elif defined CONFIG_DEVICE_T_DISPLAY_P4_AIR
+#include "t_display_p4_air_driver.h"
+
+#else
+#error "no macro definition is set"
+#endif

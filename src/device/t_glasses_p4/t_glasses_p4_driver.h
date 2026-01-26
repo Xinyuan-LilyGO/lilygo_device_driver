@@ -2,22 +2,21 @@
  * @Description: t_glasses_p4_driver
  * @Author: LILYGO_L
  * @Date: 2025-08-15 14:29:40
- * @LastEditTime: 2026-01-09 18:03:01
+ * @LastEditTime: 2026-01-24 16:52:33
  * @License: GPL 3.0
  */
 
 #pragma once
 
 #include "t_glasses_p4_config.h"
-#include "gz030pcc02_driver.h"
-#include "icn6211_driver.h"
+#include "esp32p4_driver.h"
 
 #if defined CONFIG_SCREEN_PIXEL_FORMAT_RGB888
 #define SCREEN_BITS_PER_PIXEL 24
 #define SCREEN_COLOR_RGB_PIXEL_FORMAT LCD_COLOR_PIXEL_FORMAT_RGB888
 #define LVGL_COLOR_FORMAT LV_COLOR_FORMAT_RGB888
 #else
-#error "unknown macro definition, please select the correct macro definition."
+#error "no macro definition is set"
 #endif
 
 #if defined CONFIG_CAMERA_PIXEL_FORMAT_RGB565
@@ -27,7 +26,7 @@
 #define CAMERA_BITS_PER_PIXEL 24
 #define CAMERA_COLOR_RGB_PIXEL_FORMAT LCD_COLOR_PIXEL_FORMAT_RGB888
 #else
-#error "unknown macro definition, please select the correct macro definition."
+#error "no macro definition is set"
 #endif
 
 // SCREEN
@@ -56,5 +55,12 @@
 #define SCREEN_DATA_LANE_NUM ICN6211_SCREEN_DATA_LANE_NUM
 #define SCREEN_LANE_BIT_RATE_MBPS ICN6211_SCREEN_LANE_BIT_RATE_MBPS
 #else
-#error "unknown macro definition, please select the correct macro definition."
+#error "no macro definition is set"
 #endif
+
+namespace Lilygo_Device_Driver
+{
+    bool Sdmmc_Init(const char *base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
+
+    bool Sdspi_Init(const char *base_path, spi_host_device_t host_id, int max_freq_khz = SDMMC_FREQ_DEFAULT);
+}
