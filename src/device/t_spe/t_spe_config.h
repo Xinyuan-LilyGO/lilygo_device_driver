@@ -2,7 +2,7 @@
  * @Description: t_spe_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-01-26 10:30:36
+ * @LastEditTime: 2026-01-27 13:37:20
  * @License: GPL 3.0
  */
 
@@ -10,8 +10,13 @@
 
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
+// General
+#define GPIO0_50MHZ_SWITCH 33
+
 // LAN8671
-#define LAN8671_50MHZ_EN 23
+#define LAN8671_WAKE_UP 13
+#define LAN8671_INT 4
+#define LAN8671_RECEIVE_ERROR 18
 
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
