@@ -2,7 +2,7 @@
  * @Description: t_spe_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-01-27 13:37:20
+ * @LastEditTime: 2026-01-28 15:16:18
  * @License: GPL 3.0
  */
 
@@ -17,6 +17,10 @@
 #define LAN8671_WAKE_UP 13
 #define LAN8671_INT 4
 #define LAN8671_RECEIVE_ERROR 18
+
+// RS485
+#define RS485_TX 15
+#define RS485_RX 5
 
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
