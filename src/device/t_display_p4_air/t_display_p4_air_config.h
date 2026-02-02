@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-01-22 15:22:02
+ * @LastEditTime: 2026-02-02 18:04:11
  * @License: GPL 3.0
  */
 
@@ -16,9 +16,15 @@
 #define IIC_2_SDA 54
 #define IIC_2_SCL 53
 
+#define XL9555_SDA IIC_1_SDA
+#define XL9555_SCL IIC_1_SCL
+
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
+
+// XL9555
+#define XL9555_IIC_ADDRESS 0x20
 
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
