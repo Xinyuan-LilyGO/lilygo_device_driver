@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-02-03 10:16:52
+ * @LastEditTime: 2026-02-04 11:09:31
  * @License: GPL 3.0
  */
 
@@ -29,6 +29,10 @@
 #define HI8561_TOUCH_SDA IIC_1_SDA
 #define HI8561_TOUCH_SCL IIC_1_SCL
 
+// AXP517
+#define AXP517_SDA IIC_2_SDA
+#define AXP517_SCL IIC_2_SCL
+
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
@@ -50,5 +54,8 @@
 #define HI8561_SCREEN_DATA_LANE_NUM 2
 #define HI8561_SCREEN_LANE_BIT_RATE_MBPS 1000
 #define HI8561_TOUCH_IIC_ADDRESS 0x68
+
+// AXP517
+#define AXP517_IIC_ADDRESS 0x34
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
