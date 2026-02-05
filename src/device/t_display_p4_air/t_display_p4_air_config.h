@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-02-04 11:09:31
+ * @LastEditTime: 2026-02-04 17:15:19
  * @License: GPL 3.0
  */
 
@@ -33,6 +33,10 @@
 #define AXP517_SDA IIC_2_SDA
 #define AXP517_SCL IIC_2_SCL
 
+// AW86224
+#define AW86224_SDA IIC_1_SDA
+#define AW86224_SCL IIC_1_SCL
+
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
@@ -57,5 +61,8 @@
 
 // AXP517
 #define AXP517_IIC_ADDRESS 0x34
+
+// AW86224
+#define AW86224_IIC_ADDRESS 0x58
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
