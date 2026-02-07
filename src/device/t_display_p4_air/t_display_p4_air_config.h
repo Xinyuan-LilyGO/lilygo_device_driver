@@ -2,13 +2,16 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-02-04 17:15:19
+ * @LastEditTime: 2026-02-06 17:56:35
  * @License: GPL 3.0
  */
 
 #pragma once
 
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
+
+// BOOT
+#define ESP32P4_BOOT 35
 
 // IIC
 #define IIC_1_SDA 9
@@ -22,7 +25,8 @@
 #define XL9555_TOUCH_RST Cpp_Bus_Driver::Xl95x5::Pin::IO13
 #define XL9555_SCREEN_RST Cpp_Bus_Driver::Xl95x5::Pin::IO14
 #define XL9555_LED_1 Cpp_Bus_Driver::Xl95x5::Pin::IO15
-#define XL9555_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO16
+#define XL9555_3_3_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO16
+#define XL9555_NS4150_EN Cpp_Bus_Driver::Xl95x5::Pin::IO17
 
 // HI8561
 #define HI8561_SCREEN_BL 50
@@ -36,6 +40,15 @@
 // AW86224
 #define AW86224_SDA IIC_1_SDA
 #define AW86224_SCL IIC_1_SCL
+
+// ES8388
+#define ES8388_SDA IIC_1_SDA
+#define ES8388_SCL IIC_1_SCL
+#define ES8388_ADC_DATA 33
+#define ES8388_DAC_DATA 32
+#define ES8388_BCLK 31
+#define ES8388_MCLK 30
+#define ES8388_WS_LRCK 34
 
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
@@ -64,5 +77,8 @@
 
 // AW86224
 #define AW86224_IIC_ADDRESS 0x58
+
+// ES8388
+#define ES8388_IIC_ADDRESS 0x11
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
