@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-02-06 17:56:35
+ * @LastEditTime: 2026-02-09 13:53:43
  * @License: GPL 3.0
  */
 
@@ -22,6 +22,8 @@
 #define XL9555_SDA IIC_1_SDA
 #define XL9555_SCL IIC_1_SCL
 // XL9555引脚功能
+#define XL9555_ESP32P4_ESP32C5_UART_SWITCH Cpp_Bus_Driver::Xl95x5::Pin::IO11
+#define XL9555_ESP32C5_EN Cpp_Bus_Driver::Xl95x5::Pin::IO12
 #define XL9555_TOUCH_RST Cpp_Bus_Driver::Xl95x5::Pin::IO13
 #define XL9555_SCREEN_RST Cpp_Bus_Driver::Xl95x5::Pin::IO14
 #define XL9555_LED_1 Cpp_Bus_Driver::Xl95x5::Pin::IO15
