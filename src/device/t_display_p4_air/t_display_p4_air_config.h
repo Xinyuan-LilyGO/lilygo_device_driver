@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-02-09 13:53:43
+ * @LastEditTime: 2026-02-24 15:43:27
  * @License: GPL 3.0
  */
 
@@ -82,5 +82,8 @@
 
 // ES8388
 #define ES8388_IIC_ADDRESS 0x11
+
+// spiffs
+#define SPIFFS_BASE_PATH "/spiffs"
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////

@@ -2,12 +2,12 @@
  * @Description: esp32p4_driver
  * @Author: LILYGO_L
  * @Date: 2025-12-18 17:59:41
- * @LastEditTime: 2026-01-22 11:47:04
+ * @LastEditTime: 2026-02-24 16:28:23
  * @License: GPL 3.0
  */
 #pragma once
 
-#include "config.h"
+#include "../../config.h"
 
 namespace Lilygo_Device_Driver
 {

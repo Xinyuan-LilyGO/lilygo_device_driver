@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-02-03 10:37:41
+ * @LastEditTime: 2026-02-24 16:27:17
  * @License: GPL 3.0
  */
 
@@ -39,3 +39,8 @@
 #define SCREEN_MIPI_DSI_VFP HI8561_SCREEN_MIPI_DSI_VFP
 #define SCREEN_DATA_LANE_NUM HI8561_SCREEN_DATA_LANE_NUM
 #define SCREEN_LANE_BIT_RATE_MBPS HI8561_SCREEN_LANE_BIT_RATE_MBPS
+
+namespace Lilygo_Device_Driver
+{
+    bool Spiffs_Init(const char *base_path, esp_vfs_spiffs_conf_t &spiffs_conf);
+}
