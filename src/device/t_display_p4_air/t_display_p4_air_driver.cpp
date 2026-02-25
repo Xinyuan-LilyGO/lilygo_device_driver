@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-02-24 16:34:52
+ * @LastEditTime: 2026-02-24 17:34:07
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -48,10 +48,8 @@ namespace Lilygo_Device_Driver
             esp_spiffs_format(conf.partition_label);
             return false;
         }
-        else
-        {
-            assert_log(Log_Level::CHIP, __FILE__, __LINE__, "partition size: total: %d, used: %d\n", total, used);
-        }
+
+        assert_log(Log_Level::CHIP, __FILE__, __LINE__, "partition size: total: %d bytes, used: %d bytes\n", total, used);
 
         // Check consistency of reported partition size info.
         if (used > total)
