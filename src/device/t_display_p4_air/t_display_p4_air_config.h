@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-02-24 15:43:27
+ * @LastEditTime: 2026-02-27 09:21:56
  * @License: GPL 3.0
  */
 
@@ -52,6 +52,10 @@
 #define ES8388_MCLK 30
 #define ES8388_WS_LRCK 34
 
+// BHI260AP
+#define BHI260AP_SDA IIC_2_SDA
+#define BHI260AP_SCL IIC_2_SCL
+
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
@@ -85,5 +89,8 @@
 
 // spiffs
 #define SPIFFS_BASE_PATH "/spiffs"
+
+// BHI260AP
+#define BHI260AP_IIC_ADDRESS 0x29
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
