@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-02-27 09:21:56
+ * @LastEditTime: 2026-02-27 10:25:32
  * @License: GPL 3.0
  */
 
@@ -56,6 +56,10 @@
 #define BHI260AP_SDA IIC_2_SDA
 #define BHI260AP_SCL IIC_2_SCL
 
+// QMC6310N
+#define QMC6310N_SDA IIC_1_SDA
+#define QMC6310N_SCL IIC_1_SCL
+
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
@@ -92,5 +96,8 @@
 
 // BHI260AP
 #define BHI260AP_IIC_ADDRESS 0x29
+
+// QMC6310N
+#define QMC6310N_IIC_ADDRESS 0x3C
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
