@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-02-27 10:25:32
+ * @LastEditTime: 2026-02-28 14:58:19
  * @License: GPL 3.0
  */
 
@@ -106,5 +106,7 @@
 
 // SGM38121
 #define SGM38121_IIC_ADDRESS 0x28
+
+#define CAMERA_BUFFER_COUNT 2
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////

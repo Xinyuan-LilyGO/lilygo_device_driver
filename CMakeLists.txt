@@ -13,6 +13,8 @@ elseif(CONFIG_DEVICE_T_DISPLAY_P4_AIR)
             "./src/"
             "./src/chip/esp32p4/"
             "./src/device/t_display_p4_air/"
+            "./src/camera/ov2710/"
+            "./src/camera/sc2336/"
         )
 elseif(CONFIG_DEVICE_T_SPE)
     set(
