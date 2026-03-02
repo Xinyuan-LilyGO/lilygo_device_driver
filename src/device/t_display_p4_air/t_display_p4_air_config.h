@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-02-28 14:58:19
+ * @LastEditTime: 2026-02-28 16:43:03
  * @License: GPL 3.0
  */
 
@@ -18,6 +18,11 @@
 #define IIC_1_SCL 10
 #define IIC_2_SDA 54
 #define IIC_2_SCL 53
+
+// SPI
+#define SPI_1_SCLK 2
+#define SPI_1_MOSI 3
+#define SPI_1_MISO 4
 
 #define XL9555_SDA IIC_1_SDA
 #define XL9555_SCL IIC_1_SCL
@@ -63,6 +68,15 @@
 // SGM38121
 #define SGM38121_SDA IIC_2_SDA
 #define SGM38121_SCL IIC_2_SCL
+
+// LR1121
+#define LR1121_CS 7
+#define LR1121_BUSY 6
+#define LR1121_INT 5
+#define LR1121_RST 8
+#define LR1121_SCLK SPI_1_SCLK
+#define LR1121_MOSI SPI_1_MOSI
+#define LR1121_MISO SPI_1_MISO
 
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
