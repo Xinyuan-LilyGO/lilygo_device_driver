@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-03-02 14:47:08
+ * @LastEditTime: 2026-03-03 16:06:04
  * @License: GPL 3.0
  */
 
@@ -83,6 +83,10 @@
 #define ST25R3916_SCL IIC_1_SCL
 #define ST25R3916_INT 13
 
+// Infrared
+#define INFRARED_RX 29
+#define INFRARED_TX 28
+
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
@@ -130,5 +134,9 @@
 
 // ST25R3916
 #define ST25R3916_IIC_ADDRESS 0x50
+
+// Infrared
+#define INFRARED_RESOLUTION_HZ 1000000
+#define INFRARED_NEC_DECODE_MARGIN 200
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
