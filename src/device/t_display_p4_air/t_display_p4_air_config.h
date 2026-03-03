@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-02-28 16:43:03
+ * @LastEditTime: 2026-03-02 14:47:08
  * @License: GPL 3.0
  */
 
@@ -78,6 +78,11 @@
 #define LR1121_MOSI SPI_1_MOSI
 #define LR1121_MISO SPI_1_MISO
 
+// ST25R3916
+#define ST25R3916_SDA IIC_1_SDA
+#define ST25R3916_SCL IIC_1_SCL
+#define ST25R3916_INT 13
+
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
@@ -122,5 +127,8 @@
 #define SGM38121_IIC_ADDRESS 0x28
 
 #define CAMERA_BUFFER_COUNT 2
+
+// ST25R3916
+#define ST25R3916_IIC_ADDRESS 0x50
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
