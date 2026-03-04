@@ -31,5 +31,6 @@ idf_component_register(
         ${src_dirs} 
         REQUIRES 
         "driver"
+        "fatfs"
         "spiffs"
     )

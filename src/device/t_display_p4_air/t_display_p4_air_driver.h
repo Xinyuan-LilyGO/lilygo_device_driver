@@ -43,4 +43,8 @@
 namespace Lilygo_Device_Driver
 {
     bool Spiffs_Init(const char *base_path, esp_vfs_spiffs_conf_t &spiffs_conf);
+
+    bool Sdmmc_Init(const char *base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
+
+    bool Sdspi_Init(const char *base_path, spi_host_device_t host_id, int max_freq_khz = SDMMC_FREQ_DEFAULT);
 }

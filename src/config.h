@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2025-12-19 10:52:38
- * @LastEditTime: 2026-02-24 16:26:13
+ * @LastEditTime: 2026-03-04 09:27:04
  * @License: GPL 3.0
  */
 #pragma once
@@ -17,6 +17,7 @@
 
 #include "driver/sdmmc_host.h"
 #include "driver/spi_master.h"
+#include "esp_vfs_fat.h"
 #include "esp_spiffs.h"
 #include "sdmmc_cmd.h"
 

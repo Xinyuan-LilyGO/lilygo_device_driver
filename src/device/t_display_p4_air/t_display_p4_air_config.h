@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-03-03 16:32:58
+ * @LastEditTime: 2026-03-04 09:30:23
  * @License: GPL 3.0
  */
 
@@ -24,9 +24,26 @@
 #define SPI_1_MOSI 3
 #define SPI_1_MISO 4
 
+// SDIO
+#define SDIO_1_CLK 43
+#define SDIO_1_CMD 44
+#define SDIO_1_D0 39
+#define SDIO_1_D1 40
+#define SDIO_1_D2 41
+#define SDIO_1_D3 42
+
+#define SDIO_2_CLK 18
+#define SDIO_2_CMD 19
+#define SDIO_2_D0 14
+#define SDIO_2_D1 15
+#define SDIO_2_D2 16
+#define SDIO_2_D3 17
+
 #define XL9555_SDA IIC_1_SDA
 #define XL9555_SCL IIC_1_SCL
 // XL9555引脚功能
+#define XL9555_SD_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO0
+#define XL9555_NRF9151_EN Cpp_Bus_Driver::Xl95x5::Pin::IO1
 #define XL9555_BHI260AP_RST Cpp_Bus_Driver::Xl95x5::Pin::IO2
 #define XL9555_LR1121_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO5
 #define XL9555_USBPHY_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO10
@@ -90,6 +107,20 @@
 #define INFRARED_RX 29
 #define INFRARED_TX 28
 
+// SD
+// SDMMC
+#define SD_SDIO_CLK SDIO_1_CLK
+#define SD_SDIO_CMD SDIO_1_CMD
+#define SD_SDIO_D0 SDIO_1_D0
+#define SD_SDIO_D1 SDIO_1_D1
+#define SD_SDIO_D2 SDIO_1_D2
+#define SD_SDIO_D3 SDIO_1_D3
+// SDSPI
+#define SD_SCLK SDIO_1_CLK
+#define SD_MOSI SDIO_1_CMD
+#define SD_MISO SDIO_1_D0
+#define SD_CS SDIO_1_D3
+
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
@@ -141,5 +172,8 @@
 // Infrared
 #define INFRARED_RESOLUTION_HZ 1000000
 #define INFRARED_NEC_DECODE_MARGIN 200
+
+// SD
+#define SD_BASE_PATH "/sdcard"
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
