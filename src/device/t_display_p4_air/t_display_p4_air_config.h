@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-03-04 09:30:23
+ * @LastEditTime: 2026-03-04 11:45:21
  * @License: GPL 3.0
  */
 
@@ -120,6 +120,20 @@
 #define SD_MOSI SDIO_1_CMD
 #define SD_MISO SDIO_1_D0
 #define SD_CS SDIO_1_D3
+
+// ESP32C5 SDIO
+#define ESP32C5_SDIO_CLK SDIO_2_CLK
+#define ESP32C5_SDIO_CMD SDIO_2_CMD
+#define ESP32C5_SDIO_D0 SDIO_2_D0
+#define ESP32C5_SDIO_D1 SDIO_2_D1
+#define ESP32C5_SDIO_D2 SDIO_2_D2
+#define ESP32C5_SDIO_D3 SDIO_2_D3
+
+// NRF9151
+#define NRF9151_UART_RX 23
+#define NRF9151_UART_TX 22
+#define NRF9151_UART_RTS 20
+#define NRF9151_UART_CTS 21
 
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
