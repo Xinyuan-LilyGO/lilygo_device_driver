@@ -22,6 +22,15 @@ elseif(CONFIG_DEVICE_T_SPE)
             "./src/"
             "./src/device/t_spe/"
         )
+elseif(CONFIG_DEVICE_T_DISPLAY_P4)
+    set(
+            src_dirs 
+            "./src/"
+            "./src/chip/esp32p4/"
+            "./src/device/t_display_p4/"
+            "./src/camera/ov2710/"
+            "./src/camera/sc2336/"
+        )
 endif()
     
 idf_component_register(
