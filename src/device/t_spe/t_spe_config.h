@@ -2,7 +2,7 @@
  * @Description: t_spe_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-01-28 15:16:18
+ * @LastEditTime: 2026-03-13 11:06:33
  * @License: GPL 3.0
  */
 
@@ -18,9 +18,9 @@
 #define LAN8671_INT 4
 #define LAN8671_RECEIVE_ERROR 18
 
-// RS485
-#define RS485_TX 15
-#define RS485_RX 5
+// TD301D485H-A
+#define TD301D485H_A_TX 15
+#define TD301D485H_A_RX 5
 
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
