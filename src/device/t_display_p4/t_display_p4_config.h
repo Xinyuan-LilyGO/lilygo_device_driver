@@ -2,7 +2,7 @@
  * @Description: t_display_p4_config
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-03-05 14:11:58
+ * @LastEditTime: 2026-03-16 15:11:53
  */
 #pragma once
 
@@ -151,6 +151,10 @@
 #define EXT_1X4P_1_IO_48 48
 #define EXT_1X4P_2_IO_45 45
 #define EXT_1X4P_2_IO_46 46
+
+// ETHERNET
+#define ETHERNET_MDIO 52
+#define ETHERNET_MDC 31
 
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
