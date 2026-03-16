@@ -2,7 +2,7 @@
  * @Description: t_glasses_p4_config
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-01-16 17:45:54
+ * @LastEditTime: 2026-03-04 11:34:56
  */
 #pragma once
 
@@ -111,6 +111,14 @@
 #define ECX336CN_MOSI SPI_1_MOSI
 #define ECX336CN_MISO SPI_1_MISO
 #define ECX336CN_CS 34
+
+// ESP32C6 SDIO
+#define ESP32C6_SDIO_CLK SDIO_2_CLK
+#define ESP32C6_SDIO_CMD SDIO_2_CMD
+#define ESP32C6_SDIO_D0 SDIO_2_D0
+#define ESP32C6_SDIO_D1 SDIO_2_D1
+#define ESP32C6_SDIO_D2 SDIO_2_D2
+#define ESP32C6_SDIO_D3 SDIO_2_D3
 
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
