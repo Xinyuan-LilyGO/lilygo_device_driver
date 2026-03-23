@@ -2,7 +2,7 @@
  * @Description: t_display_p4_config
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-03-16 15:11:53
+ * @LastEditTime: 2026-03-23 16:49:49
  */
 #pragma once
 
@@ -156,6 +156,14 @@
 #define ETHERNET_MDIO 52
 #define ETHERNET_MDC 31
 
+#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V1_1
+
+// BQ25896
+#define BQ25896_SDA IIC_1_SDA
+#define BQ25896_SCL IIC_1_SCL
+
+#endif
+
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
@@ -219,5 +227,12 @@
 
 // SD
 #define SD_BASE_PATH "/sdcard"
+
+#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V1_1
+
+// BQ25896
+#define BQ25896_IIC_ADDRESS 0x6B
+
+#endif
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////

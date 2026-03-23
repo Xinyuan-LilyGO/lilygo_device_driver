@@ -2,7 +2,7 @@
  * @Description: t_display_p4_keyboard_config
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-03-05 14:35:40
+ * @LastEditTime: 2026-03-23 16:35:10
  */
 #pragma once
 #include "t_display_p4_config.h"
@@ -67,10 +67,6 @@
 #define T_MIXRF_LR1121_MOSI EXT_2X8P_SPI_MOSI
 #define T_MIXRF_LR1121_MISO EXT_2X8P_SPI_MISO
 
-// BQ25896
-#define BQ25896_SDA IIC_3_SDA
-#define BQ25896_SCL IIC_3_SCL
-
 ////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
@@ -92,8 +88,5 @@ constexpr const std::string Tca8418_Map[] =
         "Alt", "z", "x", "c", "v", "b", "n", "m", "Ctrl", "Up",
         "Fn", "Win", "Shift", "Tab", "Space", "Space", "Space", "Fn", "Left", "Down",
         "F11", "9", "Del", "Enter", "Record", "Enter", "0", "Right"};
-
-// BQ25896
-#define BQ25896_IIC_ADDRESS 0x6B
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
