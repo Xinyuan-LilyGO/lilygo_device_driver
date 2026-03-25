@@ -2,18 +2,21 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-03-06 16:36:43
+ * @LastEditTime: 2026-03-23 09:10:41
  * @License: GPL 3.0
  */
 
 #pragma once
 
-#include "t_display_p4_config.h"
 #include "esp32p4_driver.h"
 
 #if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4
+#include "t_display_p4_config.h"
+
 #define SCREEN_ROTATION_DIRECTION 0
 #elif defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#include "t_display_p4_keyboard_config.h"
+
 #define SCREEN_ROTATION_DIRECTION 90
 #else
 #error "no macro definition is set"
