@@ -2,7 +2,7 @@
  * @Description: t_display_p4_config
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-03-23 16:49:49
+ * @LastEditTime: 2026-03-26 10:30:00
  */
 #pragma once
 
@@ -90,8 +90,8 @@
 #define HI8561_TOUCH_SCL IIC_1_SCL
 
 // GT9895
-#define GT9895_TOUCH_SDA IIC_1_SDA
-#define GT9895_TOUCH_SCL IIC_1_SCL
+#define GT9895_SDA IIC_1_SDA
+#define GT9895_SCL IIC_1_SCL
 
 // Camera
 #define CAMERA_SDA IIC_2_SDA
