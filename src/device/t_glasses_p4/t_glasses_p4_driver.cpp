@@ -2,9 +2,11 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:58:49
- * @LastEditTime: 2026-01-24 16:52:26
+ * @LastEditTime: 2026-03-16 11:55:20
  * @License: GPL 3.0
  */
+#include "t_glasses_p4_driver.h"
+
 namespace Lilygo_Device_Driver
 {
     bool Sdmmc_Init(const char *base_path, int max_freq_khz)
