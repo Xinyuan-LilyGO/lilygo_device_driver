@@ -39,21 +39,21 @@
 #define SDIO_2_D2 16
 #define SDIO_2_D3 17
 
-#define XL9555_SDA IIC_1_SDA
-#define XL9555_SCL IIC_1_SCL
-// XL9555引脚功能
-#define XL9555_SD_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO0
-#define XL9555_NRF9151_EN Cpp_Bus_Driver::Xl95x5::Pin::IO1
-#define XL9555_BHI260AP_RST Cpp_Bus_Driver::Xl95x5::Pin::IO2
-#define XL9555_LR1121_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO5
-#define XL9555_USBPHY_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO10
-#define XL9555_ESP32P4_ESP32C5_UART_SWITCH Cpp_Bus_Driver::Xl95x5::Pin::IO11
-#define XL9555_ESP32C5_EN Cpp_Bus_Driver::Xl95x5::Pin::IO12
-#define XL9555_TOUCH_RST Cpp_Bus_Driver::Xl95x5::Pin::IO13
-#define XL9555_SCREEN_RST Cpp_Bus_Driver::Xl95x5::Pin::IO14
-#define XL9555_LED_1 Cpp_Bus_Driver::Xl95x5::Pin::IO15
-#define XL9555_3_3_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO16
-#define XL9555_NS4150_EN Cpp_Bus_Driver::Xl95x5::Pin::IO17
+#define XL9535_SDA IIC_1_SDA
+#define XL9535_SCL IIC_1_SCL
+// XL9535引脚功能
+#define XL9535_SD_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO0
+#define XL9535_NRF9151_EN Cpp_Bus_Driver::Xl95x5::Pin::IO1
+#define XL9535_BHI260AP_RST Cpp_Bus_Driver::Xl95x5::Pin::IO2
+#define XL9535_LR1121_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO5
+#define XL9535_USBPHY_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO10
+#define XL9535_ESP32P4_ESP32C5_UART_SWITCH Cpp_Bus_Driver::Xl95x5::Pin::IO11
+#define XL9535_ESP32C5_EN Cpp_Bus_Driver::Xl95x5::Pin::IO12
+#define XL9535_TOUCH_RST Cpp_Bus_Driver::Xl95x5::Pin::IO13
+#define XL9535_SCREEN_RST Cpp_Bus_Driver::Xl95x5::Pin::IO14
+#define XL9535_LED_1 Cpp_Bus_Driver::Xl95x5::Pin::IO15
+#define XL9535_3_3_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO16
+#define XL9535_NS4150_EN Cpp_Bus_Driver::Xl95x5::Pin::IO17
 
 // HI8561
 #define HI8561_SCREEN_BL 50
@@ -139,8 +139,8 @@
 
 ////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
 
-// XL9555
-#define XL9555_IIC_ADDRESS 0x20
+// XL9535
+#define XL9535_IIC_ADDRESS 0x20
 
 // HI8561
 #define HI8561_SCREEN_WIDTH 540
