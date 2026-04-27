@@ -1,4 +1,4 @@
-if(CONFIG_DEVICE_T_GLASSES_P4)
+if(CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4)
     set(
             src_dirs 
             "./src/"
@@ -7,7 +7,7 @@ if(CONFIG_DEVICE_T_GLASSES_P4)
             "./src/camera/ov2710/"
             "./src/camera/sc2336/"
     )
-elseif(CONFIG_DEVICE_T_DISPLAY_P4_AIR)
+elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR)
     set(
             src_dirs 
             "./src/"
@@ -16,13 +16,13 @@ elseif(CONFIG_DEVICE_T_DISPLAY_P4_AIR)
             "./src/camera/ov2710/"
             "./src/camera/sc2336/"
         )
-elseif(CONFIG_DEVICE_T_SPE)
+elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_SPE)
     set(
             src_dirs 
             "./src/"
             "./src/device/t_spe/"
         )
-elseif(CONFIG_DEVICE_T_DISPLAY_P4)
+elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
     set(
             src_dirs 
             "./src/"
@@ -31,6 +31,14 @@ elseif(CONFIG_DEVICE_T_DISPLAY_P4)
             "./src/camera/ov2710/"
             "./src/camera/sc2336/"
         )
+    set(requires 
+            "cpp_bus_driver" 
+            "kode_bq25896" 
+            "arduino_cpp_bus_driver" 
+            "ICM20948_WE"
+            "radiolib_cpp_bus_driver"
+            "ST25R3916"
+            "NFC-RFAL" )
 endif()
     
 idf_component_register(
@@ -42,4 +50,5 @@ idf_component_register(
         "driver"
         "fatfs"
         "spiffs"
+        ${requires}
     )

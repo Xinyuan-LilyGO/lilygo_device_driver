@@ -1,16 +1,29 @@
-menu "Lilygo_Device_Driver Configuration"
+menu "lilygo_device_driver configuration"
 
     choice
         prompt "Select the device to build"
-        default DEVICE_T_GLASSES_P4
-            config DEVICE_T_GLASSES_P4
+        default LILYGO_DEVICE_DRIVER_T_GLASSES_P4
+            config LILYGO_DEVICE_DRIVER_T_GLASSES_P4
                 bool "T-Glasses-P4"
-            config DEVICE_T_DISPLAY_P4_AIR
+            config LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR
                 bool "T-Display-P4-Air"
-            config DEVICE_T_SPE
+            config LILYGO_DEVICE_DRIVER_T_SPE
                 bool "T-Spe"
-            config DEVICE_T_DISPLAY_P4
+            config LILYGO_DEVICE_DRIVER_T_DISPLAY_P4
                 bool "T-Display-P4"
+    endchoice
+
+    choice
+        prompt "Select log level"
+        default LILYGO_DEVICE_DRIVER_LOG_LEVEL_INFO
+            config LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEBUG
+                bool "Debug"
+            config LILYGO_DEVICE_DRIVER_LOG_LEVEL_INFO
+                bool "Info"
+            config LILYGO_DEVICE_DRIVER_LOG_LEVEL_ERROR
+                bool "Error"
+            config LILYGO_DEVICE_DRIVER_LOG_LEVEL_NONE
+                bool "None"
     endchoice
 
 endmenu

@@ -2,13 +2,15 @@
  * @Description: t_display_p4_keyboard_config
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-03-23 16:35:10
+ * @LastEditTime: 2026-04-27 09:42:44
  */
 #pragma once
-#include "t_display_p4_config.h"
 #include <string>
 
-////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
+#include "t_display_p4_config.h"
+
+////////////////////////////////////////////////// gpio config
+/////////////////////////////////////////////////////
 
 #define IIC_3_SDA EXT_1X4P_2_IO_46
 #define IIC_3_SCL EXT_1X4P_2_IO_45
@@ -17,28 +19,29 @@
 #define XL9555_SDA IIC_3_SDA
 #define XL9555_SCL IIC_3_SCL
 // XL9555引脚功能
-#define XL9555_T_MIXRF_EN Cpp_Bus_Driver::Xl95x5::Pin::IO0
-#define XL9555_T_MIXRF_CC1101_RF_SWITCH_0 Cpp_Bus_Driver::Xl95x5::Pin::IO1
-#define XL9555_T_MIXRF_CC1101_RF_SWITCH_1 Cpp_Bus_Driver::Xl95x5::Pin::IO2
-#define XL9555_LED_1 Cpp_Bus_Driver::Xl95x5::Pin::IO3
-#define XL9555_LED_2 Cpp_Bus_Driver::Xl95x5::Pin::IO4
-#define XL9555_LED_3 Cpp_Bus_Driver::Xl95x5::Pin::IO5
-#define XL9555_TCA8418_RST Cpp_Bus_Driver::Xl95x5::Pin::IO6
-#define XL9555_T_MIXRF_LR1121_INT Cpp_Bus_Driver::Xl95x5::Pin::IO7
-#define XL9555_T_MIXRF_LR1121_RST Cpp_Bus_Driver::Xl95x5::Pin::IO10
-#define XL9555_T_MIXRF_LR1121_CS Cpp_Bus_Driver::Xl95x5::Pin::IO11
-#define XL9555_T_MIXRF_LR1121_BUSY Cpp_Bus_Driver::Xl95x5::Pin::IO12
+#define XL9555_T_MIXRF_EN cpp_bus_driver::Xl95x5::Pin::kIo0
+#define XL9555_T_MIXRF_CC1101_RF_SWITCH_0 cpp_bus_driver::Xl95x5::Pin::kIo1
+#define XL9555_T_MIXRF_CC1101_RF_SWITCH_1 cpp_bus_driver::Xl95x5::Pin::kIo2
+#define XL9555_LED_1 cpp_bus_driver::Xl95x5::Pin::kIo3
+#define XL9555_LED_2 cpp_bus_driver::Xl95x5::Pin::kIo4
+#define XL9555_LED_3 cpp_bus_driver::Xl95x5::Pin::kIo5
+#define XL9555_TCA8418_RST cpp_bus_driver::Xl95x5::Pin::kIo6
+#define XL9555_T_MIXRF_LR1121_INT cpp_bus_driver::Xl95x5::Pin::kIo7
+#define XL9555_T_MIXRF_LR1121_RST cpp_bus_driver::Xl95x5::Pin::kIo10
+#define XL9555_T_MIXRF_LR1121_CS cpp_bus_driver::Xl95x5::Pin::kIo11
+#define XL9555_T_MIXRF_LR1121_BUSY cpp_bus_driver::Xl95x5::Pin::kIo12
 
 // SY7200A
 #define SY7200A_EN_PWM EXT_1X4P_1_IO_47
+
+// Keyboard
+#define KEYBOARD_BL SY7200A_EN_PWM
 
 // TCA8418
 #define TCA8418_SDA IIC_3_SDA
 #define TCA8418_SCL IIC_3_SCL
 #define TCA8418_INT EXT_1X4P_1_IO_48
-
-// Keyboard
-#define KEYBOARD_BL SY7200A_EN_PWM
+#define TCA8418_BL KEYBOARD_BL
 
 // T-MixRF
 #define T_MIXRF_CC1101_CS EXT_2X8P_IO_36
@@ -67,9 +70,11 @@
 #define T_MIXRF_LR1121_MOSI EXT_2X8P_SPI_MOSI
 #define T_MIXRF_LR1121_MISO EXT_2X8P_SPI_MISO
 
-////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
+////////////////////////////////////////////////// gpio config
+/////////////////////////////////////////////////////
 
-////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
+////////////////////////////////////////////////// other define config
+/////////////////////////////////////////////////////
 
 // XL9555
 #define XL9555_IIC_ADDRESS 0x20
@@ -79,14 +84,13 @@
 #define TCA8418_KEYPAD_SCAN_WIDTH 10
 #define TCA8418_KEYPAD_SCAN_HEIGHT 7
 // TCA8418键盘按键映射
-constexpr const std::string Tca8418_Map[] =
-    {
-        "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10",
-        "Esc", "Esc", "1", "2", "3", "4", "5", "6", "7", "8",
-        "q", "w", "e", "r", "t", "y", "u", "i", "o", "p",
-        "Caps", "a", "s", "d", "f", "g", "h", "j", "k", "l",
-        "Alt", "z", "x", "c", "v", "b", "n", "m", "Ctrl", "Up",
-        "Fn", "Win", "Shift", "Tab", "Space", "Space", "Space", "Fn", "Left", "Down",
-        "F11", "9", "Del", "Enter", "Record", "Enter", "0", "Right"};
+constexpr const std::string Tca8418_Map[] = {"F1", "F2", "F3", "F4", "F5", "F6",
+    "F7", "F8", "F9", "F10", "Esc", "Esc", "1", "2", "3", "4", "5", "6", "7",
+    "8", "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "Caps", "a", "s",
+    "d", "f", "g", "h", "j", "k", "l", "Alt", "z", "x", "c", "v", "b", "n", "m",
+    "Ctrl", "Up", "Fn", "Win", "Shift", "Tab", "Space", "Space", "Space", "Fn",
+    "Left", "Down", "F11", "9", "Del", "Enter", "Record", "Enter", "0",
+    "Right"};
 
-////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
+////////////////////////////////////////////////// other define config
+/////////////////////////////////////////////////////

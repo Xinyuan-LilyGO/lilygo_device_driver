@@ -2,11 +2,11 @@
  * @Description: t_glasses_p4_config
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-03-28 09:51:13
+ * @LastEditTime: 2026-04-16 15:34:13
  */
 #pragma once
 
-////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
+//// gpio config ////
 
 // IIC
 #define IIC_1_SDA 13
@@ -125,9 +125,10 @@
 #define S023MSAFJF10111E1_SCL IIC_2_SCL
 #define S023MSAFJF10111E1_RST 21
 
-////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
+//// gpio config ////
 
-////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
+//// other define config ////
+
 // SY6970
 #define SY6970_IIC_ADDRESS 0x6A
 
@@ -218,4 +219,4 @@
 #define S023MSAFJF10111E1_SCREEN_DATA_LANE_NUM 1
 #define S023MSAFJF10111E1_SCREEN_LANE_BIT_RATE_MBPS 1000
 
-////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
+//// other define config ////

@@ -2,19 +2,19 @@
  * @Description: t_glasses_p4_driver
  * @Author: LILYGO_L
  * @Date: 2025-08-15 14:29:40
- * @LastEditTime: 2026-03-17 15:35:03
+ * @LastEditTime: 2026-04-16 15:02:51
  * @License: GPL 3.0
  */
 
 #pragma once
 
-#include "t_glasses_p4_config.h"
 #include "esp32p4_driver.h"
+#include "t_glasses_p4_config.h"
 
 #if defined CONFIG_SCREEN_PIXEL_FORMAT_RGB888
 #define SCREEN_BITS_PER_PIXEL 24
 #else
-#error "no macro definition is set"
+#error "Missing required macro definition."
 #endif
 
 #if defined CONFIG_CAMERA_PIXEL_FORMAT_RGB565
@@ -22,7 +22,7 @@
 #elif defined CONFIG_CAMERA_PIXEL_FORMAT_RGB888
 #define CAMERA_BITS_PER_PIXEL 24
 #else
-#error "no macro definition is set"
+#error "Missing required macro definition."
 #endif
 
 // SCREEN
@@ -53,7 +53,8 @@
 #elif defined CONFIG_SCREEN_TYPE_S023MSAFJF10111E1
 #define SCREEN_WIDTH S023MSAFJF10111E1_SCREEN_WIDTH
 #define SCREEN_HEIGHT S023MSAFJF10111E1_SCREEN_HEIGHT
-#define SCREEN_MIPI_DSI_DPI_CLK_MHZ S023MSAFJF10111E1_SCREEN_MIPI_DSI_DPI_CLK_MHZ
+#define SCREEN_MIPI_DSI_DPI_CLK_MHZ \
+  S023MSAFJF10111E1_SCREEN_MIPI_DSI_DPI_CLK_MHZ
 #define SCREEN_MIPI_DSI_HSYNC S023MSAFJF10111E1_SCREEN_MIPI_DSI_HSYNC
 #define SCREEN_MIPI_DSI_HBP S023MSAFJF10111E1_SCREEN_MIPI_DSI_HBP
 #define SCREEN_MIPI_DSI_HFP S023MSAFJF10111E1_SCREEN_MIPI_DSI_HFP
@@ -63,12 +64,12 @@
 #define SCREEN_DATA_LANE_NUM S023MSAFJF10111E1_SCREEN_DATA_LANE_NUM
 #define SCREEN_LANE_BIT_RATE_MBPS S023MSAFJF10111E1_SCREEN_LANE_BIT_RATE_MBPS
 #else
-#error "no macro definition is set"
+#error "Missing required macro definition."
 #endif
 
-namespace Lilygo_Device_Driver
-{
-    bool Sdmmc_Init(const char *base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
+namespace lilygo_device_driver {
+bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
-    bool Sdspi_Init(const char *base_path, spi_host_device_t host_id, int max_freq_khz = SDMMC_FREQ_DEFAULT);
-}
+bool InitSdspi(const char* base_path, spi_host_device_t host_id,
+    int max_freq_khz = SDMMC_FREQ_DEFAULT);
+}  // namespace lilygo_device_driver

@@ -2,11 +2,11 @@
  * @Description: t_display_p4_config
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-03-26 10:30:00
+ * @LastEditTime: 2026-04-23 14:01:32
  */
 #pragma once
 
-////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
+//// gpio config ////
 
 // IIC
 #define IIC_1_SDA 7
@@ -22,22 +22,22 @@
 #define XL9535_SCL IIC_1_SCL
 #define XL9535_INT 5
 // XL9535引脚功能
-#define XL9535_3_3_V_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO0
-#define XL9535_SKY13453_VCTL Cpp_Bus_Driver::Xl95x5::Pin::IO1
-#define XL9535_SCREEN_RST Cpp_Bus_Driver::Xl95x5::Pin::IO2
-#define XL9535_TOUCH_RST Cpp_Bus_Driver::Xl95x5::Pin::IO3
-#define XL9535_TOUCH_INT Cpp_Bus_Driver::Xl95x5::Pin::IO4
-#define XL9535_ETHERNET_RST Cpp_Bus_Driver::Xl95x5::Pin::IO5
-#define XL9535_5_0_V_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO6
-#define XL9535_EXTERNAL_SENSOR_INT Cpp_Bus_Driver::Xl95x5::Pin::IO7
-#define XL9535_ESP32P4_VCCA_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO10
-#define XL9535_GPS_WAKE_UP Cpp_Bus_Driver::Xl95x5::Pin::IO11
-#define XL9535_RTC_INT Cpp_Bus_Driver::Xl95x5::Pin::IO12
-#define XL9535_ESP32C6_WAKE_UP Cpp_Bus_Driver::Xl95x5::Pin::IO13
-#define XL9535_ESP32C6_EN Cpp_Bus_Driver::Xl95x5::Pin::IO14
-#define XL9535_SD_EN Cpp_Bus_Driver::Xl95x5::Pin::IO15
-#define XL9535_SX1262_RST Cpp_Bus_Driver::Xl95x5::Pin::IO16
-#define XL9535_SX1262_DIO1 Cpp_Bus_Driver::Xl95x5::Pin::IO17
+#define XL9535_3_3_V_POWER_EN cpp_bus_driver::Xl95x5::Pin::kIo0
+#define XL9535_SKY13453_VCTL cpp_bus_driver::Xl95x5::Pin::kIo1
+#define XL9535_SCREEN_RST cpp_bus_driver::Xl95x5::Pin::kIo2
+#define XL9535_TOUCH_RST cpp_bus_driver::Xl95x5::Pin::kIo3
+#define XL9535_TOUCH_INT cpp_bus_driver::Xl95x5::Pin::kIo4
+#define XL9535_ETHERNET_RST cpp_bus_driver::Xl95x5::Pin::kIo5
+#define XL9535_5_0_V_POWER_EN cpp_bus_driver::Xl95x5::Pin::kIo6
+#define XL9535_EXTERNAL_SENSOR_INT cpp_bus_driver::Xl95x5::Pin::kIo7
+#define XL9535_ESP32P4_VCCA_POWER_EN cpp_bus_driver::Xl95x5::Pin::kIo10
+#define XL9535_GPS_WAKE_UP cpp_bus_driver::Xl95x5::Pin::kIo11
+#define XL9535_RTC_INT cpp_bus_driver::Xl95x5::Pin::kIo12
+#define XL9535_ESP32C6_WAKE_UP cpp_bus_driver::Xl95x5::Pin::kIo13
+#define XL9535_ESP32C6_EN cpp_bus_driver::Xl95x5::Pin::kIo14
+#define XL9535_SD_EN cpp_bus_driver::Xl95x5::Pin::kIo15
+#define XL9535_SX1262_RST cpp_bus_driver::Xl95x5::Pin::kIo16
+#define XL9535_SX1262_DIO1 cpp_bus_driver::Xl95x5::Pin::kIo17
 
 // ES8311
 #define ES8311_SDA IIC_2_SDA
@@ -164,15 +164,19 @@
 
 #endif
 
-////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
+//// gpio config ////
 
-////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
+//// other define config ////
 
 // XL9535
 #define XL9535_IIC_ADDRESS 0x20
 
 // ES8311
 #define ES8311_IIC_ADDRESS 0x18
+#define ES8311_MCLK_MULTIPLE 256
+#define ES8311_SAMPLE_RATE 44100
+#define ES8311_BITS_PER_SAMPLE 16
+#define ES8311_CHANNEL 2
 
 // AW86224
 #define AW86224_IIC_ADDRESS 0x58
@@ -220,8 +224,12 @@
 #define GT9895_IIC_ADDRESS 0x5D
 #define GT9895_MAX_X_SIZE 1060
 #define GT9895_MAX_Y_SIZE 2400
-#define GT9895_X_SCALE_FACTOR static_cast<float>(RM69A10_SCREEN_WIDTH) / static_cast<float>(GT9895_MAX_X_SIZE)
-#define GT9895_Y_SCALE_FACTOR static_cast<float>(RM69A10_SCREEN_HEIGHT) / static_cast<float>(GT9895_MAX_Y_SIZE)
+#define GT9895_X_SCALE_FACTOR                \
+  static_cast<float>(RM69A10_SCREEN_WIDTH) / \
+      static_cast<float>(GT9895_MAX_X_SIZE)
+#define GT9895_Y_SCALE_FACTOR                 \
+  static_cast<float>(RM69A10_SCREEN_HEIGHT) / \
+      static_cast<float>(GT9895_MAX_Y_SIZE)
 
 #define CAMERA_BUFFER_COUNT 2
 
@@ -235,4 +243,4 @@
 
 #endif
 
-////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
+//// other define config ////

@@ -2,13 +2,13 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-03-04 11:45:21
+ * @LastEditTime: 2026-04-16 15:32:03
  * @License: GPL 3.0
  */
 
 #pragma once
 
-////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
+//// gpio config ////
 
 // BOOT
 #define ESP32P4_BOOT 35
@@ -42,18 +42,18 @@
 #define XL9535_SDA IIC_1_SDA
 #define XL9535_SCL IIC_1_SCL
 // XL9535引脚功能
-#define XL9535_SD_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO0
-#define XL9535_NRF9151_EN Cpp_Bus_Driver::Xl95x5::Pin::IO1
-#define XL9535_BHI260AP_RST Cpp_Bus_Driver::Xl95x5::Pin::IO2
-#define XL9535_LR1121_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO5
-#define XL9535_USBPHY_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO10
-#define XL9535_ESP32P4_ESP32C5_UART_SWITCH Cpp_Bus_Driver::Xl95x5::Pin::IO11
-#define XL9535_ESP32C5_EN Cpp_Bus_Driver::Xl95x5::Pin::IO12
-#define XL9535_TOUCH_RST Cpp_Bus_Driver::Xl95x5::Pin::IO13
-#define XL9535_SCREEN_RST Cpp_Bus_Driver::Xl95x5::Pin::IO14
-#define XL9535_LED_1 Cpp_Bus_Driver::Xl95x5::Pin::IO15
-#define XL9535_3_3_POWER_EN Cpp_Bus_Driver::Xl95x5::Pin::IO16
-#define XL9535_NS4150_EN Cpp_Bus_Driver::Xl95x5::Pin::IO17
+#define XL9535_SD_POWER_EN cpp_bus_driver::Xl95x5::Pin::kIo0
+#define XL9535_NRF9151_EN cpp_bus_driver::Xl95x5::Pin::kIo1
+#define XL9535_BHI260AP_RST cpp_bus_driver::Xl95x5::Pin::kIo2
+#define XL9535_LR1121_POWER_EN cpp_bus_driver::Xl95x5::Pin::kIo5
+#define XL9535_USBPHY_POWER_EN cpp_bus_driver::Xl95x5::Pin::kIo10
+#define XL9535_ESP32P4_ESP32C5_UART_SWITCH cpp_bus_driver::Xl95x5::Pin::kIo11
+#define XL9535_ESP32C5_EN cpp_bus_driver::Xl95x5::Pin::kIo12
+#define XL9535_TOUCH_RST cpp_bus_driver::Xl95x5::Pin::kIo13
+#define XL9535_SCREEN_RST cpp_bus_driver::Xl95x5::Pin::kIo14
+#define XL9535_LED_1 cpp_bus_driver::Xl95x5::Pin::kIo15
+#define XL9535_3_3_POWER_EN cpp_bus_driver::Xl95x5::Pin::kIo16
+#define XL9535_NS4150_EN cpp_bus_driver::Xl95x5::Pin::kIo17
 
 // HI8561
 #define HI8561_SCREEN_BL 50
@@ -135,9 +135,9 @@
 #define NRF9151_UART_RTS 20
 #define NRF9151_UART_CTS 21
 
-////////////////////////////////////////////////// gpio config //////////////////////////////////////////////////
+//// gpio config ////
 
-////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
+//// other define config ////
 
 // XL9535
 #define XL9535_IIC_ADDRESS 0x20
@@ -190,4 +190,4 @@
 // SD
 #define SD_BASE_PATH "/sdcard"
 
-////////////////////////////////////////////////// other define config //////////////////////////////////////////////////
+//// other define config ////

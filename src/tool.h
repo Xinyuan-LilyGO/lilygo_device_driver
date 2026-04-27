@@ -2,25 +2,24 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2025-12-19 10:50:07
- * @LastEditTime: 2025-12-19 16:17:32
+ * @LastEditTime: 2026-04-16 15:42:32
  * @License: GPL 3.0
  */
 #pragma once
 
 #include "config.h"
 
-namespace Lilygo_Device_Driver
-{
-    static constexpr uint16_t ASSERT_LOG_MAX_LOG_BUFFER_SIZE = 1024;
-    
-    enum class Log_Level
-    {
-        DEBUG, // debug信息
-        INFO,  // 普通信息
+namespace lilygo_device_driver {
+static constexpr uint16_t kMaxLogBufferSize = 1024;
 
-        DEVICE,  // 设备错误
-        CHIP, // 芯片错误
-    };
+enum class LogLevel {
+  kDebug,  // debug信息
+  kInfo,   // 普通信息
 
-    void assert_log(Log_Level level, const char *file_name, size_t line_number, const char *format, ...);
-}
+  kBus,   // 总线错误
+  kChip,  // 芯片错误
+};
+
+void LogMessage(LogLevel level, const char* file_name, size_t line_number,
+    const char* format, ...);
+}  // namespace lilygo_device_driver
