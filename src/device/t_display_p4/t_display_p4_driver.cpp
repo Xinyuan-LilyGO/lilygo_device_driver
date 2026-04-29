@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-04-29 09:53:44
+ * @LastEditTime: 2026-04-29 10:25:18
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -111,7 +111,7 @@ void TDisplayP4Driver::CreateDrivers() {
 
   chip_.l76k = std::make_unique<cpp_bus_driver::L76k>(
       bus_.l76k_uart_bus, [this](bool value) -> bool {
-        return chip_.xl9535->PinWrite(XL9535_GPS_WAKE_UP,
+        return chip_.xl9535->GpioWrite(XL9535_GPS_WAKE_UP,
             static_cast<cpp_bus_driver::Xl95x5::Value>(value));
       });
 
@@ -499,20 +499,20 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
 #endif
 
         if (status_.xl9535.init_flag) {
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
         }
       } else {
         if (status_.xl9535.init_flag) {
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
         }
 
@@ -564,11 +564,11 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
 
         if (status_.sx1262.init_flag) {
           // 唤醒
-          result &= tool_->PinWrite(SX1262_CS, 1);
+          result &= tool_->GpioWrite(SX1262_CS, 1);
           tool_->DelayMs(10);
-          result &= tool_->PinWrite(SX1262_CS, 0);
+          result &= tool_->GpioWrite(SX1262_CS, 0);
           tool_->DelayMs(10);
-          result &= tool_->PinWrite(SX1262_CS, 1);
+          result &= tool_->GpioWrite(SX1262_CS, 1);
           tool_->DelayMs(10);
         }
 
@@ -607,40 +607,40 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
 
 #if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
         if (status_.xl9555.init_flag) {
-          result &= chip_.xl9555->PinWrite(
+          result &= chip_.xl9555->GpioWrite(
               XL9555_LED_1, cpp_bus_driver::Xl95x5::Value::kHigh);
-          result &= chip_.xl9555->PinWrite(
+          result &= chip_.xl9555->GpioWrite(
               XL9555_LED_2, cpp_bus_driver::Xl95x5::Value::kHigh);
-          result &= chip_.xl9555->PinWrite(
+          result &= chip_.xl9555->GpioWrite(
               XL9555_LED_3, cpp_bus_driver::Xl95x5::Value::kHigh);
-          result &= chip_.xl9555->PinWrite(
+          result &= chip_.xl9555->GpioWrite(
               XL9555_T_MIXRF_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-          result &= chip_.xl9555->PinWrite(
+          result &= chip_.xl9555->GpioWrite(
               XL9555_TCA8418_RST, cpp_bus_driver::Xl95x5::Value::kLow);
         }
 #endif
         if (status_.xl9535.init_flag) {
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_TOUCH_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_ETHERNET_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-          result &= chip_.xl9535->PinWrite(
+          result &= chip_.xl9535->GpioWrite(
               XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
 
           for (size_t i = 0; i < GPIO_NUM_MAX; i++) {
             result &=
-                tool_->SetPinMode(i, cpp_bus_driver::Tool::PinMode::kDisable,
-                    cpp_bus_driver::Tool::PinStatus ::kDisable);
+                tool_->SetGpioMode(i, cpp_bus_driver::Tool::GpioMode::kDisable,
+                    cpp_bus_driver::Tool::GpioStatus ::kDisable);
           }
         }
       } else {
@@ -659,19 +659,19 @@ bool TDisplayP4Driver::InitEsp32p4() {
   bool result = true;
 
 #if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
-  result &= tool_->SetPinMode(
-      T_MIXRF_CC1101_CS, cpp_bus_driver::Tool::PinMode::kOutput);
-  result &= tool_->SetPinMode(
-      T_MIXRF_NRF24L01_CS, cpp_bus_driver::Tool::PinMode::kOutput);
-  result &= tool_->SetPinMode(
-      T_MIXRF_ST25R3916_CS, cpp_bus_driver::Tool::PinMode::kOutput);
-  result &= tool_->PinWrite(T_MIXRF_CC1101_CS, 1);
-  result &= tool_->PinWrite(T_MIXRF_NRF24L01_CS, 1);
-  result &= tool_->PinWrite(T_MIXRF_ST25R3916_CS, 1);
+  result &= tool_->SetGpioMode(
+      T_MIXRF_CC1101_CS, cpp_bus_driver::Tool::GpioMode::kOutput);
+  result &= tool_->SetGpioMode(
+      T_MIXRF_NRF24L01_CS, cpp_bus_driver::Tool::GpioMode::kOutput);
+  result &= tool_->SetGpioMode(
+      T_MIXRF_ST25R3916_CS, cpp_bus_driver::Tool::GpioMode::kOutput);
+  result &= tool_->GpioWrite(T_MIXRF_CC1101_CS, 1);
+  result &= tool_->GpioWrite(T_MIXRF_NRF24L01_CS, 1);
+  result &= tool_->GpioWrite(T_MIXRF_ST25R3916_CS, 1);
 
-  result &= tool_->SetPinMode(T_MIXRF_CC1101_BUSY,
-      cpp_bus_driver::Tool::PinMode::kInput,
-      cpp_bus_driver::Tool::PinStatus::kPulldown);
+  result &= tool_->SetGpioMode(T_MIXRF_CC1101_BUSY,
+      cpp_bus_driver::Tool::GpioMode::kInput,
+      cpp_bus_driver::Tool::GpioStatus::kPulldown);
 #endif
 
   return result;
@@ -769,99 +769,99 @@ bool TDisplayP4Driver::ConfigXl9535() {
   }
 
   bool result = true;
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_TOUCH_RST, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_ESP32P4_VCCA_POWER_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_GPS_WAKE_UP, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_ETHERNET_RST, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_SD_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_SKY13453_VCTL, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_ICM20948_INT, cpp_bus_driver::Xl95x5::Mode::kInput);
-  result &= chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetGpioMode(
       XL9535_SX1262_DIO1, cpp_bus_driver::Xl95x5::Mode::kInput);
 
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_ESP32P4_VCCA_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
   // 默认使用RF1天线
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_SKY13453_VCTL, cpp_bus_driver::Xl95x5::Value::kHigh);
 
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(200);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(200);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(200);
 
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_TOUCH_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_ETHERNET_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_GPS_WAKE_UP, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &=
-      chip_.xl9535->PinWrite(XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kLow);
+  result &= chip_.xl9535->GpioWrite(
+      XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(100);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_TOUCH_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_ETHERNET_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_GPS_WAKE_UP, cpp_bus_driver::Xl95x5::Value::kLow);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(100);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_TOUCH_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_ETHERNET_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_GPS_WAKE_UP, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->GpioWrite(
       XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &=
-      chip_.xl9535->PinWrite(XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kLow);
+  result &= chip_.xl9535->GpioWrite(
+      XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(1000);
 
   if (!result) {
@@ -1192,39 +1192,39 @@ bool TDisplayP4Driver::ConfigXl9555() {
   }
 
   bool result = true;
-  result &= chip_.xl9555->SetPinMode(
+  result &= chip_.xl9555->SetGpioMode(
       XL9555_LED_1, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetPinMode(
+  result &= chip_.xl9555->SetGpioMode(
       XL9555_LED_2, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetPinMode(
+  result &= chip_.xl9555->SetGpioMode(
       XL9555_LED_3, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetPinMode(
+  result &= chip_.xl9555->SetGpioMode(
       XL9555_TCA8418_RST, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetPinMode(
+  result &= chip_.xl9555->SetGpioMode(
       XL9555_T_MIXRF_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetPinMode(
+  result &= chip_.xl9555->SetGpioMode(
       XL9555_T_MIXRF_CC1101_RF_SWITCH_0, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetPinMode(
+  result &= chip_.xl9555->SetGpioMode(
       XL9555_T_MIXRF_CC1101_RF_SWITCH_1, cpp_bus_driver::Xl95x5::Mode::kOutput);
 
-  result &= chip_.xl9555->PinWrite(
+  result &= chip_.xl9555->GpioWrite(
       XL9555_LED_1, cpp_bus_driver::Xl95x5::Value::kHigh);  // 关闭led
-  result &= chip_.xl9555->PinWrite(
+  result &= chip_.xl9555->GpioWrite(
       XL9555_LED_2, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9555->PinWrite(
+  result &= chip_.xl9555->GpioWrite(
       XL9555_LED_3, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9555->PinWrite(
+  result &= chip_.xl9555->GpioWrite(
       XL9555_T_MIXRF_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
 
   result &= SetCc1101RfSwitch(Cc1101RfSwitch::k868_915Mhz);
 
-  result &= chip_.xl9555->PinWrite(
+  result &= chip_.xl9555->GpioWrite(
       XL9555_TCA8418_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(10);
-  result &= chip_.xl9555->PinWrite(
+  result &= chip_.xl9555->GpioWrite(
       XL9555_TCA8418_RST, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(10);
-  result &= chip_.xl9555->PinWrite(
+  result &= chip_.xl9555->GpioWrite(
       XL9555_TCA8418_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(10);
 
@@ -1243,7 +1243,7 @@ bool TDisplayP4Driver::InitTca8418() {
     bool result = true;
     result &= chip_.tca8418->SetKeypadScanWindow(
         0, 0, TCA8418_KEYPAD_SCAN_WIDTH, TCA8418_KEYPAD_SCAN_HEIGHT);
-    result &= chip_.tca8418->SetIrqPinMode(
+    result &= chip_.tca8418->SetIrqGpioMode(
         cpp_bus_driver::Tca8418::IrqMask::kKeyEvents);
     result &= chip_.tca8418->ClearIrqFlag(
         cpp_bus_driver::Tca8418::IrqFlag::kKeyEvents);
@@ -1299,21 +1299,21 @@ bool TDisplayP4Driver::SetCc1101RfSwitch(Cc1101RfSwitch rf_switch) {
   bool result = true;
   switch (rf_switch) {
     case Cc1101RfSwitch::k315Mhz:
-      result &= chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_0,
+      result &= chip_.xl9555->GpioWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_0,
           cpp_bus_driver::Xl95x5::Value::kLow);
-      result &= chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_1,
+      result &= chip_.xl9555->GpioWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_1,
           cpp_bus_driver::Xl95x5::Value::kHigh);
       break;
     case Cc1101RfSwitch::k434Mhz:
-      result &= chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_0,
+      result &= chip_.xl9555->GpioWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_0,
           cpp_bus_driver::Xl95x5::Value::kHigh);
-      result &= chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_1,
+      result &= chip_.xl9555->GpioWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_1,
           cpp_bus_driver::Xl95x5::Value::kHigh);
       break;
     case Cc1101RfSwitch::k868_915Mhz:
-      result &= chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_0,
+      result &= chip_.xl9555->GpioWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_0,
           cpp_bus_driver::Xl95x5::Value::kHigh);
-      result &= chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_1,
+      result &= chip_.xl9555->GpioWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_1,
           cpp_bus_driver::Xl95x5::Value::kLow);
       break;
 
