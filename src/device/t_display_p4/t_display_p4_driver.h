@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-04-27 16:16:02
+ * @LastEditTime: 2026-04-28 16:30:08
  * @License: GPL 3.0
  */
 
@@ -90,6 +90,10 @@ namespace lilygo_device_driver {
 class TDisplayP4Driver {
  public:
   enum class InitMode { kAsync, kSync };
+  enum class SleepLevel {
+    kChipSleep,
+    kPowerOff,
+  };
 
 #if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
   enum class Cc1101RfSwitch {
@@ -262,10 +266,6 @@ class TDisplayP4Driver {
 
     struct {
       bool init_flag = false;
-    } spiffs;
-
-    struct {
-      bool init_flag = false;
     } sd_card;
   };
 
@@ -278,6 +278,7 @@ class TDisplayP4Driver {
   void CreateDrivers();
   bool InitDrivers(InitMode mode = InitMode::kSync);
   bool Init(InitMode mode = InitMode::kSync);
+  bool SetSleep(SleepLevel level, bool enable);
 
   bool InitEsp32p4();
   bool InitPower();

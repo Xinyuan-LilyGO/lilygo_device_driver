@@ -2,7 +2,7 @@
  * @Description: t_display_p4_config
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-04-23 14:01:32
+ * @LastEditTime: 2026-04-28 17:04:30
  */
 #pragma once
 
@@ -29,7 +29,7 @@
 #define XL9535_TOUCH_INT cpp_bus_driver::Xl95x5::Pin::kIo4
 #define XL9535_ETHERNET_RST cpp_bus_driver::Xl95x5::Pin::kIo5
 #define XL9535_5_0_V_POWER_EN cpp_bus_driver::Xl95x5::Pin::kIo6
-#define XL9535_EXTERNAL_SENSOR_INT cpp_bus_driver::Xl95x5::Pin::kIo7
+#define XL9535_ICM20948_INT cpp_bus_driver::Xl95x5::Pin::kIo7
 #define XL9535_ESP32P4_VCCA_POWER_EN cpp_bus_driver::Xl95x5::Pin::kIo10
 #define XL9535_GPS_WAKE_UP cpp_bus_driver::Xl95x5::Pin::kIo11
 #define XL9535_RTC_INT cpp_bus_driver::Xl95x5::Pin::kIo12

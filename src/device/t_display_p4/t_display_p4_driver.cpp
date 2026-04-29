@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-04-27 16:20:03
+ * @LastEditTime: 2026-04-29 09:53:44
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -164,33 +164,40 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
 #if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0
   InitBq25896();
-  bus_.xl9535_i2c_bus->set_bus_handle(bus_.bq25896_i2c_bus->bus_handle());
+  result &=
+      bus_.xl9535_i2c_bus->set_bus_handle(bus_.bq25896_i2c_bus->bus_handle());
 #endif
 
   InitXl9535();
   InitPower();
-  ConfigXl9535();
+  result &= ConfigXl9535();
 
   InitSgm38121();
 
 #if defined CONFIG_SCREEN_TYPE_HI8561
-  bus_.hi8561_i2c_touch_bus->set_bus_handle(bus_.xl9535_i2c_bus->bus_handle());
+  result &= bus_.hi8561_i2c_touch_bus->set_bus_handle(
+      bus_.xl9535_i2c_bus->bus_handle());
 #elif defined CONFIG_SCREEN_TYPE_RM69A10
-  bus_.gt9895_i2c_touch_bus->set_bus_handle(bus_.xl9535_i2c_bus->bus_handle());
+  result &= bus_.gt9895_i2c_touch_bus->set_bus_handle(
+      bus_.xl9535_i2c_bus->bus_handle());
 #endif
 
-  bus_.bq27220_i2c_bus->set_bus_handle(bus_.xl9535_i2c_bus->bus_handle());
-  bus_.pcf8563_i2c_bus->set_bus_handle(bus_.xl9535_i2c_bus->bus_handle());
-  bus_.aw86224_i2c_bus->set_bus_handle(bus_.sgm38121_i2c_bus->bus_handle());
-  bus_.es8311_i2c_bus->set_bus_handle(bus_.sgm38121_i2c_bus->bus_handle());
-
+  result &=
+      bus_.bq27220_i2c_bus->set_bus_handle(bus_.xl9535_i2c_bus->bus_handle());
+  result &=
+      bus_.pcf8563_i2c_bus->set_bus_handle(bus_.xl9535_i2c_bus->bus_handle());
+  result &=
+      bus_.aw86224_i2c_bus->set_bus_handle(bus_.sgm38121_i2c_bus->bus_handle());
+  result &=
+      bus_.es8311_i2c_bus->set_bus_handle(bus_.sgm38121_i2c_bus->bus_handle());
 #if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
   bus_.cc1101_spi_bus->set_bus_init_flag(true);
   bus_.nrf24l01_spi_bus->set_bus_init_flag(true);
 #endif
 
-  bus_.icm20948_i2c_bus->set_bus_handle(bus_.sgm38121_i2c_bus->bus_handle());
-  bus_.icm20948_i2c_bus->begin(ICM20948_SDA, ICM20948_SCL);
+  result &= bus_.icm20948_i2c_bus->set_bus_handle(
+      bus_.sgm38121_i2c_bus->bus_handle());
+  result &= bus_.icm20948_i2c_bus->begin(ICM20948_SDA, ICM20948_SCL);
 
   if (mode == InitMode::kAsync) {
     xTaskCreate(
@@ -327,8 +334,6 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     InitHi8561Backlight();
 #elif defined CONFIG_SCREEN_TYPE_RM69A10
     InitRm69a10();
-    bus_.gt9895_i2c_touch_bus->set_bus_handle(
-        bus_.bq27220_i2c_bus->bus_handle());
     InitGt9895();
 #endif
 
@@ -336,14 +341,14 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     InitPcf8563();
     InitAw86224();
     InitEs8311();
-    ConfigEs8311();
+    result &= ConfigEs8311();
     InitL76k();
     InitIcm20948();
     InitSx1262();
 
 #if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
     InitXl9555();
-    ConfigXl9555();
+    result &= ConfigXl9555();
     InitTca8418();
     InitTca8418Backlight();
     InitCc1101();
@@ -393,8 +398,265 @@ bool TDisplayP4Driver::Init(InitMode mode) {
   return InitDrivers(mode);
 }
 
+bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
+  bool result = true;
+
+  switch (level) {
+    case SleepLevel::kChipSleep:
+      if (enable) {
+#if defined CONFIG_SCREEN_TYPE_HI8561
+        if (status_.hi8561_backlight.init_flag) {
+          result &= chip_.hi8561_backlight->Stop(0);
+        }
+        if (status_.hi8561.init_flag) {
+          result &= chip_.hi8561->SetScreenOff(true);
+          result &= chip_.hi8561->SetSleep(true);
+        }
+#elif defined CONFIG_SCREEN_TYPE_RM69A10
+        if (status_.rm69a10.init_flag) {
+          result &= chip_.rm69a10->SetBrightness(0);
+          result &= chip_.rm69a10->SetScreenOff(true);
+          result &= chip_.rm69a10->SetSleep(true);
+        }
+        if (status_.gt9895.init_flag) {
+          result &= chip_.gt9895->SetSleep();
+        }
+#endif
+
+        if (status_.es8311.init_flag) {
+          cpp_bus_driver::Es8311::PowerStatus ps = {
+              .contorl =
+                  {
+                      .analog_circuits = false,
+                      .analog_bias_circuits = false,
+                      .analog_adc_bias_circuits = false,
+                      .analog_adc_reference_circuits = false,
+                      .analog_dac_reference_circuit = false,
+                      .internal_reference_circuits = false,
+                  },
+              .vmid = cpp_bus_driver::Es8311::Vmid::kPowerDown,
+          };
+          result &= chip_.es8311->SetOutputToHpDrive(false);
+          result &= chip_.es8311->SetPgaPower(false);
+          result &= chip_.es8311->SetAdcPower(false);
+          result &= chip_.es8311->SetDacPower(false);
+          result &= chip_.es8311->SetPowerStatus(ps);
+        }
+
+        if (status_.icm20948.init_flag) {
+          chip_.icm20948->sleep(true);
+        }
+
+        if (status_.l76k.init_flag) {
+          result &= chip_.l76k->Sleep(true);
+        }
+
+        if (status_.sx1262.init_flag) {
+          result &= chip_.sx1262->SetStandby(
+              cpp_bus_driver::Sx126x::StdbyConfig::kStdbyRc);
+          result &= chip_.sx1262->SetSleep(
+              cpp_bus_driver::Sx126x::SleepMode::kWarmStart);
+        }
+
+        if (status_.sgm38121.init_flag) {
+          result &= chip_.sgm38121->SetChannelStatus(
+              cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+              cpp_bus_driver::Sgm38121::Status::kOff);
+          result &= chip_.sgm38121->SetChannelStatus(
+              cpp_bus_driver::Sgm38121::Channel::kDvdd2,
+              cpp_bus_driver::Sgm38121::Status::kOff);
+          result &= chip_.sgm38121->SetChannelStatus(
+              cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+              cpp_bus_driver::Sgm38121::Status::kOff);
+          result &= chip_.sgm38121->SetChannelStatus(
+              cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+              cpp_bus_driver::Sgm38121::Status::kOff);
+        }
+
+#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+        if (status_.cc1101.init_flag) {
+          int16_t ret = chip_.cc1101->sleep();
+          if (ret != RADIOLIB_ERR_NONE) {
+            LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+                "cc1101 sleep failed (error code: %d)\n", ret);
+            result = false;
+          }
+        }
+
+        if (status_.nrf24l01.init_flag) {
+          int16_t ret = chip_.nrf24l01->sleep();
+          if (ret != RADIOLIB_ERR_NONE) {
+            LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+                "nrf24l01 sleep failed (error code: %d)\n", ret);
+            result = false;
+          }
+        }
+
+        if (status_.tca8418_backlight.init_flag) {
+          result &= chip_.tca8418_backlight->Stop(0);
+        }
+
+#endif
+
+        if (status_.xl9535.init_flag) {
+          result &= chip_.xl9535->PinWrite(
+              XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kLow);
+          result &= chip_.xl9535->PinWrite(
+              XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
+          result &= chip_.xl9535->PinWrite(
+              XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
+        }
+      } else {
+        if (status_.xl9535.init_flag) {
+          result &= chip_.xl9535->PinWrite(
+              XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
+          result &= chip_.xl9535->PinWrite(
+              XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kLow);
+          result &= chip_.xl9535->PinWrite(
+              XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
+        }
+
+#if defined CONFIG_SCREEN_TYPE_HI8561
+        if (status_.hi8561.init_flag) {
+          result &= chip_.hi8561->SetSleep(false);
+          result &= chip_.hi8561->SetScreenOff(false);
+        }
+#elif defined CONFIG_SCREEN_TYPE_RM69A10
+        if (status_.rm69a10.init_flag) {
+          result &= chip_.rm69a10->SetSleep(false);
+          result &= chip_.rm69a10->SetScreenOff(false);
+        }
+        if (status_.gt9895.init_flag) {
+          result &= InitGt9895();
+        }
+#endif
+
+        if (status_.es8311.init_flag) {
+          if (status_.es8311.init_flag) {
+            cpp_bus_driver::Es8311::PowerStatus ps = {
+                .contorl =
+                    {
+                        .analog_circuits = true,
+                        .analog_bias_circuits = true,
+                        .analog_adc_bias_circuits = true,
+                        .analog_adc_reference_circuits = true,
+                        .analog_dac_reference_circuit = true,
+                        .internal_reference_circuits = false,
+                    },
+                .vmid =
+                    cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
+            };
+            result &= chip_.es8311->SetOutputToHpDrive(true);
+            result &= chip_.es8311->SetPgaPower(true);
+            result &= chip_.es8311->SetAdcPower(true);
+            result &= chip_.es8311->SetDacPower(true);
+            result &= chip_.es8311->SetPowerStatus(ps);
+          }
+        }
+
+        if (status_.icm20948.init_flag) {
+          chip_.icm20948->sleep(false);
+        }
+
+        if (status_.l76k.init_flag) {
+          result &= chip_.l76k->Sleep(false);
+        }
+
+        if (status_.sx1262.init_flag) {
+          // 唤醒
+          result &= tool_->PinWrite(SX1262_CS, 1);
+          tool_->DelayMs(10);
+          result &= tool_->PinWrite(SX1262_CS, 0);
+          tool_->DelayMs(10);
+          result &= tool_->PinWrite(SX1262_CS, 1);
+          tool_->DelayMs(10);
+        }
+
+        if (status_.sgm38121.init_flag) {
+          result &= chip_.sgm38121->SetChannelStatus(
+              cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+              cpp_bus_driver::Sgm38121::Status::kOn);
+          result &= chip_.sgm38121->SetChannelStatus(
+              cpp_bus_driver::Sgm38121::Channel::kDvdd2,
+              cpp_bus_driver::Sgm38121::Status::kOn);
+          result &= chip_.sgm38121->SetChannelStatus(
+              cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+              cpp_bus_driver::Sgm38121::Status::kOn);
+          result &= chip_.sgm38121->SetChannelStatus(
+              cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+              cpp_bus_driver::Sgm38121::Status::kOn);
+        }
+      }
+      break;
+    case SleepLevel::kPowerOff:
+      if (enable) {
+        if (status_.icm20948.init_flag) {
+          chip_.icm20948->sleep(true);
+        }
+
+        if (status_.l76k.init_flag) {
+          result &= chip_.l76k->Sleep(true);
+        }
+
+        if (status_.sx1262.init_flag) {
+          result &= chip_.sx1262->SetStandby(
+              cpp_bus_driver::Sx126x::StdbyConfig::kStdbyRc);
+          result &= chip_.sx1262->SetSleep(
+              cpp_bus_driver::Sx126x::SleepMode::kWarmStart);
+        }
+
+#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+        if (status_.xl9555.init_flag) {
+          result &= chip_.xl9555->PinWrite(
+              XL9555_LED_1, cpp_bus_driver::Xl95x5::Value::kHigh);
+          result &= chip_.xl9555->PinWrite(
+              XL9555_LED_2, cpp_bus_driver::Xl95x5::Value::kHigh);
+          result &= chip_.xl9555->PinWrite(
+              XL9555_LED_3, cpp_bus_driver::Xl95x5::Value::kHigh);
+          result &= chip_.xl9555->PinWrite(
+              XL9555_T_MIXRF_EN, cpp_bus_driver::Xl95x5::Value::kLow);
+          result &= chip_.xl9555->PinWrite(
+              XL9555_TCA8418_RST, cpp_bus_driver::Xl95x5::Value::kLow);
+        }
+#endif
+        if (status_.xl9535.init_flag) {
+          result &= chip_.xl9535->PinWrite(
+              XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Value::kLow);
+          result &= chip_.xl9535->PinWrite(
+              XL9535_TOUCH_RST, cpp_bus_driver::Xl95x5::Value::kLow);
+          result &= chip_.xl9535->PinWrite(
+              XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kLow);
+          result &= chip_.xl9535->PinWrite(
+              XL9535_ETHERNET_RST, cpp_bus_driver::Xl95x5::Value::kLow);
+          result &= chip_.xl9535->PinWrite(
+              XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Value::kLow);
+          result &= chip_.xl9535->PinWrite(
+              XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
+          result &= chip_.xl9535->PinWrite(
+              XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
+          result &= chip_.xl9535->PinWrite(
+              XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
+
+          for (size_t i = 0; i < GPIO_NUM_MAX; i++) {
+            result &=
+                tool_->SetPinMode(i, cpp_bus_driver::Tool::PinMode::kDisable,
+                    cpp_bus_driver::Tool::PinStatus ::kDisable);
+          }
+        }
+      } else {
+        result &= InitDrivers(InitMode::kAsync);
+      }
+      break;
+
+    default:
+      break;
+  }
+
+  return result;
+}
+
 bool TDisplayP4Driver::InitEsp32p4() {
-  bool result = false;
+  bool result = true;
 
 #if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
   result &= tool_->SetPinMode(
@@ -416,7 +678,7 @@ bool TDisplayP4Driver::InitEsp32p4() {
 }
 
 bool TDisplayP4Driver::InitPower() {
-  bool result = false;
+  bool result = true;
   result &= InitLdoPower(3, 2500);
   result &= InitLdoPower(4, 3300);
   return result;
@@ -432,17 +694,36 @@ bool TDisplayP4Driver::InitBq25896() {
         "InitBq25896 failed (error code: %#X)\n", ret);
     return false;
   } else {
-    status_.bq25896.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitBq25896 success\n");
+    bool result = true;
 
-    kode_bq25896::bq25896_set_input_current_limit(chip_.bq25896_handle,
+    ret = kode_bq25896::bq25896_set_input_current_limit(chip_.bq25896_handle,
         kode_bq25896::bq25896_ilim_t::BQ25896_ILIM_2000MA);
+    if (ret != ESP_OK) {
+      result = false;
+      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+          "bq25896_set_input_current_limit failed (error code: %#X)\n", ret);
+    }
     // 禁用看门狗后不能读取看门狗寄存器状态，否则看门狗禁用会失效
-    kode_bq25896::bq25896_set_watchdog_timer(chip_.bq25896_handle,
+    ret = kode_bq25896::bq25896_set_watchdog_timer(chip_.bq25896_handle,
         kode_bq25896::bq25896_watchdog_t::BQ25896_WATCHDOG_DISABLE);
-    kode_bq25896::bq25896_set_charge_current(
+    if (ret != ESP_OK) {
+      result = false;
+      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+          "bq25896_set_watchdog_timer failed (error code: %#X)\n", ret);
+    }
+    ret = kode_bq25896::bq25896_set_charge_current(
         chip_.bq25896_handle, kode_bq25896::bq25896_ichg_t::BQ25896_ICHG_512MA);
-    return true;
+    if (ret != ESP_OK) {
+      result = false;
+      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+          "bq25896_set_charge_current failed (error code: %#X)\n", ret);
+    }
+
+    status_.bq25896.init_flag = result;
+    if (result) {
+      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitBq25896 success\n");
+    }
+    return result;
   }
 }
 #endif
@@ -454,13 +735,18 @@ bool TDisplayP4Driver::InitBq27220() {
     return false;
   } else {
     // 设置的电池容量会在没有电池插入的时候自动还原为默认值
-    chip_.bq27220->SetDesignCapacity(1000);
-    chip_.bq27220->SetTemperatureMode(
+    bool result = true;
+    result &= chip_.bq27220->SetDesignCapacity(1000);
+    result &= chip_.bq27220->SetTemperatureMode(
         cpp_bus_driver::Bq27220xxxx::TemperatureMode::kExternalNtc);
 
-    status_.bq27220.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitBq27220 success\n");
-    return true;
+    status_.bq27220.init_flag = result;
+    if (result) {
+      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitBq27220 success\n");
+    } else {
+      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitBq27220 failed\n");
+    }
+    return result;
   }
 }
 
@@ -482,107 +768,106 @@ bool TDisplayP4Driver::ConfigXl9535() {
     return false;
   }
 
-  chip_.xl9535->SetPinMode(
+  bool result = true;
+  result &= chip_.xl9535->SetPinMode(
       XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetPinMode(
       XL9535_TOUCH_RST, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetPinMode(
       XL9535_ESP32P4_VCCA_POWER_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetPinMode(
       XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetPinMode(
       XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetPinMode(
       XL9535_GPS_WAKE_UP, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetPinMode(
       XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetPinMode(
       XL9535_ETHERNET_RST, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9535->SetPinMode(XL9535_SD_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetPinMode(
+      XL9535_SD_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9535->SetPinMode(
       XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetPinMode(
       XL9535_SKY13453_VCTL, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9535->SetPinMode(
-      XL9535_EXTERNAL_SENSOR_INT, cpp_bus_driver::Xl95x5::Mode::kInput);
-  chip_.xl9535->SetPinMode(
+  result &= chip_.xl9535->SetPinMode(
+      XL9535_ICM20948_INT, cpp_bus_driver::Xl95x5::Mode::kInput);
+  result &= chip_.xl9535->SetPinMode(
       XL9535_SX1262_DIO1, cpp_bus_driver::Xl95x5::Mode::kInput);
 
-  chip_.xl9535->PinWrite(
-      XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-  chip_.xl9535->PinWrite(XL9535_TOUCH_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-  chip_.xl9535->PinWrite(
-      XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-  chip_.xl9535->PinWrite(
-      XL9535_ETHERNET_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-  chip_.xl9535->PinWrite(
-      XL9535_GPS_WAKE_UP, cpp_bus_driver::Xl95x5::Value::kLow);
-  chip_.xl9535->PinWrite(
-      XL9535_ESP32P4_VCCA_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
+  result &= chip_.xl9535->PinWrite(
+      XL9535_ESP32P4_VCCA_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
   // 默认使用RF1天线
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_SKY13453_VCTL, cpp_bus_driver::Xl95x5::Value::kHigh);
 
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(200);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(200);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(200);
 
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_TOUCH_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_ETHERNET_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_GPS_WAKE_UP, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kLow);
+  result &=
+      chip_.xl9535->PinWrite(XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(100);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-  chip_.xl9535->PinWrite(XL9535_TOUCH_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
+      XL9535_TOUCH_RST, cpp_bus_driver::Xl95x5::Value::kLow);
+  result &= chip_.xl9535->PinWrite(
       XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_ETHERNET_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_GPS_WAKE_UP, cpp_bus_driver::Xl95x5::Value::kLow);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-  chip_.xl9535->PinWrite(XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
+  result &= chip_.xl9535->PinWrite(
+      XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(100);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_TOUCH_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_ESP32C6_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_ETHERNET_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_GPS_WAKE_UP, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(
+  result &= chip_.xl9535->PinWrite(
       XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9535->PinWrite(XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kLow);
+  result &=
+      chip_.xl9535->PinWrite(XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(1000);
 
-  return true;
+  if (!result) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigXl9535 failed\n");
+  }
+  return result;
 }
 
 bool TDisplayP4Driver::InitSgm38121() {
@@ -591,46 +876,59 @@ bool TDisplayP4Driver::InitSgm38121() {
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitSgm38121 failed\n");
     return false;
   } else {
+    bool result = true;
 #if defined CONFIG_CAMERA_TYPE_SC2336
-    chip_.sgm38121->SetOutputVoltage(
+    result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
-    chip_.sgm38121->SetOutputVoltage(
+    result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
-    chip_.sgm38121->SetChannelStatus(cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+    result &= chip_.sgm38121->SetChannelStatus(
+        cpp_bus_driver::Sgm38121::Channel::kAvdd1,
         cpp_bus_driver::Sgm38121::Status::kOn);
-    chip_.sgm38121->SetChannelStatus(cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+    result &= chip_.sgm38121->SetChannelStatus(
+        cpp_bus_driver::Sgm38121::Channel::kAvdd2,
         cpp_bus_driver::Sgm38121::Status::kOn);
 #elif defined CONFIG_CAMERA_TYPE_OV2710
-    chip_.sgm38121->SetOutputVoltage(
+    result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
-    chip_.sgm38121->SetOutputVoltage(
+    result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
-    chip_.sgm38121->SetOutputVoltage(
+    result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3000);
-    chip_.sgm38121->SetChannelStatus(cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+    result &= chip_.sgm38121->SetChannelStatus(
+        cpp_bus_driver::Sgm38121::Channel::kDvdd1,
         cpp_bus_driver::Sgm38121::Status::kOn);
-    chip_.sgm38121->SetChannelStatus(cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+    result &= chip_.sgm38121->SetChannelStatus(
+        cpp_bus_driver::Sgm38121::Channel::kAvdd1,
         cpp_bus_driver::Sgm38121::Status::kOn);
-    chip_.sgm38121->SetChannelStatus(cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+    result &= chip_.sgm38121->SetChannelStatus(
+        cpp_bus_driver::Sgm38121::Channel::kAvdd2,
         cpp_bus_driver::Sgm38121::Status::kOn);
 #elif defined CONFIG_CAMERA_TYPE_OV5645
-    chip_.sgm38121->SetOutputVoltage(
+    result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
-    chip_.sgm38121->SetOutputVoltage(
+    result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
-    chip_.sgm38121->SetOutputVoltage(
+    result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
-    chip_.sgm38121->SetChannelStatus(cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+    result &= chip_.sgm38121->SetChannelStatus(
+        cpp_bus_driver::Sgm38121::Channel::kDvdd1,
         cpp_bus_driver::Sgm38121::Status::kOn);
-    chip_.sgm38121->SetChannelStatus(cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+    result &= chip_.sgm38121->SetChannelStatus(
+        cpp_bus_driver::Sgm38121::Channel::kAvdd1,
         cpp_bus_driver::Sgm38121::Status::kOn);
-    chip_.sgm38121->SetChannelStatus(cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+    result &= chip_.sgm38121->SetChannelStatus(
+        cpp_bus_driver::Sgm38121::Channel::kAvdd2,
         cpp_bus_driver::Sgm38121::Status::kOn);
 #endif
 
-    status_.sgm38121.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSgm38121 success\n");
-    return true;
+    status_.sgm38121.init_flag = result;
+    if (result) {
+      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSgm38121 success\n");
+    } else {
+      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitSgm38121 failed\n");
+    }
+    return result;
   }
 }
 
@@ -763,48 +1061,76 @@ bool TDisplayP4Driver::ConfigEs8311() {
           },
       .vmid = cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
   };
-  chip_.es8311->SetPowerStatus(ps);
-  chip_.es8311->SetPgaPower(true);
-  chip_.es8311->SetAdcPower(true);
-  chip_.es8311->SetDacPower(true);
-  chip_.es8311->SetOutputToHpDrive(true);
-  chip_.es8311->SetAdcOffsetFreeze(
+  bool result = true;
+  result &= chip_.es8311->SetPowerStatus(ps);
+  result &= chip_.es8311->SetPgaPower(true);
+  result &= chip_.es8311->SetAdcPower(true);
+  result &= chip_.es8311->SetDacPower(true);
+  result &= chip_.es8311->SetOutputToHpDrive(true);
+  result &= chip_.es8311->SetAdcOffsetFreeze(
       cpp_bus_driver::Es8311::AdcOffsetFreeze::kDynamicHpf);
-  chip_.es8311->SetAdcHpfStage2Coeff(10);
-  chip_.es8311->SetDacEqualizer(false);
-  chip_.es8311->SetMic(cpp_bus_driver::Es8311::MicType::kAnalogMic,
+  result &= chip_.es8311->SetAdcHpfStage2Coeff(10);
+  result &= chip_.es8311->SetDacEqualizer(false);
+  result &= chip_.es8311->SetMic(cpp_bus_driver::Es8311::MicType::kAnalogMic,
       cpp_bus_driver::Es8311::MicInput::kMic1p1n);
-  chip_.es8311->SetAdcAutoVolumeControl(false);
-  chip_.es8311->SetAdcGain(cpp_bus_driver::Es8311::AdcGain::kGain18db);
-  chip_.es8311->SetAdcPgaGain(cpp_bus_driver::Es8311::AdcPgaGain::kGain30db);
-  chip_.es8311->SetAdcVolume(191);
-  chip_.es8311->SetDacVolume(191);
+  result &= chip_.es8311->SetAdcAutoVolumeControl(false);
+  result &=
+      chip_.es8311->SetAdcGain(cpp_bus_driver::Es8311::AdcGain::kGain18db);
+  result &= chip_.es8311->SetAdcPgaGain(
+      cpp_bus_driver::Es8311::AdcPgaGain::kGain30db);
+  result &= chip_.es8311->SetAdcVolume(191);
+  result &= chip_.es8311->SetDacVolume(191);
 
-  return true;
+  if (!result) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigEs8311 failed\n");
+  }
+  return result;
 }
 
 bool TDisplayP4Driver::InitL76k() {
   if (!chip_.l76k->Init()) {
-    bus_.l76k_uart_bus->SetBaudRate(115200);
+    if (!bus_.l76k_uart_bus->SetBaudRate(115200)) {
+      status_.l76k.init_flag = false;
+      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "SetBaudRate failed\n");
+      return false;
+    }
     if (!chip_.l76k->Init()) {
       status_.l76k.init_flag = false;
       LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitL76k failed\n");
       return false;
     } else {
-      status_.l76k.init_flag = true;
-      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitL76k success\n");
-      return true;
+      bool result = true;
+      result &=
+          chip_.l76k->SetBaudRate(cpp_bus_driver::L76k::BaudRate::kBr115200Bps);
+      result &= chip_.l76k->SetUpdateFrequency(
+          cpp_bus_driver::L76k::UpdateFreq::kFreq5Hz);
+      result &= chip_.l76k->ClearRxBufferData();
+
+      status_.l76k.init_flag = result;
+      if (result) {
+        LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitL76k success\n");
+      } else {
+        LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitL76k failed\n");
+      }
+      return result;
     }
 
   } else {
-    chip_.l76k->SetBaudRate(cpp_bus_driver::L76k::BaudRate::kBr115200Bps);
+    bool result = true;
+    result &=
+        chip_.l76k->SetBaudRate(cpp_bus_driver::L76k::BaudRate::kBr115200Bps);
 
-    chip_.l76k->SetUpdateFrequency(cpp_bus_driver::L76k::UpdateFreq::kFreq5Hz);
-    chip_.l76k->ClearRxBufferData();
+    result &= chip_.l76k->SetUpdateFrequency(
+        cpp_bus_driver::L76k::UpdateFreq::kFreq5Hz);
+    result &= chip_.l76k->ClearRxBufferData();
 
-    status_.l76k.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitL76k success\n");
-    return true;
+    status_.l76k.init_flag = result;
+    if (result) {
+      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitL76k success\n");
+    } else {
+      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitL76k failed\n");
+    }
+    return result;
   }
 }
 
@@ -865,38 +1191,47 @@ bool TDisplayP4Driver::ConfigXl9555() {
     return false;
   }
 
-  chip_.xl9555->SetPinMode(XL9555_LED_1, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9555->SetPinMode(XL9555_LED_2, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9555->SetPinMode(XL9555_LED_3, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9555->SetPinMode(
+  bool result = true;
+  result &= chip_.xl9555->SetPinMode(
+      XL9555_LED_1, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9555->SetPinMode(
+      XL9555_LED_2, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9555->SetPinMode(
+      XL9555_LED_3, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9555->SetPinMode(
       XL9555_TCA8418_RST, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9555->SetPinMode(
+  result &= chip_.xl9555->SetPinMode(
       XL9555_T_MIXRF_EN, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9555->SetPinMode(
+  result &= chip_.xl9555->SetPinMode(
       XL9555_T_MIXRF_CC1101_RF_SWITCH_0, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  chip_.xl9555->SetPinMode(
+  result &= chip_.xl9555->SetPinMode(
       XL9555_T_MIXRF_CC1101_RF_SWITCH_1, cpp_bus_driver::Xl95x5::Mode::kOutput);
 
-  chip_.xl9555->PinWrite(
+  result &= chip_.xl9555->PinWrite(
       XL9555_LED_1, cpp_bus_driver::Xl95x5::Value::kHigh);  // 关闭led
-  chip_.xl9555->PinWrite(XL9555_LED_2, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9555->PinWrite(XL9555_LED_3, cpp_bus_driver::Xl95x5::Value::kHigh);
-  chip_.xl9555->PinWrite(
+  result &= chip_.xl9555->PinWrite(
+      XL9555_LED_2, cpp_bus_driver::Xl95x5::Value::kHigh);
+  result &= chip_.xl9555->PinWrite(
+      XL9555_LED_3, cpp_bus_driver::Xl95x5::Value::kHigh);
+  result &= chip_.xl9555->PinWrite(
       XL9555_T_MIXRF_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
 
-  SetCc1101RfSwitch(Cc1101RfSwitch::k868_915Mhz);
+  result &= SetCc1101RfSwitch(Cc1101RfSwitch::k868_915Mhz);
 
-  chip_.xl9555->PinWrite(
+  result &= chip_.xl9555->PinWrite(
       XL9555_TCA8418_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(10);
-  chip_.xl9555->PinWrite(
+  result &= chip_.xl9555->PinWrite(
       XL9555_TCA8418_RST, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(10);
-  chip_.xl9555->PinWrite(
+  result &= chip_.xl9555->PinWrite(
       XL9555_TCA8418_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(10);
 
-  return true;
+  if (!result) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigXl9555 failed\n");
+  }
+  return result;
 }
 
 bool TDisplayP4Driver::InitTca8418() {
@@ -905,14 +1240,21 @@ bool TDisplayP4Driver::InitTca8418() {
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitTca8418 failed\n");
     return false;
   } else {
-    chip_.tca8418->SetKeypadScanWindow(
+    bool result = true;
+    result &= chip_.tca8418->SetKeypadScanWindow(
         0, 0, TCA8418_KEYPAD_SCAN_WIDTH, TCA8418_KEYPAD_SCAN_HEIGHT);
-    chip_.tca8418->SetIrqPinMode(cpp_bus_driver::Tca8418::IrqMask::kKeyEvents);
-    chip_.tca8418->ClearIrqFlag(cpp_bus_driver::Tca8418::IrqFlag::kKeyEvents);
+    result &= chip_.tca8418->SetIrqPinMode(
+        cpp_bus_driver::Tca8418::IrqMask::kKeyEvents);
+    result &= chip_.tca8418->ClearIrqFlag(
+        cpp_bus_driver::Tca8418::IrqFlag::kKeyEvents);
 
-    status_.tca8418.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitTca8418 success\n");
-    return true;
+    status_.tca8418.init_flag = result;
+    if (result) {
+      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitTca8418 success\n");
+    } else {
+      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitTca8418 failed\n");
+    }
+    return result;
   }
 }
 
@@ -954,31 +1296,37 @@ bool TDisplayP4Driver::SetCc1101RfSwitch(Cc1101RfSwitch rf_switch) {
     return false;
   }
 
+  bool result = true;
   switch (rf_switch) {
     case Cc1101RfSwitch::k315Mhz:
-      chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_0,
+      result &= chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_0,
           cpp_bus_driver::Xl95x5::Value::kLow);
-      chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_1,
+      result &= chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_1,
           cpp_bus_driver::Xl95x5::Value::kHigh);
       break;
     case Cc1101RfSwitch::k434Mhz:
-      chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_0,
+      result &= chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_0,
           cpp_bus_driver::Xl95x5::Value::kHigh);
-      chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_1,
+      result &= chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_1,
           cpp_bus_driver::Xl95x5::Value::kHigh);
       break;
     case Cc1101RfSwitch::k868_915Mhz:
-      chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_0,
+      result &= chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_0,
           cpp_bus_driver::Xl95x5::Value::kHigh);
-      chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_1,
+      result &= chip_.xl9555->PinWrite(XL9555_T_MIXRF_CC1101_RF_SWITCH_1,
           cpp_bus_driver::Xl95x5::Value::kLow);
       break;
 
     default:
+      result = false;
       break;
   }
 
-  return true;
+  if (!result) {
+    LogMessage(
+        LogLevel::kChip, __FILE__, __LINE__, "SetCc1101RfSwitch failed\n");
+  }
+  return result;
 }
 
 bool TDisplayP4Driver::InitNrf24l01() {
@@ -1017,7 +1365,6 @@ bool TDisplayP4Driver::InitSpiffs(
       LogMessage(LogLevel::kChip, __FILE__, __LINE__,
           "Failed to initialize spiffs (error code: %#X)\n", result);
     }
-    status_.spiffs.init_flag = false;
     return false;
   }
 
@@ -1029,7 +1376,6 @@ bool TDisplayP4Driver::InitSpiffs(
         "formatting...\n",
         result);
     esp_spiffs_format(conf.partition_label);
-    status_.spiffs.init_flag = false;
     return false;
   }
 
@@ -1045,7 +1391,6 @@ bool TDisplayP4Driver::InitSpiffs(
       LogMessage(LogLevel::kChip, __FILE__, __LINE__,
           "esp_spiffs_check failed (error code: %#X)\n", result);
       return false;
-      status_.spiffs.init_flag = false;
     } else {
       LogMessage(
           LogLevel::kChip, __FILE__, __LINE__, "esp_spiffs_check success\n");
@@ -1053,7 +1398,6 @@ bool TDisplayP4Driver::InitSpiffs(
   }
 
   spiffs_conf = conf;
-  status_.spiffs.init_flag = true;
   return true;
 }
 
