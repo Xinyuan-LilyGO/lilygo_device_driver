@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-04-29 10:25:18
+ * @LastEditTime: 2026-04-29 18:15:49
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -272,7 +272,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
           self->InitIcm20948();
           vTaskDelete(NULL);
         },
-        "InitIcm20948Task", 2048, this, 3, NULL);
+        "InitIcm20948Task", 4096, this, 3, NULL);
 
     xTaskCreate(
         [](void* arg) {
@@ -629,19 +629,76 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.xl9535->GpioWrite(
               XL9535_ETHERNET_RST, cpp_bus_driver::Xl95x5::Value::kLow);
           result &= chip_.xl9535->GpioWrite(
-              XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Value::kLow);
-          result &= chip_.xl9535->GpioWrite(
               XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
           result &= chip_.xl9535->GpioWrite(
               XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
           result &= chip_.xl9535->GpioWrite(
               XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
 
-          for (size_t i = 0; i < GPIO_NUM_MAX; i++) {
-            result &=
-                tool_->SetGpioMode(i, cpp_bus_driver::Tool::GpioMode::kDisable,
-                    cpp_bus_driver::Tool::GpioStatus ::kDisable);
-          }
+          result &= bus_.aw86224_i2c_bus->Deinit();
+          status_.aw86224.init_flag = false;
+          result &= bus_.es8311_i2c_bus->Deinit();
+          result &= bus_.es8311_i2s_bus->Deinit();
+          status_.es8311.init_flag = false;
+          result &= bus_.icm20948_i2c_bus->end(false);
+          status_.icm20948.init_flag = false;
+
+#if defined CONFIG_SCREEN_TYPE_HI8561
+          result &= bus_.hi8561_i2c_touch_bus->Deinit();
+          status_.hi8561_touch.init_flag = false;
+          result &= chip_.hi8561_backlight->Stop(0);
+          status_.hi8561_backlight.init_flag = false;
+#elif defined CONFIG_SCREEN_TYPE_RM69A10
+          result &= bus_.gt9895_i2c_touch_bus->Deinit();
+          status_.gt9895.init_flag = false;
+#endif
+
+          result &= bus_.bq27220_i2c_bus->Deinit();
+          status_.bq27220.init_flag = false;
+          result &= bus_.pcf8563_i2c_bus->Deinit();
+          status_.pcf8563.init_flag = false;
+
+#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+          result &= bus_.xl9555_i2c_bus->Deinit();
+          status_.xl9555.init_flag = false;
+          result &= bus_.tca8418_i2c_bus->Deinit();
+          status_.tca8418.init_flag = false;
+          result &= chip_.tca8418_backlight->Stop(0);
+          status_.tca8418_backlight.init_flag = false;
+#endif
+
+#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0
+          result &= bus_.bq25896_i2c_bus->Deinit();
+          status_.bq25896.init_flag = false;
+#endif
+
+          result &= bus_.sgm38121_i2c_bus->Deinit(true);
+          status_.sgm38121.init_flag = false;
+          result &= bus_.xl9535_i2c_bus->Deinit(true);
+          status_.xl9535.init_flag = false;
+
+#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+          result &= bus_.cc1101_spi_bus->Deinit();
+          status_.cc1101.init_flag = false;
+          result &= bus_.nrf24l01_spi_bus->Deinit();
+          status_.nrf24l01.init_flag = false;
+#endif
+
+          result &= bus_.sx1262_spi_bus->Deinit(true);
+          result &= tool_->SetGpioMode(SX1262_BUSY,
+              cpp_bus_driver::Tool::GpioMode::kDisable,
+              cpp_bus_driver::Tool::GpioStatus ::kDisable);
+          status_.sx1262.init_flag = false;
+          result &= bus_.l76k_uart_bus->Deinit();
+          status_.l76k.init_flag = false;
+
+          result &= bus_.screen_mipi_bus->Deinit();
+
+#if defined CONFIG_SCREEN_TYPE_HI8561
+          status_.hi8561.init_flag = false;
+#elif defined CONFIG_SCREEN_TYPE_RM69A10
+          status_.rm69a10.init_flag = false;
+#endif
         }
       } else {
         result &= InitDrivers(InitMode::kAsync);

@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-04-28 16:30:08
+ * @LastEditTime: 2026-04-29 14:59:25
  * @License: GPL 3.0
  */
 
@@ -114,10 +114,10 @@ class TDisplayP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> pcf8563_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> aw86224_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> es8311_i2c_bus;
+    std::unique_ptr<TwoWire> icm20948_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareUart> l76k_uart_bus;
-    std::unique_ptr<TwoWire> icm20948_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
 
 #if defined CONFIG_SCREEN_TYPE_HI8561
