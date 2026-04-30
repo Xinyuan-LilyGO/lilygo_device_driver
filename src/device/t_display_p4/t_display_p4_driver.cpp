@@ -69,13 +69,13 @@ void TDisplayP4Driver::CreateDrivers() {
 #endif
 
   chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220xxxx>(
-      bus_.bq27220_i2c_bus, BQ27220_IIC_ADDRESS);
+      bus_.bq27220_i2c_bus, BQ27220_I2C_ADDRESS);
 
   chip_.xl9535 = std::make_unique<cpp_bus_driver::Xl95x5>(
-      bus_.xl9535_i2c_bus, XL9535_IIC_ADDRESS);
+      bus_.xl9535_i2c_bus, XL9535_I2C_ADDRESS);
 
   chip_.sgm38121 = std::make_unique<cpp_bus_driver::Sgm38121>(
-      bus_.sgm38121_i2c_bus, SGM38121_IIC_ADDRESS);
+      bus_.sgm38121_i2c_bus, SGM38121_I2C_ADDRESS);
 
 #if defined CONFIG_SCREEN_TYPE_HI8561
   bus_.hi8561_i2c_touch_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
@@ -83,7 +83,7 @@ void TDisplayP4Driver::CreateDrivers() {
 
   chip_.hi8561 = std::make_unique<cpp_bus_driver::Hi8561>(bus_.screen_mipi_bus);
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
-      bus_.hi8561_i2c_touch_bus, HI8561_TOUCH_IIC_ADDRESS);
+      bus_.hi8561_i2c_touch_bus, HI8561_TOUCH_I2C_ADDRESS);
   chip_.hi8561_backlight =
       std::make_unique<cpp_bus_driver::Pwm>(HI8561_SCREEN_BL);
 #elif defined CONFIG_SCREEN_TYPE_RM69A10
@@ -94,20 +94,20 @@ void TDisplayP4Driver::CreateDrivers() {
       std::make_unique<cpp_bus_driver::Rm69a10>(bus_.screen_mipi_bus);
   chip_.gt9895 =
       std::make_unique<cpp_bus_driver::Gt9895>(bus_.gt9895_i2c_touch_bus,
-          GT9895_IIC_ADDRESS, -1, GT9895_X_SCALE_FACTOR, GT9895_Y_SCALE_FACTOR);
+          GT9895_I2C_ADDRESS, -1, GT9895_X_SCALE_FACTOR, GT9895_Y_SCALE_FACTOR);
 #endif
 
   chip_.pcf8563 = std::make_unique<cpp_bus_driver::Pcf8563x>(
-      bus_.pcf8563_i2c_bus, PCF8563_IIC_ADDRESS);
+      bus_.pcf8563_i2c_bus, PCF8563_I2C_ADDRESS);
 
   chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
-      bus_.aw86224_i2c_bus, AW86224_IIC_ADDRESS);
+      bus_.aw86224_i2c_bus, AW86224_I2C_ADDRESS);
 
   chip_.es8311 = std::make_unique<cpp_bus_driver::Es8311>(
-      bus_.es8311_i2c_bus, bus_.es8311_i2s_bus, ES8311_IIC_ADDRESS);
+      bus_.es8311_i2c_bus, bus_.es8311_i2s_bus, ES8311_I2C_ADDRESS);
 
   chip_.icm20948 = std::make_unique<ICM20948_WE>(
-      bus_.icm20948_i2c_bus.get(), ICM20948_IIC_ADDRESS);
+      bus_.icm20948_i2c_bus.get(), ICM20948_I2C_ADDRESS);
 
   chip_.l76k = std::make_unique<cpp_bus_driver::L76k>(
       bus_.l76k_uart_bus, [this](bool value) -> bool {
@@ -147,9 +147,9 @@ void TDisplayP4Driver::CreateDrivers() {
           static_cast<uint32_t>(RADIOLIB_NC));
 
   chip_.xl9555 = std::make_unique<cpp_bus_driver::Xl95x5>(
-      bus_.xl9555_i2c_bus, XL9555_IIC_ADDRESS);
+      bus_.xl9555_i2c_bus, XL9555_I2C_ADDRESS);
   chip_.tca8418 = std::make_unique<cpp_bus_driver::Tca8418>(
-      bus_.tca8418_i2c_bus, TCA8418_IIC_ADDRESS);
+      bus_.tca8418_i2c_bus, TCA8418_I2C_ADDRESS);
   chip_.tca8418_backlight = std::make_unique<cpp_bus_driver::Pwm>(TCA8418_BL);
 
   chip_.cc1101 = new CC1101(bus_.cc1101_module);

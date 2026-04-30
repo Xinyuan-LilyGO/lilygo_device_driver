@@ -77,10 +77,10 @@
 /////////////////////////////////////////////////////
 
 // XL9555
-#define XL9555_IIC_ADDRESS 0x20
+#define XL9555_I2C_ADDRESS 0x20
 
 // TCA8418
-#define TCA8418_IIC_ADDRESS 0x34
+#define TCA8418_I2C_ADDRESS 0x34
 #define TCA8418_KEYPAD_SCAN_WIDTH 10
 #define TCA8418_KEYPAD_SCAN_HEIGHT 7
 // TCA8418键盘按键映射
