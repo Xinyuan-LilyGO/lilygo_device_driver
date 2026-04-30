@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-04-29 18:15:49
+ * @LastEditTime: 2026-04-30 14:44:32
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -564,11 +564,11 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
 
         if (status_.sx1262.init_flag) {
           // 唤醒
-          result &= tool_->GpioWrite(SX1262_CS, 1);
+          tool_->GpioWrite(SX1262_CS, 1);
           tool_->DelayMs(10);
-          result &= tool_->GpioWrite(SX1262_CS, 0);
+          tool_->GpioWrite(SX1262_CS, 0);
           tool_->DelayMs(10);
-          result &= tool_->GpioWrite(SX1262_CS, 1);
+          tool_->GpioWrite(SX1262_CS, 1);
           tool_->DelayMs(10);
         }
 
@@ -635,33 +635,32 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.xl9535->GpioWrite(
               XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
 
-          result &= bus_.aw86224_i2c_bus->Deinit();
+          result &= chip_.aw86224->Deinit();
           status_.aw86224.init_flag = false;
-          result &= bus_.es8311_i2c_bus->Deinit();
-          result &= bus_.es8311_i2s_bus->Deinit();
+          result &= chip_.es8311->Deinit();
           status_.es8311.init_flag = false;
           result &= bus_.icm20948_i2c_bus->end(false);
           status_.icm20948.init_flag = false;
 
 #if defined CONFIG_SCREEN_TYPE_HI8561
-          result &= bus_.hi8561_i2c_touch_bus->Deinit();
+          result &= chip_.hi8561_touch->Deinit();
           status_.hi8561_touch.init_flag = false;
           result &= chip_.hi8561_backlight->Stop(0);
           status_.hi8561_backlight.init_flag = false;
 #elif defined CONFIG_SCREEN_TYPE_RM69A10
-          result &= bus_.gt9895_i2c_touch_bus->Deinit();
+          result &= chip_.gt9895->Deinit();
           status_.gt9895.init_flag = false;
 #endif
 
-          result &= bus_.bq27220_i2c_bus->Deinit();
+          result &= chip_.bq27220->Deinit();
           status_.bq27220.init_flag = false;
-          result &= bus_.pcf8563_i2c_bus->Deinit();
+          result &= chip_.pcf8563->Deinit();
           status_.pcf8563.init_flag = false;
 
 #if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
-          result &= bus_.xl9555_i2c_bus->Deinit();
+          result &= chip_.xl9555->Deinit();
           status_.xl9555.init_flag = false;
-          result &= bus_.tca8418_i2c_bus->Deinit();
+          result &= chip_.tca8418->Deinit();
           status_.tca8418.init_flag = false;
           result &= chip_.tca8418_backlight->Stop(0);
           status_.tca8418_backlight.init_flag = false;
@@ -672,9 +671,9 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           status_.bq25896.init_flag = false;
 #endif
 
-          result &= bus_.sgm38121_i2c_bus->Deinit(true);
+          result &= chip_.sgm38121->Deinit(true);
           status_.sgm38121.init_flag = false;
-          result &= bus_.xl9535_i2c_bus->Deinit(true);
+          result &= chip_.xl9535->Deinit(true);
           status_.xl9535.init_flag = false;
 
 #if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
@@ -684,19 +683,16 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           status_.nrf24l01.init_flag = false;
 #endif
 
-          result &= bus_.sx1262_spi_bus->Deinit(true);
-          result &= tool_->SetGpioMode(SX1262_BUSY,
-              cpp_bus_driver::Tool::GpioMode::kDisable,
-              cpp_bus_driver::Tool::GpioStatus ::kDisable);
+          result &= chip_.sx1262->Deinit(true);
           status_.sx1262.init_flag = false;
-          result &= bus_.l76k_uart_bus->Deinit();
+          result &= chip_.l76k->Deinit();
           status_.l76k.init_flag = false;
 
-          result &= bus_.screen_mipi_bus->Deinit();
-
 #if defined CONFIG_SCREEN_TYPE_HI8561
+          result &= chip_.hi8561->Deinit();
           status_.hi8561.init_flag = false;
 #elif defined CONFIG_SCREEN_TYPE_RM69A10
+          result &= chip_.rm69a10->Deinit();
           status_.rm69a10.init_flag = false;
 #endif
         }
@@ -716,17 +712,17 @@ bool TDisplayP4Driver::InitEsp32p4() {
   bool result = true;
 
 #if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
-  result &= tool_->SetGpioMode(
+  tool_->SetGpioMode(
       T_MIXRF_CC1101_CS, cpp_bus_driver::Tool::GpioMode::kOutput);
-  result &= tool_->SetGpioMode(
+  tool_->SetGpioMode(
       T_MIXRF_NRF24L01_CS, cpp_bus_driver::Tool::GpioMode::kOutput);
-  result &= tool_->SetGpioMode(
+  tool_->SetGpioMode(
       T_MIXRF_ST25R3916_CS, cpp_bus_driver::Tool::GpioMode::kOutput);
-  result &= tool_->GpioWrite(T_MIXRF_CC1101_CS, 1);
-  result &= tool_->GpioWrite(T_MIXRF_NRF24L01_CS, 1);
-  result &= tool_->GpioWrite(T_MIXRF_ST25R3916_CS, 1);
+  tool_->GpioWrite(T_MIXRF_CC1101_CS, 1);
+  tool_->GpioWrite(T_MIXRF_NRF24L01_CS, 1);
+  tool_->GpioWrite(T_MIXRF_ST25R3916_CS, 1);
 
-  result &= tool_->SetGpioMode(T_MIXRF_CC1101_BUSY,
+  tool_->SetGpioMode(T_MIXRF_CC1101_BUSY,
       cpp_bus_driver::Tool::GpioMode::kInput,
       cpp_bus_driver::Tool::GpioStatus::kPulldown);
 #endif
@@ -860,17 +856,11 @@ bool TDisplayP4Driver::ConfigXl9535() {
       XL9535_SKY13453_VCTL, cpp_bus_driver::Xl95x5::Value::kHigh);
 
   result &= chip_.xl9535->GpioWrite(
-      XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-  result &= chip_.xl9535->GpioWrite(
       XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-  tool_->DelayMs(200);
-  result &= chip_.xl9535->GpioWrite(
-      XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
+  tool_->DelayMs(100);
   result &= chip_.xl9535->GpioWrite(
       XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-  tool_->DelayMs(200);
-  result &= chip_.xl9535->GpioWrite(
-      XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
+  tool_->DelayMs(100);
   result &= chip_.xl9535->GpioWrite(
       XL9535_3_3_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(200);
@@ -889,7 +879,9 @@ bool TDisplayP4Driver::ConfigXl9535() {
       XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
       XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-  tool_->DelayMs(100);
+  result &= chip_.xl9535->GpioWrite(
+      XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
+  tool_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(
       XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Value::kLow);
   result &= chip_.xl9535->GpioWrite(
@@ -904,7 +896,9 @@ bool TDisplayP4Driver::ConfigXl9535() {
       XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Value::kLow);
   result &= chip_.xl9535->GpioWrite(
       XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
-  tool_->DelayMs(100);
+  result &= chip_.xl9535->GpioWrite(
+      XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kLow);
+  tool_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(
       XL9535_SCREEN_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
@@ -919,7 +913,9 @@ bool TDisplayP4Driver::ConfigXl9535() {
       XL9535_SX1262_RST, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
       XL9535_SD_EN, cpp_bus_driver::Xl95x5::Value::kLow);
-  tool_->DelayMs(1000);
+  result &= chip_.xl9535->GpioWrite(
+      XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
+  tool_->DelayMs(120);
 
   if (!result) {
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigXl9535 failed\n");
