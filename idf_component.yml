@@ -27,6 +27,6 @@ dependencies:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
   ICM20948_WE:
-    version: "^2.0.0"
+    version: "*"
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
