@@ -7,26 +7,26 @@ dependencies:
   idf: ">=5.5.3"
 
   cpp_bus_driver:
-    override_path: "../cpp_bus_driver"
-    matches:
-      - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
-
-  kode_bq25896:
-    override_path: "../kode_bq25896"
+    version: "^2.0.0"
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
   arduino_cpp_bus_driver:
-    override_path: "../arduino_cpp_bus_driver"
-    matches:
-      - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
-
-  ICM20948_WE:
-    override_path: "../ICM20948_WE"
+    version: "^2.0.0"
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
   radiolib_cpp_bus_driver:
-    override_path: "../radiolib_cpp_bus_driver"
+    version: "^2.0.0"
+    matches:
+      - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
+
+  kode_bq25896:
+    version: "^2.0.0"
+    matches:
+      - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
+
+  ICM20948_WE:
+    version: "^2.0.0"
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"

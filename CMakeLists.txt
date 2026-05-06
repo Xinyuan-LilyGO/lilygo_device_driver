@@ -36,9 +36,7 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
             "kode_bq25896" 
             "arduino_cpp_bus_driver" 
             "ICM20948_WE"
-            "radiolib_cpp_bus_driver"
-            "ST25R3916"
-            "NFC-RFAL" )
+            "radiolib_cpp_bus_driver")
 endif()
     
 idf_component_register(
