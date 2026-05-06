@@ -10,16 +10,16 @@
 
 #include "sdkconfig.h"
 
-#if defined CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4)
 #include "t_glasses_p4_driver.h"
 
-#elif defined CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR)
 #include "t_display_p4_air_driver.h"
 
-#elif defined CONFIG_LILYGO_DEVICE_DRIVER_T_SPE
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_T_SPE)
 #include "t_spe_driver.h"
 
-#elif defined CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
 #include "t_display_p4_driver.h"
 
 #else

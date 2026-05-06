@@ -10,33 +10,33 @@
 
 #include "esp32p4_driver.h"
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4)
 #include "t_display_p4_config.h"
 #define SCREEN_ROTATION_DIRECTION 0
-#elif defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#elif defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
 #include "t_display_p4_keyboard_config.h"
 #define SCREEN_ROTATION_DIRECTION 90
 #else
 #error "Missing required macro definition."
 #endif
 
-#if defined CONFIG_SCREEN_PIXEL_FORMAT_RGB565
+#if defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB565)
 #define SCREEN_BITS_PER_PIXEL 16
-#elif defined CONFIG_SCREEN_PIXEL_FORMAT_RGB888
+#elif defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB888)
 #define SCREEN_BITS_PER_PIXEL 24
 #else
 #error "Missing required macro definition."
 #endif
 
-#if defined CONFIG_CAMERA_PIXEL_FORMAT_RGB565
+#if defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB565)
 #define CAMERA_BITS_PER_PIXEL 16
-#elif defined CONFIG_CAMERA_PIXEL_FORMAT_RGB888
+#elif defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB888)
 #define CAMERA_BITS_PER_PIXEL 24
 #else
 #error "Missing required macro definition."
 #endif
 
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
 #define SCREEN_WIDTH HI8561_SCREEN_WIDTH
 #define SCREEN_HEIGHT HI8561_SCREEN_HEIGHT
 #define SCREEN_MIPI_DSI_DPI_CLK_MHZ HI8561_SCREEN_MIPI_DSI_DPI_CLK_MHZ
@@ -49,7 +49,7 @@
 #define SCREEN_DATA_LANE_NUM HI8561_SCREEN_DATA_LANE_NUM
 #define SCREEN_LANE_BIT_RATE_MBPS HI8561_SCREEN_LANE_BIT_RATE_MBPS
 
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
 #define SCREEN_WIDTH RM69A10_SCREEN_WIDTH
 #define SCREEN_HEIGHT RM69A10_SCREEN_HEIGHT
 #define SCREEN_MIPI_DSI_DPI_CLK_MHZ RM69A10_SCREEN_MIPI_DSI_DPI_CLK_MHZ
@@ -66,22 +66,22 @@
 #error "Missing required macro definition."
 #endif
 
-#if defined CONFIG_CAMERA_TYPE_SC2336
-#elif defined CONFIG_CAMERA_TYPE_OV2710
-#elif defined CONFIG_CAMERA_TYPE_OV5645
+#if defined(CONFIG_CAMERA_TYPE_SC2336)
+#elif defined(CONFIG_CAMERA_TYPE_OV2710)
+#elif defined(CONFIG_CAMERA_TYPE_OV5645)
 #else
 #error "Missing required macro definition."
 #endif
 
 #include "cpp_bus_driver_library.h"
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
 #include "radiolib_cpp_bus_driver_library.h"
 #endif
 
 #include "ICM20948_WE.h"
 
-#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0
+#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
 #include "kode_bq25896.h"
 #endif
 
@@ -95,7 +95,7 @@ class TDisplayP4Driver {
     kPowerOff,
   };
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
   enum class Cc1101RfSwitch {
     k315Mhz,
     k434Mhz,
@@ -104,7 +104,7 @@ class TDisplayP4Driver {
 #endif
 
   struct Bus {
-#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0
+#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> bq25896_i2c_bus;
 #endif
 
@@ -120,13 +120,13 @@ class TDisplayP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareUart> l76k_uart_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
 
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> hi8561_i2c_touch_bus;
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> gt9895_i2c_touch_bus;
 #endif
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
     std::shared_ptr<cpp_bus_driver::SoftwareI2c> xl9555_i2c_bus;
     std::shared_ptr<cpp_bus_driver::SoftwareI2c> tca8418_i2c_bus;
 
@@ -142,7 +142,7 @@ class TDisplayP4Driver {
   };
 
   struct Chip {
-#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0
+#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
     std::shared_ptr<kode_bq25896::bq25896_dev_t> bq25896_dev;
     kode_bq25896::bq25896_handle_t bq25896_handle = nullptr;
 #endif
@@ -157,16 +157,16 @@ class TDisplayP4Driver {
     std::unique_ptr<ICM20948_WE> icm20948;
     std::unique_ptr<cpp_bus_driver::Sx126x> sx1262;
 
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
     std::unique_ptr<cpp_bus_driver::Hi8561> hi8561;
     std::unique_ptr<cpp_bus_driver::Hi8561Touch> hi8561_touch;
     std::unique_ptr<cpp_bus_driver::Pwm> hi8561_backlight;
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
     std::unique_ptr<cpp_bus_driver::Rm69a10> rm69a10;
     std::unique_ptr<cpp_bus_driver::Gt9895> gt9895;
 #endif
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
 
     std::unique_ptr<cpp_bus_driver::Xl95x5> xl9555;
     std::unique_ptr<cpp_bus_driver::Tca8418> tca8418;
@@ -178,7 +178,7 @@ class TDisplayP4Driver {
   };
 
   struct Status {
-#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0
+#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
     struct {
       bool init_flag = false;
     } bq25896;
@@ -192,7 +192,7 @@ class TDisplayP4Driver {
       bool init_flag = false;
     } sgm38121;
 
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
     struct {
       bool init_flag = false;
     } hi8561;
@@ -204,7 +204,7 @@ class TDisplayP4Driver {
     struct {
       bool init_flag = false;
     } hi8561_backlight;
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
     struct {
       bool init_flag = false;
     } rm69a10;
@@ -242,7 +242,7 @@ class TDisplayP4Driver {
       bool init_flag = false;
     } sx1262;
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
     struct {
       bool init_flag = false;
     } xl9555;
@@ -283,7 +283,7 @@ class TDisplayP4Driver {
   bool InitEsp32p4();
   bool InitPower();
 
-#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0
+#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
   bool InitBq25896();
 #endif
 
@@ -292,11 +292,11 @@ class TDisplayP4Driver {
   bool ConfigXl9535();
   bool InitSgm38121();
 
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
   bool InitHi8561();
   bool InitHi8561Touch();
   bool InitHi8561Backlight();
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
   bool InitRm69a10();
   bool InitGt9895();
 #endif
@@ -309,7 +309,7 @@ class TDisplayP4Driver {
   bool InitIcm20948();
   bool InitSx1262();
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
   bool InitXl9555();
   bool ConfigXl9555();
   bool InitTca8418();

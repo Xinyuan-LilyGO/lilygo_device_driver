@@ -11,17 +11,17 @@
 #include "esp32p4_driver.h"
 #include "t_display_p4_air_config.h"
 
-#if defined CONFIG_SCREEN_PIXEL_FORMAT_RGB565
+#if defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB565)
 #define SCREEN_BITS_PER_PIXEL 16
-#elif defined CONFIG_SCREEN_PIXEL_FORMAT_RGB888
+#elif defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB888)
 #define SCREEN_BITS_PER_PIXEL 24
 #else
 #error "Missing required macro definition."
 #endif
 
-#if defined CONFIG_CAMERA_PIXEL_FORMAT_RGB565
+#if defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB565)
 #define CAMERA_BITS_PER_PIXEL 16
-#elif defined CONFIG_CAMERA_PIXEL_FORMAT_RGB888
+#elif defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB888)
 #define CAMERA_BITS_PER_PIXEL 24
 #else
 #error "Missing required macro definition."

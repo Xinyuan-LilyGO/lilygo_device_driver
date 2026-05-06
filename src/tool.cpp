@@ -10,13 +10,13 @@
 namespace lilygo_device_driver {
 void LogMessage(LogLevel level, const char* file_name, size_t line_number,
     const char* format, ...) {
-#if defined LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEVICE || \
-    defined LILYGO_DEVICE_DRIVER_LOG_LEVEL_CHIP ||   \
-    defined LILYGO_DEVICE_DRIVER_LOG_LEVEL_INFO ||   \
-    defined LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEBUG
+#if defined(LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEVICE) || \
+    defined(LILYGO_DEVICE_DRIVER_LOG_LEVEL_CHIP) ||   \
+    defined(LILYGO_DEVICE_DRIVER_LOG_LEVEL_INFO) ||   \
+    defined(LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEBUG)
 
   switch (level) {
-#if defined LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEBUG
+#if defined(LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEBUG)
     case LogLevel::kDebug: {
       va_list args;
       va_start(args, format);
@@ -30,7 +30,7 @@ void LogMessage(LogLevel level, const char* file_name, size_t line_number,
       break;
     }
 #endif
-#if defined LILYGO_DEVICE_DRIVER_LOG_LEVEL_INFO
+#if defined(LILYGO_DEVICE_DRIVER_LOG_LEVEL_INFO)
     case LogLevel::kInfo: {
       va_list args;
       va_start(args, format);
@@ -44,7 +44,7 @@ void LogMessage(LogLevel level, const char* file_name, size_t line_number,
       break;
     }
 #endif
-#if defined LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEVICE
+#if defined(LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEVICE)
     case LogLevel::kDebug: {
       va_list args;
       va_start(args, format);
@@ -58,7 +58,7 @@ void LogMessage(LogLevel level, const char* file_name, size_t line_number,
       break;
     }
 #endif
-#if defined LILYGO_DEVICE_DRIVER_LOG_LEVEL_CHIP
+#if defined(LILYGO_DEVICE_DRIVER_LOG_LEVEL_CHIP)
     case LogLevel::kChip: {
       va_list args;
       va_start(args, format);

@@ -60,7 +60,7 @@ void TDisplayP4Driver::CreateDrivers() {
   bus_.sx1262_spi_bus = std::make_shared<cpp_bus_driver::HardwareSpi>(
       SX1262_MOSI, SX1262_SCLK, SX1262_MISO, SPI2_HOST, 0);
 
-#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0
+#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
   bus_.bq25896_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
       BQ25896_SDA, BQ25896_SCL, I2C_NUM_0);
 
@@ -77,7 +77,7 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.sgm38121 = std::make_unique<cpp_bus_driver::Sgm38121>(
       bus_.sgm38121_i2c_bus, SGM38121_I2C_ADDRESS);
 
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
   bus_.hi8561_i2c_touch_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
       HI8561_TOUCH_SDA, HI8561_TOUCH_SCL, I2C_NUM_0);
 
@@ -86,7 +86,7 @@ void TDisplayP4Driver::CreateDrivers() {
       bus_.hi8561_i2c_touch_bus, HI8561_TOUCH_I2C_ADDRESS);
   chip_.hi8561_backlight =
       std::make_unique<cpp_bus_driver::Pwm>(HI8561_SCREEN_BL);
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
   bus_.gt9895_i2c_touch_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
       GT9895_SDA, GT9895_SCL, I2C_NUM_0);
 
@@ -118,7 +118,7 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.sx1262 = std::make_unique<cpp_bus_driver::Sx126x>(bus_.sx1262_spi_bus,
       cpp_bus_driver::Sx126x::ChipType::kSx1262, SX1262_BUSY, SX1262_CS);
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
   bus_.xl9555_i2c_bus =
       std::make_shared<cpp_bus_driver::SoftwareI2c>(XL9555_SDA, XL9555_SCL);
   bus_.tca8418_i2c_bus =
@@ -162,7 +162,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
   result &= InitEsp32p4();
 
-#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0
+#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
   InitBq25896();
   result &=
       bus_.xl9535_i2c_bus->set_bus_handle(bus_.bq25896_i2c_bus->bus_handle());
@@ -174,10 +174,10 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
   InitSgm38121();
 
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
   result &= bus_.hi8561_i2c_touch_bus->set_bus_handle(
       bus_.xl9535_i2c_bus->bus_handle());
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
   result &= bus_.gt9895_i2c_touch_bus->set_bus_handle(
       bus_.xl9535_i2c_bus->bus_handle());
 #endif
@@ -190,7 +190,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
       bus_.aw86224_i2c_bus->set_bus_handle(bus_.sgm38121_i2c_bus->bus_handle());
   result &=
       bus_.es8311_i2c_bus->set_bus_handle(bus_.sgm38121_i2c_bus->bus_handle());
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
   bus_.cc1101_spi_bus->set_bus_init_flag(true);
   bus_.nrf24l01_spi_bus->set_bus_init_flag(true);
 #endif
@@ -203,9 +203,9 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     xTaskCreate(
         [](void* arg) {
           auto self = static_cast<TDisplayP4Driver*>(arg);
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
           self->InitHi8561();
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
           self->InitRm69a10();
 #endif
           vTaskDelete(NULL);
@@ -215,10 +215,10 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     xTaskCreate(
         [](void* arg) {
           auto self = static_cast<TDisplayP4Driver*>(arg);
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
           self->InitHi8561Touch();
           self->InitHi8561Backlight();
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
           self->InitGt9895();
 #endif
           vTaskDelete(NULL);
@@ -282,7 +282,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
         },
         "InitSx1262Task", 2048, this, 3, NULL);
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
     xTaskCreate(
         [](void* arg) {
           auto self = static_cast<TDisplayP4Driver*>(arg);
@@ -328,11 +328,11 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
     result = true;
   } else {
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
     InitHi8561();
     InitHi8561Touch();
     InitHi8561Backlight();
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
     InitRm69a10();
     InitGt9895();
 #endif
@@ -346,7 +346,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     InitIcm20948();
     InitSx1262();
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
     InitXl9555();
     result &= ConfigXl9555();
     InitTca8418();
@@ -357,17 +357,17 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
     InitSdmmc(SD_BASE_PATH, SDMMC_FREQ_52M);
 
-#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0
+#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
     result &= status_.bq25896.init_flag;
 #endif
 
     result &= status_.xl9535.init_flag;
     result &= status_.sgm38121.init_flag;
 
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
     result &= status_.hi8561.init_flag;
     result &= status_.hi8561_touch.init_flag;
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
     result &= status_.rm69a10.init_flag;
     result &= status_.gt9895.init_flag;
 #endif
@@ -380,7 +380,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     result &= status_.icm20948.init_flag;
     result &= status_.sx1262.init_flag;
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
     result &= status_.xl9555.init_flag;
     result &= status_.tca8418.init_flag;
     result &= status_.cc1101.init_flag;
@@ -404,7 +404,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
   switch (level) {
     case SleepLevel::kChipSleep:
       if (enable) {
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
         if (status_.hi8561_backlight.init_flag) {
           result &= chip_.hi8561_backlight->Stop(0);
         }
@@ -412,7 +412,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.hi8561->SetScreenOff(true);
           result &= chip_.hi8561->SetSleep(true);
         }
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
         if (status_.rm69a10.init_flag) {
           result &= chip_.rm69a10->SetBrightness(0);
           result &= chip_.rm69a10->SetScreenOff(true);
@@ -473,7 +473,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
               cpp_bus_driver::Sgm38121::Status::kOff);
         }
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
         if (status_.cc1101.init_flag) {
           int16_t ret = chip_.cc1101->sleep();
           if (ret != RADIOLIB_ERR_NONE) {
@@ -516,12 +516,12 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
               XL9535_5_0_V_POWER_EN, cpp_bus_driver::Xl95x5::Value::kHigh);
         }
 
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
         if (status_.hi8561.init_flag) {
           result &= chip_.hi8561->SetSleep(false);
           result &= chip_.hi8561->SetScreenOff(false);
         }
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
         if (status_.rm69a10.init_flag) {
           result &= chip_.rm69a10->SetSleep(false);
           result &= chip_.rm69a10->SetScreenOff(false);
@@ -605,7 +605,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
               cpp_bus_driver::Sx126x::SleepMode::kWarmStart);
         }
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
         if (status_.xl9555.init_flag) {
           result &= chip_.xl9555->GpioWrite(
               XL9555_LED_1, cpp_bus_driver::Xl95x5::Value::kHigh);
@@ -642,12 +642,12 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= bus_.icm20948_i2c_bus->end(false);
           status_.icm20948.init_flag = false;
 
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
           result &= chip_.hi8561_touch->Deinit();
           status_.hi8561_touch.init_flag = false;
           result &= chip_.hi8561_backlight->Stop(0);
           status_.hi8561_backlight.init_flag = false;
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
           result &= chip_.gt9895->Deinit();
           status_.gt9895.init_flag = false;
 #endif
@@ -657,7 +657,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.pcf8563->Deinit();
           status_.pcf8563.init_flag = false;
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
           result &= chip_.xl9555->Deinit();
           status_.xl9555.init_flag = false;
           result &= chip_.tca8418->Deinit();
@@ -666,7 +666,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           status_.tca8418_backlight.init_flag = false;
 #endif
 
-#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0
+#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
           result &= bus_.bq25896_i2c_bus->Deinit();
           status_.bq25896.init_flag = false;
 #endif
@@ -676,7 +676,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.xl9535->Deinit(true);
           status_.xl9535.init_flag = false;
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
           result &= bus_.cc1101_spi_bus->Deinit();
           status_.cc1101.init_flag = false;
           result &= bus_.nrf24l01_spi_bus->Deinit();
@@ -688,10 +688,10 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.l76k->Deinit();
           status_.l76k.init_flag = false;
 
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
           result &= chip_.hi8561->Deinit();
           status_.hi8561.init_flag = false;
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
           result &= chip_.rm69a10->Deinit();
           status_.rm69a10.init_flag = false;
 #endif
@@ -711,7 +711,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
 bool TDisplayP4Driver::InitEsp32p4() {
   bool result = true;
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
   tool_->SetGpioMode(
       T_MIXRF_CC1101_CS, cpp_bus_driver::Tool::GpioMode::kOutput);
   tool_->SetGpioMode(
@@ -737,7 +737,7 @@ bool TDisplayP4Driver::InitPower() {
   return result;
 }
 
-#if defined CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0
+#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
 bool TDisplayP4Driver::InitBq25896() {
   int16_t ret =
       kode_bq25896::bq25896_init(bus_.bq25896_i2c_bus, chip_.bq25896_handle);
@@ -930,7 +930,7 @@ bool TDisplayP4Driver::InitSgm38121() {
     return false;
   } else {
     bool result = true;
-#if defined CONFIG_CAMERA_TYPE_SC2336
+#if defined(CONFIG_CAMERA_TYPE_SC2336)
     result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
     result &= chip_.sgm38121->SetOutputVoltage(
@@ -941,7 +941,7 @@ bool TDisplayP4Driver::InitSgm38121() {
     result &= chip_.sgm38121->SetChannelStatus(
         cpp_bus_driver::Sgm38121::Channel::kAvdd2,
         cpp_bus_driver::Sgm38121::Status::kOn);
-#elif defined CONFIG_CAMERA_TYPE_OV2710
+#elif defined(CONFIG_CAMERA_TYPE_OV2710)
     result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
     result &= chip_.sgm38121->SetOutputVoltage(
@@ -957,7 +957,7 @@ bool TDisplayP4Driver::InitSgm38121() {
     result &= chip_.sgm38121->SetChannelStatus(
         cpp_bus_driver::Sgm38121::Channel::kAvdd2,
         cpp_bus_driver::Sgm38121::Status::kOn);
-#elif defined CONFIG_CAMERA_TYPE_OV5645
+#elif defined(CONFIG_CAMERA_TYPE_OV5645)
     result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
     result &= chip_.sgm38121->SetOutputVoltage(
@@ -985,7 +985,7 @@ bool TDisplayP4Driver::InitSgm38121() {
   }
 }
 
-#if defined CONFIG_SCREEN_TYPE_HI8561
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
 bool TDisplayP4Driver::InitHi8561() {
   if (!chip_.hi8561->Init(
           SCREEN_MIPI_DSI_DPI_CLK_MHZ, SCREEN_LANE_BIT_RATE_MBPS)) {
@@ -1026,7 +1026,7 @@ bool TDisplayP4Driver::InitHi8561Backlight() {
     return true;
   }
 }
-#elif defined CONFIG_SCREEN_TYPE_RM69A10
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
 bool TDisplayP4Driver::InitRm69a10() {
   if (!chip_.rm69a10->Init(
           SCREEN_MIPI_DSI_DPI_CLK_MHZ, SCREEN_LANE_BIT_RATE_MBPS)) {
@@ -1225,7 +1225,7 @@ bool TDisplayP4Driver::InitSx1262() {
   }
 }
 
-#if defined CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
 bool TDisplayP4Driver::InitXl9555() {
   if (!chip_.xl9555->Init()) {
     status_.xl9555.init_flag = false;

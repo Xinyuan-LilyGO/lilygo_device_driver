@@ -16,7 +16,7 @@ bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf) {
       .format_if_mount_failed = false,
   };
 
-  // Use settings defined above to initialize and mount SPIFFS filesystem.
+  // Use settings defined(above) to initialize and mount SPIFFS filesystem.
   // Note: esp_vfs_spiffs_register is an all-in-one convenience function.
   esp_err_t ret = esp_vfs_spiffs_register(&conf);
 
