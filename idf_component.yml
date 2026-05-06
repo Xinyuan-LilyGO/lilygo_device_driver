@@ -1,7 +1,7 @@
 version: "2.0.0"
 license: "GPL-3.0"
 description: "This is a library for managing lilygo devices."
-url: "https://github.com/Xinyuan-LilyGO/lilygo_device_driver.git"
+url: https://github.com/Xinyuan-LilyGO/lilygo_device_driver
 
 dependencies:
   idf: ">=5.5.3"
@@ -27,6 +27,6 @@ dependencies:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
   ICM20948_WE:
-    version: "*"
+    version: "^1.0.0"
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
