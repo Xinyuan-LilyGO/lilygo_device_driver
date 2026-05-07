@@ -6,27 +6,27 @@ url: https://github.com/Xinyuan-LilyGO/lilygo_device_driver
 dependencies:
   idf: ">=5.5.3"
 
-  cpp_bus_driver:
+  llgok/cpp_bus_driver:
     version: "^2.0.0"
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
-  arduino_cpp_bus_driver:
+  llgok/arduino_cpp_bus_driver:
     version: "^2.0.0"
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
-  radiolib_cpp_bus_driver:
+  llgok/radiolib_cpp_bus_driver:
     version: "^2.0.0"
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
-  kode_bq25896:
+  llgok/kode_bq25896:
     version: "^2.0.0"
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
-  ICM20948_WE:
+  llgok/ICM20948_WE:
     version: "^1.0.0"
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
