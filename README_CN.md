@@ -74,7 +74,7 @@ bool es8311_ready = driver.status().es8311.init_flag;
 
 ### 作为 ESP-IDF component 使用
 
-可以把本仓库放入工程的 `components` 目录；如果你的工程已经把 `libraries` 目录加入 component 搜索路径，也可以保持当前仓库结构。
+可以把本仓库放入工程的 `components` 目录，你也可以添加到其他工程目录文件下。
 
 ```bash
 your_project/

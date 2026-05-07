@@ -73,7 +73,7 @@ The current device selection in `lilygo_device_driver configuration` supports:
 
 ### Use as an ESP-IDF Component
 
-Place this library in the project `components` directory, or keep it under the repository `libraries` directory if your project already adds that path as a component source.
+You can place this repository in the `components` directory of your project, or you can add it to other project directory files.
 
 ```bash
 your_project/
