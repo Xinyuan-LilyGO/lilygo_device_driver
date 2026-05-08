@@ -8,25 +8,30 @@ dependencies:
 
   llgok/cpp_bus_driver:
     version: "^2.0.0"
+    require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
   llgok/arduino_cpp_bus_driver:
     version: "^2.0.0"
+    require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
   llgok/radiolib_cpp_bus_driver:
     version: "^2.0.0"
+    require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
   llgok/kode_bq25896:
     version: "^2.0.0"
+    require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
   llgok/icm20948_we:
     version: "^1.0.0"
+    require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
