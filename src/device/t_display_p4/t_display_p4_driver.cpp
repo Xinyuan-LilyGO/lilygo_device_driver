@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-04-30 14:44:32
+ * @LastEditTime: 2026-05-10 16:55:22
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -280,7 +280,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
           self->InitSx1262();
           vTaskDelete(NULL);
         },
-        "InitSx1262Task", 2048, this, 3, NULL);
+        "InitSx1262Task", 4096, this, 3, NULL);
 
 #if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
     xTaskCreate(
