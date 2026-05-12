@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-04-29 14:59:25
+ * @LastEditTime: 2026-05-13 00:34:26
  * @License: GPL 3.0
  */
 
@@ -148,7 +148,7 @@ class TDisplayP4Driver {
 #endif
 
     std::unique_ptr<cpp_bus_driver::Xl95x5> xl9535;
-    std::unique_ptr<cpp_bus_driver::Bq27220xxxx> bq27220;
+    std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
     std::unique_ptr<cpp_bus_driver::Pcf8563x> pcf8563;
     std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;

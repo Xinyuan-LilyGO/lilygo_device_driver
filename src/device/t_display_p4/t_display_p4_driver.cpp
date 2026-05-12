@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-05-10 16:55:22
+ * @LastEditTime: 2026-05-13 00:34:55
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -68,7 +68,7 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.bq25896_handle = chip_.bq25896_dev.get();
 #endif
 
-  chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220xxxx>(
+  chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220>(
       bus_.bq27220_i2c_bus, BQ27220_I2C_ADDRESS);
 
   chip_.xl9535 = std::make_unique<cpp_bus_driver::Xl95x5>(
@@ -787,11 +787,8 @@ bool TDisplayP4Driver::InitBq27220() {
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitBq27220 failed\n");
     return false;
   } else {
-    // 设置的电池容量会在没有电池插入的时候自动还原为默认值
-    bool result = true;
-    result &= chip_.bq27220->SetDesignCapacity(1000);
-    result &= chip_.bq27220->SetTemperatureMode(
-        cpp_bus_driver::Bq27220xxxx::TemperatureMode::kExternalNtc);
+    const bool result = chip_.bq27220->SetTemperatureMode(
+        cpp_bus_driver::Bq27220::TemperatureMode::kExternalNtc);
 
     status_.bq27220.init_flag = result;
     if (result) {
@@ -1071,9 +1068,16 @@ bool TDisplayP4Driver::InitAw86224() {
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
     return false;
   } else {
-    status_.aw86224.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitAw86224 success\n");
-    return true;
+    cpp_bus_driver::Aw862xx::RamWaveformSelection selection;
+    const bool result = chip_.aw86224->InitRamModeByF0(selection);
+
+    status_.aw86224.init_flag = result;
+    if (result) {
+      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitAw86224 success\n");
+    } else {
+      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
+    }
+    return result;
   }
 }
 
