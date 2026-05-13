@@ -7,7 +7,14 @@
  */
 #include "t_display_p4_driver.h"
 
+#include <cstdint>
+
 namespace lilygo_device_driver {
+namespace {
+
+constexpr uint16_t kBq27220BatteryCapacityMah = 1000;
+
+}  // namespace
 
 TDisplayP4Driver& TDisplayP4Driver::GetInstance() {
   static TDisplayP4Driver* instance = new TDisplayP4Driver();
@@ -787,7 +794,15 @@ bool TDisplayP4Driver::InitBq27220() {
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitBq27220 failed\n");
     return false;
   } else {
-    const bool result = chip_.bq27220->SetTemperatureMode(
+    cpp_bus_driver::Bq27220::CedvProfile battery_profile;
+    battery_profile.design_capacity = kBq27220BatteryCapacityMah;
+    battery_profile.full_charge_capacity = kBq27220BatteryCapacityMah;
+    cpp_bus_driver::Bq27220::GaugingConfig gauging_config;
+
+    bool result = true;
+    result &= chip_.bq27220->ApplyBatteryProfileIfNeeded(
+        battery_profile, gauging_config);
+    result &= chip_.bq27220->SetTemperatureMode(
         cpp_bus_driver::Bq27220::TemperatureMode::kExternalNtc);
 
     status_.bq27220.init_flag = result;
@@ -1065,6 +1080,8 @@ bool TDisplayP4Driver::InitPcf8563() {
 bool TDisplayP4Driver::InitAw86224() {
   if (!chip_.aw86224->Init(500000)) {
     status_.aw86224.init_flag = false;
+    status_.aw86224.ram_waveform_selection =
+        cpp_bus_driver::Aw862xx::RamWaveformSelection();
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
     return false;
   } else {
@@ -1072,6 +1089,8 @@ bool TDisplayP4Driver::InitAw86224() {
     const bool result = chip_.aw86224->InitRamModeByF0(selection);
 
     status_.aw86224.init_flag = result;
+    status_.aw86224.ram_waveform_selection =
+        result ? selection : cpp_bus_driver::Aw862xx::RamWaveformSelection();
     if (result) {
       LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitAw86224 success\n");
     } else {
