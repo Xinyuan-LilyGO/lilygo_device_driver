@@ -224,6 +224,7 @@ class TDisplayP4Driver {
 
     struct {
       bool init_flag = false;
+      cpp_bus_driver::Aw862xx::RamWaveformSelection ram_waveform_selection;
     } aw86224;
 
     struct {
