@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-05-13 00:34:55
+ * @LastEditTime: 2026-05-15 01:35:28
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -15,6 +15,94 @@ namespace device = t_display_p4::device;
 namespace {
 
 constexpr uint16_t kBq27220BatteryCapacityMah = 1000;
+using ScreenDeviceInfo = device::ScreenDeviceInfo;
+using ScreenType = device::ScreenType;
+
+constexpr ScreenDeviceInfo kHi8561ScreenDeviceInfo = {
+    .type = ScreenType::kHi8561,
+    .name = "hi8561",
+    .width = device::hi8561::kScreenWidth,
+    .height = device::hi8561::kScreenHeight,
+    .bits_per_pixel = device::screen::kBitsPerPixel,
+    .mipi_dsi_dpi_clk_mhz = device::hi8561::kScreenMipiDsiDpiClkMhz,
+    .mipi_dsi_hsync = device::hi8561::kScreenMipiDsiHsync,
+    .mipi_dsi_hbp = device::hi8561::kScreenMipiDsiHbp,
+    .mipi_dsi_hfp = device::hi8561::kScreenMipiDsiHfp,
+    .mipi_dsi_vsync = device::hi8561::kScreenMipiDsiVsync,
+    .mipi_dsi_vbp = device::hi8561::kScreenMipiDsiVbp,
+    .mipi_dsi_vfp = device::hi8561::kScreenMipiDsiVfp,
+    .data_lane_num = device::hi8561::kScreenDataLaneNum,
+    .lane_bit_rate_mbps = device::hi8561::kScreenLaneBitRateMbps,
+};
+
+constexpr ScreenDeviceInfo kRm69a10ScreenDeviceInfo = {
+    .type = ScreenType::kRm69a10,
+    .name = "rm69a10",
+    .width = device::rm69a10::kScreenWidth,
+    .height = device::rm69a10::kScreenHeight,
+    .bits_per_pixel = device::screen::kBitsPerPixel,
+    .mipi_dsi_dpi_clk_mhz = device::rm69a10::kScreenMipiDsiDpiClkMhz,
+    .mipi_dsi_hsync = device::rm69a10::kScreenMipiDsiHsync,
+    .mipi_dsi_hbp = device::rm69a10::kScreenMipiDsiHbp,
+    .mipi_dsi_hfp = device::rm69a10::kScreenMipiDsiHfp,
+    .mipi_dsi_vsync = device::rm69a10::kScreenMipiDsiVsync,
+    .mipi_dsi_vbp = device::rm69a10::kScreenMipiDsiVbp,
+    .mipi_dsi_vfp = device::rm69a10::kScreenMipiDsiVfp,
+    .data_lane_num = device::rm69a10::kScreenDataLaneNum,
+    .lane_bit_rate_mbps = device::rm69a10::kScreenLaneBitRateMbps,
+};
+
+constexpr ScreenDeviceInfo kScreenDeviceInfoRegistry[] = {
+    kHi8561ScreenDeviceInfo,
+    kRm69a10ScreenDeviceInfo,
+};
+
+constexpr const ScreenDeviceInfo* kDefaultScreenDeviceInfo =
+    &kHi8561ScreenDeviceInfo;
+
+/**
+ * @brief 将屏幕像素位宽转换为 MIPI 总线颜色格式
+ * @param bits_per_pixel 单个像素的位数
+ * @return MIPI 总线颜色格式
+ * @Date 2026-05-15 00:00:00
+ */
+cpp_bus_driver::HardwareMipi::ColorFormat ColorFormatFromBitsPerPixel(
+    int bits_per_pixel) {
+  switch (bits_per_pixel) {
+    case 16:
+      return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb565;
+    case 24:
+      return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb888;
+    default:
+      return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb565;
+  }
+}
+
+/**
+ * @brief 在屏幕设备信息注册表中查找指定屏幕类型
+ * @param type 屏幕类型
+ * @return 找到时返回设备信息指针，否则返回 nullptr
+ * @Date 2026-05-15 00:00:00
+ */
+const ScreenDeviceInfo* FindScreenDeviceInfo(ScreenType type) {
+  for (const ScreenDeviceInfo& info : kScreenDeviceInfoRegistry) {
+    if (info.type == type) {
+      return &info;
+    }
+  }
+  return nullptr;
+}
+
+/**
+ * @brief 按屏幕类型查找设备信息，未找到时返回默认屏幕
+ * @param type 屏幕类型
+ * @return 屏幕设备信息指针
+ * @Date 2026-05-15 00:00:00
+ */
+const ScreenDeviceInfo* ScreenInfoOrDefault(ScreenType type) {
+  const auto* info = FindScreenDeviceInfo(type);
+  return info == nullptr ? kDefaultScreenDeviceInfo : info;
+}
 
 }  // namespace
 
@@ -23,155 +111,210 @@ TDisplayP4Driver& TDisplayP4Driver::GetInstance() {
   return *instance;
 }
 
+const device::ScreenDeviceInfo& TDisplayP4Driver::screen_info() const {
+  return *(screen_info_ == nullptr ? kDefaultScreenDeviceInfo : screen_info_);
+}
+
+device::ScreenType TDisplayP4Driver::screen_type() const {
+  return screen_info().type;
+}
+
 void TDisplayP4Driver::CreateDrivers() {
   tool_ = std::make_unique<cpp_bus_driver::Tool>();
 
   bus_.bq27220_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::kBq27220Sda, gpio::kBq27220Scl, I2C_NUM_0);
+      gpio::bq27220::kSda, gpio::bq27220::kScl, I2C_NUM_0);
   bus_.xl9535_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::kXl9535Sda, gpio::kXl9535Scl, I2C_NUM_0);
+      gpio::xl9535::kSda, gpio::xl9535::kScl, I2C_NUM_0);
   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::kSgm38121Sda, gpio::kSgm38121Scl, I2C_NUM_1);
+      gpio::sgm38121::kSda, gpio::sgm38121::kScl, I2C_NUM_1);
   bus_.pcf8563_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::kPcf8563Sda, gpio::kPcf8563Scl, I2C_NUM_0);
+      gpio::pcf8563::kSda, gpio::pcf8563::kScl, I2C_NUM_0);
   bus_.aw86224_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::kAw86224Sda, gpio::kAw86224Scl, I2C_NUM_1);
+      gpio::aw86224::kSda, gpio::aw86224::kScl, I2C_NUM_1);
   bus_.es8311_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::kEs8311Sda, gpio::kEs8311Scl, I2C_NUM_1);
-
-  bus_.screen_mipi_bus = std::make_shared<cpp_bus_driver::HardwareMipi>(
-      device::kScreenWidth, device::kScreenHeight,
-      device::kScreenMipiDsiHsync, device::kScreenMipiDsiHbp,
-      device::kScreenMipiDsiHfp, device::kScreenMipiDsiVsync,
-      device::kScreenMipiDsiVbp, device::kScreenMipiDsiVfp,
-      device::kScreenDataLaneNum,
-      [](uint8_t format) -> cpp_bus_driver::HardwareMipi::ColorFormat {
-        switch (format) {
-          case 16:
-            return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb565;
-          case 24:
-            return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb888;
-          default:
-            return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb565;
-        }
-      }(device::kScreenBitsPerPixel));
+      gpio::es8311::kSda, gpio::es8311::kScl, I2C_NUM_1);
 
   bus_.es8311_i2s_bus = std::make_shared<cpp_bus_driver::HardwareI2s>(
-      gpio::kEs8311AdcData, gpio::kEs8311DacData, gpio::kEs8311WsLrck,
-      gpio::kEs8311Bclk, gpio::kEs8311Mclk, i2s_port_t::I2S_NUM_0,
+      gpio::es8311::kAdcData, gpio::es8311::kDacData, gpio::es8311::kWsLrck,
+      gpio::es8311::kBclk, gpio::es8311::kMclk, i2s_port_t::I2S_NUM_0,
       cpp_bus_driver::HardwareI2s::DataMode::kInputOutput,
       cpp_bus_driver::HardwareI2s::I2sMode::kStd,
       i2s_clock_src_t::I2S_CLK_SRC_DEFAULT);
 
   bus_.l76k_uart_bus = std::make_shared<cpp_bus_driver::HardwareUart>(
-      gpio::kGpsRx, gpio::kGpsTx, UART_NUM_1);
+      gpio::l76k::kRx, gpio::l76k::kTx, UART_NUM_1);
 
   bus_.icm20948_i2c_bus = std::make_unique<TwoWire>(1);
 
-  bus_.sx1262_spi_bus = std::make_shared<cpp_bus_driver::HardwareSpi>(
-      gpio::kSx1262Mosi, gpio::kSx1262Sclk, gpio::kSx1262Miso, SPI2_HOST, 0);
+  bus_.sx1262_spi_bus =
+      std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::sx1262::kMosi,
+          gpio::sx1262::kSclk, gpio::sx1262::kMiso, SPI2_HOST, 0);
 
 #if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
   bus_.bq25896_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::kBq25896Sda, gpio::kBq25896Scl, I2C_NUM_0);
+      gpio::bq25896::kSda, gpio::bq25896::kScl, I2C_NUM_0);
 
   chip_.bq25896_dev = std::make_shared<kode_bq25896::bq25896_dev_t>();
   chip_.bq25896_handle = chip_.bq25896_dev.get();
 #endif
 
   chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220>(
-      bus_.bq27220_i2c_bus, device::kBq27220I2cAddress);
+      bus_.bq27220_i2c_bus, device::bq27220::kI2cAddress);
 
   chip_.xl9535 = std::make_unique<cpp_bus_driver::Xl95x5>(
-      bus_.xl9535_i2c_bus, device::kXl9535I2cAddress);
+      bus_.xl9535_i2c_bus, device::xl9535::kI2cAddress);
 
   chip_.sgm38121 = std::make_unique<cpp_bus_driver::Sgm38121>(
-      bus_.sgm38121_i2c_bus, device::kSgm38121I2cAddress);
+      bus_.sgm38121_i2c_bus, device::sgm38121::kI2cAddress);
 
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
   bus_.hi8561_i2c_touch_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::kHi8561TouchSda, gpio::kHi8561TouchScl, I2C_NUM_0);
-
-  chip_.hi8561 =
-      std::make_unique<cpp_bus_driver::Hi8561>(bus_.screen_mipi_bus);
+      gpio::hi8561::kTouchSda, gpio::hi8561::kTouchScl, I2C_NUM_0);
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
-      bus_.hi8561_i2c_touch_bus, device::kHi8561TouchI2cAddress);
+      bus_.hi8561_i2c_touch_bus, device::hi8561::kTouchI2cAddress);
   chip_.hi8561_backlight =
-      std::make_unique<cpp_bus_driver::Pwm>(gpio::kHi8561ScreenBl);
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
-  bus_.gt9895_i2c_touch_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::kGt9895Sda, gpio::kGt9895Scl, I2C_NUM_0);
+      std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBl);
 
-  chip_.rm69a10 =
-      std::make_unique<cpp_bus_driver::Rm69a10>(bus_.screen_mipi_bus);
-  chip_.gt9895 =
-      std::make_unique<cpp_bus_driver::Gt9895>(bus_.gt9895_i2c_touch_bus,
-          device::kGt9895I2cAddress, -1, device::kGt9895XScaleFactor,
-          device::kGt9895YScaleFactor);
-#endif
+  bus_.gt9895_i2c_touch_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
+      gpio::gt9895::kSda, gpio::gt9895::kScl, I2C_NUM_0);
+  chip_.gt9895 = std::make_unique<cpp_bus_driver::Gt9895>(
+      bus_.gt9895_i2c_touch_bus, device::gt9895::kI2cAddress, -1,
+      device::gt9895::kXScaleFactor, device::gt9895::kYScaleFactor);
 
   chip_.pcf8563 = std::make_unique<cpp_bus_driver::Pcf8563x>(
-      bus_.pcf8563_i2c_bus, device::kPcf8563I2cAddress);
+      bus_.pcf8563_i2c_bus, device::pcf8563::kI2cAddress);
 
   chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
-      bus_.aw86224_i2c_bus, device::kAw86224I2cAddress);
+      bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
 
   chip_.es8311 = std::make_unique<cpp_bus_driver::Es8311>(
-      bus_.es8311_i2c_bus, bus_.es8311_i2s_bus, device::kEs8311I2cAddress);
+      bus_.es8311_i2c_bus, bus_.es8311_i2s_bus, device::es8311::kI2cAddress);
 
   chip_.icm20948 = std::make_unique<ICM20948_WE>(
-      bus_.icm20948_i2c_bus.get(), device::kIcm20948I2cAddress);
+      bus_.icm20948_i2c_bus.get(), device::icm20948::kI2cAddress);
 
   chip_.l76k = std::make_unique<cpp_bus_driver::L76k>(
       bus_.l76k_uart_bus, [this](bool value) -> bool {
-        return chip_.xl9535->GpioWrite(gpio::kXl9535GpsWakeUp,
+        return chip_.xl9535->GpioWrite(gpio::xl9535::kGpsWakeUp,
             static_cast<cpp_bus_driver::Xl95x5::Value>(value));
       });
 
-  chip_.sx1262 = std::make_unique<cpp_bus_driver::Sx126x>(
-      bus_.sx1262_spi_bus, cpp_bus_driver::Sx126x::ChipType::kSx1262,
-      gpio::kSx1262Busy, gpio::kSx1262Cs);
+  chip_.sx1262 = std::make_unique<cpp_bus_driver::Sx126x>(bus_.sx1262_spi_bus,
+      cpp_bus_driver::Sx126x::ChipType::kSx1262, gpio::sx1262::kBusy,
+      gpio::sx1262::kCs);
 
 #if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
-  bus_.xl9555_i2c_bus =
-      std::make_shared<cpp_bus_driver::SoftwareI2c>(
-          gpio::kXl9555Sda, gpio::kXl9555Scl);
-  bus_.tca8418_i2c_bus =
-      std::make_shared<cpp_bus_driver::SoftwareI2c>(
-          gpio::kTca8418Sda, gpio::kTca8418Scl);
+  bus_.xl9555_i2c_bus = std::make_shared<cpp_bus_driver::SoftwareI2c>(
+      gpio::xl9555::kSda, gpio::xl9555::kScl);
+  bus_.tca8418_i2c_bus = std::make_shared<cpp_bus_driver::SoftwareI2c>(
+      gpio::tca8418::kSda, gpio::tca8418::kScl);
 
-  bus_.cc1101_spi_bus =
-      std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::kTMixrfCc1101Mosi,
-          gpio::kTMixrfCc1101Sclk, gpio::kTMixrfCc1101Miso, SPI2_HOST, 0);
-  bus_.nrf24l01_spi_bus =
-      std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::kTMixrfNrf24l01Mosi,
-          gpio::kTMixrfNrf24l01Sclk, gpio::kTMixrfNrf24l01Miso, SPI2_HOST, 0);
+  bus_.cc1101_spi_bus = std::make_shared<cpp_bus_driver::HardwareSpi>(
+      gpio::tmixrf::cc1101::kMosi, gpio::tmixrf::cc1101::kSclk,
+      gpio::tmixrf::cc1101::kMiso, SPI2_HOST, 0);
+  bus_.nrf24l01_spi_bus = std::make_shared<cpp_bus_driver::HardwareSpi>(
+      gpio::tmixrf::nrf24l01::kMosi, gpio::tmixrf::nrf24l01::kSclk,
+      gpio::tmixrf::nrf24l01::kMiso, SPI2_HOST, 0);
 
   bus_.cc1101_radiolib_hal = new RadiolibCppBusDriverHal(
-      bus_.cc1101_spi_bus, 10000000, gpio::kTMixrfCc1101Cs);
+      bus_.cc1101_spi_bus, 10000000, gpio::tmixrf::cc1101::kCs);
   bus_.nrf24l01_radiolib_hal = new RadiolibCppBusDriverHal(
-      bus_.nrf24l01_spi_bus, 10000000, gpio::kTMixrfNrf24l01Cs);
+      bus_.nrf24l01_spi_bus, 10000000, gpio::tmixrf::nrf24l01::kCs);
 
   bus_.cc1101_module = new Module(bus_.cc1101_radiolib_hal,
       static_cast<uint32_t>(RADIOLIB_NC), static_cast<uint32_t>(RADIOLIB_NC),
-      static_cast<uint32_t>(RADIOLIB_NC), gpio::kTMixrfCc1101Busy);
+      static_cast<uint32_t>(RADIOLIB_NC), gpio::tmixrf::cc1101::kBusy);
 
-  bus_.nrf24l01_module = new Module(bus_.nrf24l01_radiolib_hal,
-      static_cast<uint32_t>(RADIOLIB_NC),
-      static_cast<uint32_t>(gpio::kTMixrfNrf24l01Int),
-      static_cast<uint32_t>(gpio::kTMixrfNrf24l01Ce),
-      static_cast<uint32_t>(RADIOLIB_NC));
+  bus_.nrf24l01_module =
+      new Module(bus_.nrf24l01_radiolib_hal, static_cast<uint32_t>(RADIOLIB_NC),
+          static_cast<uint32_t>(gpio::tmixrf::nrf24l01::kInt),
+          static_cast<uint32_t>(gpio::tmixrf::nrf24l01::kCe),
+          static_cast<uint32_t>(RADIOLIB_NC));
 
   chip_.xl9555 = std::make_unique<cpp_bus_driver::Xl95x5>(
-      bus_.xl9555_i2c_bus, device::kXl9555I2cAddress);
+      bus_.xl9555_i2c_bus, device::xl9555::kI2cAddress);
   chip_.tca8418 = std::make_unique<cpp_bus_driver::Tca8418>(
-      bus_.tca8418_i2c_bus, device::kTca8418I2cAddress);
+      bus_.tca8418_i2c_bus, device::tca8418::kI2cAddress);
   chip_.tca8418_backlight =
-      std::make_unique<cpp_bus_driver::Pwm>(gpio::kTca8418Bl);
+      std::make_unique<cpp_bus_driver::Pwm>(gpio::tca8418::kBl);
 
   chip_.cc1101 = new CC1101(bus_.cc1101_module);
   chip_.nrf24l01 = new nRF24(bus_.nrf24l01_module);
 #endif
+}
+
+bool TDisplayP4Driver::DetectScreen() {
+  status_.gt9895.init_flag = false;
+
+  if (chip_.gt9895 != nullptr && chip_.gt9895->Init()) {
+    screen_info_ = ScreenInfoOrDefault(device::ScreenType::kRm69a10);
+    status_.gt9895.init_flag = true;
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "Auto detected T-Display-P4 screen: %s\n", screen_info_->name);
+    return true;
+  }
+
+  if (bus_.gt9895_i2c_touch_bus != nullptr) {
+    bus_.gt9895_i2c_touch_bus->Deinit(false);
+  }
+  screen_info_ = ScreenInfoOrDefault(device::ScreenType::kHi8561);
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+      "Auto detected T-Display-P4 screen: %s\n", screen_info_->name);
+  return true;
+}
+
+void TDisplayP4Driver::CreateSelectedScreenDrivers() {
+  const auto& screen = screen_info();
+  bus_.screen_mipi_bus = std::make_shared<cpp_bus_driver::HardwareMipi>(
+      screen.width, screen.height, screen.mipi_dsi_hsync, screen.mipi_dsi_hbp,
+      screen.mipi_dsi_hfp, screen.mipi_dsi_vsync, screen.mipi_dsi_vbp,
+      screen.mipi_dsi_vfp, screen.data_lane_num,
+      ColorFormatFromBitsPerPixel(screen.bits_per_pixel));
+
+  chip_.hi8561.reset();
+  chip_.rm69a10.reset();
+  status_.hi8561.init_flag = false;
+  status_.hi8561_touch.init_flag = false;
+  status_.hi8561_backlight.init_flag = false;
+  status_.rm69a10.init_flag = false;
+
+  switch (screen.type) {
+    case device::ScreenType::kHi8561:
+      chip_.hi8561 =
+          std::make_unique<cpp_bus_driver::Hi8561>(bus_.screen_mipi_bus);
+      break;
+    case device::ScreenType::kRm69a10:
+      chip_.rm69a10 =
+          std::make_unique<cpp_bus_driver::Rm69a10>(bus_.screen_mipi_bus);
+      break;
+    default:
+      break;
+  }
+}
+
+bool TDisplayP4Driver::InitSelectedScreen() {
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return InitHi8561();
+    case device::ScreenType::kRm69a10:
+      return InitRm69a10();
+    default:
+      return false;
+  }
+}
+
+bool TDisplayP4Driver::InitSelectedTouchAndBacklight() {
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561: {
+      const bool touch_result = InitHi8561Touch();
+      const bool backlight_result = InitHi8561Backlight();
+      return touch_result && backlight_result;
+    }
+    case device::ScreenType::kRm69a10:
+      return status_.gt9895.init_flag || InitGt9895();
+    default:
+      return false;
+  }
 }
 
 bool TDisplayP4Driver::InitDrivers(InitMode mode) {
@@ -191,22 +334,21 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
   InitSgm38121();
 
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
   result &= bus_.hi8561_i2c_touch_bus->set_bus_handle(
       bus_.xl9535_i2c_bus->bus_handle());
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
   result &= bus_.gt9895_i2c_touch_bus->set_bus_handle(
       bus_.xl9535_i2c_bus->bus_handle());
-#endif
+  result &= DetectScreen();
+  CreateSelectedScreenDrivers();
 
   result &=
       bus_.bq27220_i2c_bus->set_bus_handle(bus_.xl9535_i2c_bus->bus_handle());
   result &=
       bus_.pcf8563_i2c_bus->set_bus_handle(bus_.xl9535_i2c_bus->bus_handle());
-  result &= bus_.aw86224_i2c_bus->set_bus_handle(
-      bus_.sgm38121_i2c_bus->bus_handle());
-  result &= bus_.es8311_i2c_bus->set_bus_handle(
-      bus_.sgm38121_i2c_bus->bus_handle());
+  result &=
+      bus_.aw86224_i2c_bus->set_bus_handle(bus_.sgm38121_i2c_bus->bus_handle());
+  result &=
+      bus_.es8311_i2c_bus->set_bus_handle(bus_.sgm38121_i2c_bus->bus_handle());
 #if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
   bus_.cc1101_spi_bus->set_bus_init_flag(true);
   bus_.nrf24l01_spi_bus->set_bus_init_flag(true);
@@ -214,34 +356,19 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
   result &= bus_.icm20948_i2c_bus->set_bus_handle(
       bus_.sgm38121_i2c_bus->bus_handle());
-  result &= bus_.icm20948_i2c_bus->begin(
-      gpio::kIcm20948Sda, gpio::kIcm20948Scl);
+  result &=
+      bus_.icm20948_i2c_bus->begin(gpio::icm20948::kSda, gpio::icm20948::kScl);
 
   if (mode == InitMode::kAsync) {
     xTaskCreate(
         [](void* arg) {
           auto self = static_cast<TDisplayP4Driver*>(arg);
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
-          self->InitHi8561();
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
-          self->InitRm69a10();
-#endif
+          if (self->InitSelectedScreen()) {
+            self->InitSelectedTouchAndBacklight();
+          }
           vTaskDelete(NULL);
         },
         "ScreenTask", 4096, this, 3, NULL);
-
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
-          self->InitHi8561Touch();
-          self->InitHi8561Backlight();
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
-          self->InitGt9895();
-#endif
-          vTaskDelete(NULL);
-        },
-        "TouchAndBacklightTask", 2048, this, 3, NULL);
 
     xTaskCreate(
         [](void* arg) {
@@ -265,7 +392,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
           self->InitAw86224();
           vTaskDelete(NULL);
         },
-        "InitAw86224Task", 2048, this, 3, NULL);
+        "InitAw86224Task", 4096, this, 3, NULL);
 
     xTaskCreate(
         [](void* arg) {
@@ -339,21 +466,16 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     xTaskCreate(
         [](void* arg) {
           auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitSdmmc(device::kSdBasePath, SDMMC_FREQ_52M);
+          self->InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
           vTaskDelete(NULL);
         },
         "InitSdmmcTask", 4096, this, 3, NULL);
 
     result = true;
   } else {
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
-    InitHi8561();
-    InitHi8561Touch();
-    InitHi8561Backlight();
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
-    InitRm69a10();
-    InitGt9895();
-#endif
+    if (InitSelectedScreen()) {
+      InitSelectedTouchAndBacklight();
+    }
 
     InitBq27220();
     InitPcf8563();
@@ -373,7 +495,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     InitNrf24l01();
 #endif
 
-    InitSdmmc(device::kSdBasePath, SDMMC_FREQ_52M);
+    InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
 
 #if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
     result &= status_.bq25896.init_flag;
@@ -382,13 +504,19 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     result &= status_.xl9535.init_flag;
     result &= status_.sgm38121.init_flag;
 
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
-    result &= status_.hi8561.init_flag;
-    result &= status_.hi8561_touch.init_flag;
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
-    result &= status_.rm69a10.init_flag;
-    result &= status_.gt9895.init_flag;
-#endif
+    switch (screen_type()) {
+      case device::ScreenType::kHi8561:
+        result &= status_.hi8561.init_flag;
+        result &= status_.hi8561_touch.init_flag;
+        break;
+      case device::ScreenType::kRm69a10:
+        result &= status_.rm69a10.init_flag;
+        result &= status_.gt9895.init_flag;
+        break;
+      default:
+        result = false;
+        break;
+    }
 
     result &= status_.bq27220.init_flag;
     result &= status_.pcf8563.init_flag;
@@ -422,24 +550,29 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
   switch (level) {
     case SleepLevel::kChipSleep:
       if (enable) {
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
-        if (status_.hi8561_backlight.init_flag) {
-          result &= chip_.hi8561_backlight->Stop(0);
+        switch (screen_type()) {
+          case device::ScreenType::kHi8561:
+            if (status_.hi8561_backlight.init_flag) {
+              result &= chip_.hi8561_backlight->Stop(0);
+            }
+            if (status_.hi8561.init_flag) {
+              result &= chip_.hi8561->SetScreenOff(true);
+              result &= chip_.hi8561->SetSleep(true);
+            }
+            break;
+          case device::ScreenType::kRm69a10:
+            if (status_.rm69a10.init_flag) {
+              result &= chip_.rm69a10->SetBrightness(0);
+              result &= chip_.rm69a10->SetScreenOff(true);
+              result &= chip_.rm69a10->SetSleep(true);
+            }
+            if (status_.gt9895.init_flag) {
+              result &= chip_.gt9895->SetSleep();
+            }
+            break;
+          default:
+            break;
         }
-        if (status_.hi8561.init_flag) {
-          result &= chip_.hi8561->SetScreenOff(true);
-          result &= chip_.hi8561->SetSleep(true);
-        }
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
-        if (status_.rm69a10.init_flag) {
-          result &= chip_.rm69a10->SetBrightness(0);
-          result &= chip_.rm69a10->SetScreenOff(true);
-          result &= chip_.rm69a10->SetSleep(true);
-        }
-        if (status_.gt9895.init_flag) {
-          result &= chip_.gt9895->SetSleep();
-        }
-#endif
 
         if (status_.es8311.init_flag) {
           cpp_bus_driver::Es8311::PowerStatus ps = {
@@ -518,36 +651,41 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
 
         if (status_.xl9535.init_flag) {
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535Esp32c6En, cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kEsp32c6En, cpp_bus_driver::Xl95x5::Value::kLow);
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535SdEn, cpp_bus_driver::Xl95x5::Value::kHigh);
+              gpio::xl9535::kSdEn, cpp_bus_driver::Xl95x5::Value::kHigh);
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535PowerEn5v0, cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kPowerEn5v0, cpp_bus_driver::Xl95x5::Value::kLow);
         }
       } else {
         if (status_.xl9535.init_flag) {
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535Esp32c6En, cpp_bus_driver::Xl95x5::Value::kHigh);
+              gpio::xl9535::kEsp32c6En, cpp_bus_driver::Xl95x5::Value::kHigh);
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535SdEn, cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kSdEn, cpp_bus_driver::Xl95x5::Value::kLow);
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535PowerEn5v0, cpp_bus_driver::Xl95x5::Value::kHigh);
+              gpio::xl9535::kPowerEn5v0, cpp_bus_driver::Xl95x5::Value::kHigh);
         }
 
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
-        if (status_.hi8561.init_flag) {
-          result &= chip_.hi8561->SetSleep(false);
-          result &= chip_.hi8561->SetScreenOff(false);
+        switch (screen_type()) {
+          case device::ScreenType::kHi8561:
+            if (status_.hi8561.init_flag) {
+              result &= chip_.hi8561->SetSleep(false);
+              result &= chip_.hi8561->SetScreenOff(false);
+            }
+            break;
+          case device::ScreenType::kRm69a10:
+            if (status_.rm69a10.init_flag) {
+              result &= chip_.rm69a10->SetSleep(false);
+              result &= chip_.rm69a10->SetScreenOff(false);
+            }
+            if (status_.gt9895.init_flag) {
+              result &= InitGt9895();
+            }
+            break;
+          default:
+            break;
         }
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
-        if (status_.rm69a10.init_flag) {
-          result &= chip_.rm69a10->SetSleep(false);
-          result &= chip_.rm69a10->SetScreenOff(false);
-        }
-        if (status_.gt9895.init_flag) {
-          result &= InitGt9895();
-        }
-#endif
 
         if (status_.es8311.init_flag) {
           if (status_.es8311.init_flag) {
@@ -561,8 +699,8 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
                         .analog_dac_reference_circuit = true,
                         .internal_reference_circuits = false,
                     },
-                .vmid = cpp_bus_driver::Es8311::Vmid::
-                    kStartUpVmidNormalSpeedCharge,
+                .vmid =
+                    cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
             };
             result &= chip_.es8311->SetOutputToHpDrive(true);
             result &= chip_.es8311->SetPgaPower(true);
@@ -621,32 +759,32 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
 #if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
         if (status_.xl9555.init_flag) {
           result &= chip_.xl9555->GpioWrite(
-              gpio::kXl9555Led1, cpp_bus_driver::Xl95x5::Value::kHigh);
+              gpio::xl9555::kLed1, cpp_bus_driver::Xl95x5::Value::kHigh);
           result &= chip_.xl9555->GpioWrite(
-              gpio::kXl9555Led2, cpp_bus_driver::Xl95x5::Value::kHigh);
+              gpio::xl9555::kLed2, cpp_bus_driver::Xl95x5::Value::kHigh);
           result &= chip_.xl9555->GpioWrite(
-              gpio::kXl9555Led3, cpp_bus_driver::Xl95x5::Value::kHigh);
+              gpio::xl9555::kLed3, cpp_bus_driver::Xl95x5::Value::kHigh);
           result &= chip_.xl9555->GpioWrite(
-              gpio::kXl9555TMixrfEn, cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9555::kTMixrfEn, cpp_bus_driver::Xl95x5::Value::kLow);
           result &= chip_.xl9555->GpioWrite(
-              gpio::kXl9555Tca8418Rst, cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Value::kLow);
         }
 #endif
         if (status_.xl9535.init_flag) {
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535ScreenRst, cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kScreenRst, cpp_bus_driver::Xl95x5::Value::kLow);
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535TouchRst, cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Value::kLow);
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535Esp32c6En, cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kEsp32c6En, cpp_bus_driver::Xl95x5::Value::kLow);
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535EthernetRst, cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kEthernetRst, cpp_bus_driver::Xl95x5::Value::kLow);
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535SdEn, cpp_bus_driver::Xl95x5::Value::kHigh);
+              gpio::xl9535::kSdEn, cpp_bus_driver::Xl95x5::Value::kHigh);
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535PowerEn5v0, cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kPowerEn5v0, cpp_bus_driver::Xl95x5::Value::kLow);
           result &= chip_.xl9535->GpioWrite(
-              gpio::kXl9535PowerEn3v3, cpp_bus_driver::Xl95x5::Value::kHigh);
+              gpio::xl9535::kPowerEn3v3, cpp_bus_driver::Xl95x5::Value::kHigh);
 
           result &= chip_.aw86224->Deinit();
           status_.aw86224.init_flag = false;
@@ -655,15 +793,20 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= bus_.icm20948_i2c_bus->end(false);
           status_.icm20948.init_flag = false;
 
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
-          result &= chip_.hi8561_touch->Deinit();
-          status_.hi8561_touch.init_flag = false;
-          result &= chip_.hi8561_backlight->Stop(0);
-          status_.hi8561_backlight.init_flag = false;
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
-          result &= chip_.gt9895->Deinit();
-          status_.gt9895.init_flag = false;
-#endif
+          switch (screen_type()) {
+            case device::ScreenType::kHi8561:
+              result &= chip_.hi8561_touch->Deinit();
+              status_.hi8561_touch.init_flag = false;
+              result &= chip_.hi8561_backlight->Stop(0);
+              status_.hi8561_backlight.init_flag = false;
+              break;
+            case device::ScreenType::kRm69a10:
+              result &= chip_.gt9895->Deinit();
+              status_.gt9895.init_flag = false;
+              break;
+            default:
+              break;
+          }
 
           result &= chip_.bq27220->Deinit();
           status_.bq27220.init_flag = false;
@@ -701,13 +844,18 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.l76k->Deinit();
           status_.l76k.init_flag = false;
 
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
-          result &= chip_.hi8561->Deinit();
-          status_.hi8561.init_flag = false;
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
-          result &= chip_.rm69a10->Deinit();
-          status_.rm69a10.init_flag = false;
-#endif
+          switch (screen_type()) {
+            case device::ScreenType::kHi8561:
+              result &= chip_.hi8561->Deinit();
+              status_.hi8561.init_flag = false;
+              break;
+            case device::ScreenType::kRm69a10:
+              result &= chip_.rm69a10->Deinit();
+              status_.rm69a10.init_flag = false;
+              break;
+            default:
+              break;
+          }
         }
       } else {
         result &= InitDrivers(InitMode::kAsync);
@@ -726,16 +874,16 @@ bool TDisplayP4Driver::InitEsp32p4() {
 
 #if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
   tool_->SetGpioMode(
-      gpio::kTMixrfCc1101Cs, cpp_bus_driver::Tool::GpioMode::kOutput);
+      gpio::tmixrf::cc1101::kCs, cpp_bus_driver::Tool::GpioMode::kOutput);
   tool_->SetGpioMode(
-      gpio::kTMixrfNrf24l01Cs, cpp_bus_driver::Tool::GpioMode::kOutput);
+      gpio::tmixrf::nrf24l01::kCs, cpp_bus_driver::Tool::GpioMode::kOutput);
   tool_->SetGpioMode(
-      gpio::kTMixrfSt25r3916Cs, cpp_bus_driver::Tool::GpioMode::kOutput);
-  tool_->GpioWrite(gpio::kTMixrfCc1101Cs, 1);
-  tool_->GpioWrite(gpio::kTMixrfNrf24l01Cs, 1);
-  tool_->GpioWrite(gpio::kTMixrfSt25r3916Cs, 1);
+      gpio::tmixrf::st25r3916::kCs, cpp_bus_driver::Tool::GpioMode::kOutput);
+  tool_->GpioWrite(gpio::tmixrf::cc1101::kCs, 1);
+  tool_->GpioWrite(gpio::tmixrf::nrf24l01::kCs, 1);
+  tool_->GpioWrite(gpio::tmixrf::st25r3916::kCs, 1);
 
-  tool_->SetGpioMode(gpio::kTMixrfCc1101Busy,
+  tool_->SetGpioMode(gpio::tmixrf::cc1101::kBusy,
       cpp_bus_driver::Tool::GpioMode::kInput,
       cpp_bus_driver::Tool::GpioStatus::kPulldown);
 #endif
@@ -777,8 +925,8 @@ bool TDisplayP4Driver::InitBq25896() {
       LogMessage(LogLevel::kChip, __FILE__, __LINE__,
           "bq25896_set_watchdog_timer failed (error code: %#X)\n", ret);
     }
-    ret = kode_bq25896::bq25896_set_charge_current(chip_.bq25896_handle,
-        kode_bq25896::bq25896_ichg_t::BQ25896_ICHG_512MA);
+    ret = kode_bq25896::bq25896_set_charge_current(
+        chip_.bq25896_handle, kode_bq25896::bq25896_ichg_t::BQ25896_ICHG_512MA);
     if (ret != ESP_OK) {
       result = false;
       LogMessage(LogLevel::kChip, __FILE__, __LINE__,
@@ -841,98 +989,98 @@ bool TDisplayP4Driver::ConfigXl9535() {
 
   bool result = true;
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535ScreenRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kScreenRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535TouchRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535Esp32p4VccaPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kEsp32p4VccaPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535PowerEn5v0, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kPowerEn5v0, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535PowerEn3v3, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kPowerEn3v3, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535GpsWakeUp, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kGpsWakeUp, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535Esp32c6En, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kEsp32c6En, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535EthernetRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kEthernetRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535SdEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kSdEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535Sx1262Rst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kSx1262Rst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535Sky13453Vctl, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kSky13453Vctl, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535Icm20948Int, cpp_bus_driver::Xl95x5::Mode::kInput);
+      gpio::xl9535::kIcm20948Int, cpp_bus_driver::Xl95x5::Mode::kInput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::kXl9535Sx1262Dio1, cpp_bus_driver::Xl95x5::Mode::kInput);
+      gpio::xl9535::kSx1262Dio1, cpp_bus_driver::Xl95x5::Mode::kInput);
 
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535Esp32p4VccaPowerEn, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9535::kEsp32p4VccaPowerEn, cpp_bus_driver::Xl95x5::Value::kLow);
   // 默认使用RF1天线
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535Sky13453Vctl, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kSky13453Vctl, cpp_bus_driver::Xl95x5::Value::kHigh);
 
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535PowerEn3v3, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9535::kPowerEn3v3, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(100);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535PowerEn3v3, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kPowerEn3v3, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(100);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535PowerEn3v3, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9535::kPowerEn3v3, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(200);
 
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535ScreenRst, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kScreenRst, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535TouchRst, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535Esp32c6En, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kEsp32c6En, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535EthernetRst, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kEthernetRst, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535GpsWakeUp, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kGpsWakeUp, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535Sx1262Rst, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kSx1262Rst, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535SdEn, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9535::kSdEn, cpp_bus_driver::Xl95x5::Value::kLow);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535PowerEn5v0, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kPowerEn5v0, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535ScreenRst, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9535::kScreenRst, cpp_bus_driver::Xl95x5::Value::kLow);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535TouchRst, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Value::kLow);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535Esp32c6En, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9535::kEsp32c6En, cpp_bus_driver::Xl95x5::Value::kLow);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535EthernetRst, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9535::kEthernetRst, cpp_bus_driver::Xl95x5::Value::kLow);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535GpsWakeUp, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9535::kGpsWakeUp, cpp_bus_driver::Xl95x5::Value::kLow);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535Sx1262Rst, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9535::kSx1262Rst, cpp_bus_driver::Xl95x5::Value::kLow);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535SdEn, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kSdEn, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535PowerEn5v0, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9535::kPowerEn5v0, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535ScreenRst, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kScreenRst, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535TouchRst, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535Esp32c6En, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kEsp32c6En, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535EthernetRst, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kEthernetRst, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535GpsWakeUp, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kGpsWakeUp, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535Sx1262Rst, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kSx1262Rst, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535SdEn, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9535::kSdEn, cpp_bus_driver::Xl95x5::Value::kLow);
   result &= chip_.xl9535->GpioWrite(
-      gpio::kXl9535PowerEn5v0, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kPowerEn5v0, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(120);
 
   if (!result) {
@@ -995,8 +1143,7 @@ bool TDisplayP4Driver::InitSgm38121() {
 
     status_.sgm38121.init_flag = result;
     if (result) {
-      LogMessage(
-          LogLevel::kInfo, __FILE__, __LINE__, "InitSgm38121 success\n");
+      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSgm38121 success\n");
     } else {
       LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitSgm38121 failed\n");
     }
@@ -1004,10 +1151,16 @@ bool TDisplayP4Driver::InitSgm38121() {
   }
 }
 
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
 bool TDisplayP4Driver::InitHi8561() {
+  if (chip_.hi8561 == nullptr) {
+    status_.hi8561.init_flag = false;
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitHi8561 failed\n");
+    return false;
+  }
+
+  const auto& screen = screen_info();
   if (!chip_.hi8561->Init(
-          device::kScreenMipiDsiDpiClkMhz, device::kScreenLaneBitRateMbps)) {
+          screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps)) {
     status_.hi8561.init_flag = false;
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitHi8561 failed\n");
     return false;
@@ -1019,10 +1172,15 @@ bool TDisplayP4Driver::InitHi8561() {
 }
 
 bool TDisplayP4Driver::InitHi8561Touch() {
+  if (chip_.hi8561_touch == nullptr) {
+    status_.hi8561_touch.init_flag = false;
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitHi8561Touch failed\n");
+    return false;
+  }
+
   if (!chip_.hi8561_touch->Init()) {
     status_.hi8561_touch.init_flag = false;
-    LogMessage(
-        LogLevel::kChip, __FILE__, __LINE__, "InitHi8561Touch failed\n");
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   } else {
     status_.hi8561_touch.init_flag = true;
@@ -1033,6 +1191,13 @@ bool TDisplayP4Driver::InitHi8561Touch() {
 }
 
 bool TDisplayP4Driver::InitHi8561Backlight() {
+  if (chip_.hi8561_backlight == nullptr) {
+    status_.hi8561_backlight.init_flag = false;
+    LogMessage(
+        LogLevel::kChip, __FILE__, __LINE__, "InitHi8561Backlight failed\n");
+    return false;
+  }
+
   if (!chip_.hi8561_backlight->Init(
           ledc_timer_t::LEDC_TIMER_0, ledc_channel_t::LEDC_CHANNEL_0, 2000)) {
     status_.hi8561_backlight.init_flag = false;
@@ -1046,10 +1211,17 @@ bool TDisplayP4Driver::InitHi8561Backlight() {
     return true;
   }
 }
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
+
 bool TDisplayP4Driver::InitRm69a10() {
+  if (chip_.rm69a10 == nullptr) {
+    status_.rm69a10.init_flag = false;
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitRm69a10 failed\n");
+    return false;
+  }
+
+  const auto& screen = screen_info();
   if (!chip_.rm69a10->Init(
-          device::kScreenMipiDsiDpiClkMhz, device::kScreenLaneBitRateMbps)) {
+          screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps)) {
     status_.rm69a10.init_flag = false;
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitRm69a10 failed\n");
     return false;
@@ -1061,6 +1233,12 @@ bool TDisplayP4Driver::InitRm69a10() {
 }
 
 bool TDisplayP4Driver::InitGt9895() {
+  if (chip_.gt9895 == nullptr) {
+    status_.gt9895.init_flag = false;
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitGt9895 failed\n");
+    return false;
+  }
+
   if (!chip_.gt9895->Init()) {
     status_.gt9895.init_flag = false;
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitGt9895 failed\n");
@@ -1071,7 +1249,6 @@ bool TDisplayP4Driver::InitGt9895() {
     return true;
   }
 }
-#endif
 
 bool TDisplayP4Driver::InitPcf8563() {
   if (!chip_.pcf8563->Init()) {
@@ -1114,8 +1291,8 @@ bool TDisplayP4Driver::InitEs8311() {
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8311 failed\n");
     return false;
   } else {
-    if (!chip_.es8311->Init(device::kEs8311MclkMultiple,
-            device::kEs8311SampleRate, device::kEs8311BitsPerSample)) {
+    if (!chip_.es8311->Init(device::es8311::kMclkMultiple,
+            device::es8311::kSampleRate, device::es8311::kBitsPerSample)) {
       status_.es8311.init_flag = false;
       LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8311 failed\n");
       return false;
@@ -1136,12 +1313,12 @@ bool TDisplayP4Driver::ConfigEs8311() {
   cpp_bus_driver::Es8311::PowerStatus ps = {
       .contorl =
           {
-              .analog_circuits = true,                // 开启模拟电路
-              .analog_bias_circuits = true,           // 开启模拟偏置电路
+              .analog_circuits = true,                // 开启模拟电�?
+              .analog_bias_circuits = true,           // 开启模拟偏置电�?
               .analog_adc_bias_circuits = true,       // 开启模拟ADC偏置电路
-              .analog_adc_reference_circuits = true,  // 开启模拟ADC参考电路
-              .analog_dac_reference_circuit = true,   // 开启模拟DAC参考电路
-              .internal_reference_circuits = false,   // 关闭内部参考电路
+              .analog_adc_reference_circuits = true,  // 开启模拟ADC参考电�?
+              .analog_dac_reference_circuit = true,   // 开启模拟DAC参考电�?
+              .internal_reference_circuits = false,   // 关闭内部参考电�?
           },
       .vmid = cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
   };
@@ -1184,8 +1361,8 @@ bool TDisplayP4Driver::InitL76k() {
       return false;
     } else {
       bool result = true;
-      result &= chip_.l76k->SetBaudRate(
-          cpp_bus_driver::L76k::BaudRate::kBr115200Bps);
+      result &=
+          chip_.l76k->SetBaudRate(cpp_bus_driver::L76k::BaudRate::kBr115200Bps);
       result &= chip_.l76k->SetUpdateFrequency(
           cpp_bus_driver::L76k::UpdateFreq::kFreq5Hz);
       result &= chip_.l76k->ClearRxBufferData();
@@ -1201,8 +1378,8 @@ bool TDisplayP4Driver::InitL76k() {
 
   } else {
     bool result = true;
-    result &= chip_.l76k->SetBaudRate(
-        cpp_bus_driver::L76k::BaudRate::kBr115200Bps);
+    result &=
+        chip_.l76k->SetBaudRate(cpp_bus_driver::L76k::BaudRate::kBr115200Bps);
 
     result &= chip_.l76k->SetUpdateFrequency(
         cpp_bus_driver::L76k::UpdateFreq::kFreq5Hz);
@@ -1230,8 +1407,7 @@ bool TDisplayP4Driver::InitIcm20948() {
       chip_.icm20948->setMagOpMode(AK09916_CONT_MODE_20HZ);
 
       status_.icm20948.init_flag = true;
-      LogMessage(
-          LogLevel::kInfo, __FILE__, __LINE__, "InitIcm20948 success\n");
+      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitIcm20948 success\n");
       return true;
     }
   } else {
@@ -1240,8 +1416,7 @@ bool TDisplayP4Driver::InitIcm20948() {
     chip_.icm20948->setMagOpMode(AK09916_CONT_MODE_20HZ);
 
     status_.icm20948.init_flag = true;
-    LogMessage(
-        LogLevel::kInfo, __FILE__, __LINE__, "InitIcm20948 success\n");
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitIcm20948 success\n");
     return true;
   }
 }
@@ -1279,41 +1454,39 @@ bool TDisplayP4Driver::ConfigXl9555() {
 
   bool result = true;
   result &= chip_.xl9555->SetGpioMode(
-      gpio::kXl9555Led1, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9555::kLed1, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9555->SetGpioMode(
-      gpio::kXl9555Led2, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9555::kLed2, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9555->SetGpioMode(
-      gpio::kXl9555Led3, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9555::kLed3, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9555->SetGpioMode(
-      gpio::kXl9555Tca8418Rst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9555->SetGpioMode(
-      gpio::kXl9555TMixrfEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetGpioMode(
-      gpio::kXl9555TMixrfCc1101RfSwitch0,
+      gpio::xl9555::kTMixrfEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9555->SetGpioMode(gpio::xl9555::kTMixrfCc1101RfSwitch0,
       cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetGpioMode(
-      gpio::kXl9555TMixrfCc1101RfSwitch1,
+  result &= chip_.xl9555->SetGpioMode(gpio::xl9555::kTMixrfCc1101RfSwitch1,
       cpp_bus_driver::Xl95x5::Mode::kOutput);
 
   result &= chip_.xl9555->GpioWrite(
-      gpio::kXl9555Led1, cpp_bus_driver::Xl95x5::Value::kHigh);  // 关闭led
+      gpio::xl9555::kLed1, cpp_bus_driver::Xl95x5::Value::kHigh);  // 关闭led
   result &= chip_.xl9555->GpioWrite(
-      gpio::kXl9555Led2, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9555::kLed2, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9555->GpioWrite(
-      gpio::kXl9555Led3, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9555::kLed3, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9555->GpioWrite(
-      gpio::kXl9555TMixrfEn, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9555::kTMixrfEn, cpp_bus_driver::Xl95x5::Value::kHigh);
 
   result &= SetCc1101RfSwitch(Cc1101RfSwitch::k868_915Mhz);
 
   result &= chip_.xl9555->GpioWrite(
-      gpio::kXl9555Tca8418Rst, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(10);
   result &= chip_.xl9555->GpioWrite(
-      gpio::kXl9555Tca8418Rst, cpp_bus_driver::Xl95x5::Value::kLow);
+      gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(10);
   result &= chip_.xl9555->GpioWrite(
-      gpio::kXl9555Tca8418Rst, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(10);
 
   if (!result) {
@@ -1329,9 +1502,8 @@ bool TDisplayP4Driver::InitTca8418() {
     return false;
   } else {
     bool result = true;
-    result &= chip_.tca8418->SetKeypadScanWindow(
-        0, 0, device::kTca8418KeypadScanWidth,
-        device::kTca8418KeypadScanHeight);
+    result &= chip_.tca8418->SetKeypadScanWindow(0, 0,
+        device::tca8418::kKeypadScanWidth, device::tca8418::kKeypadScanHeight);
     result &= chip_.tca8418->SetIrqGpioMode(
         cpp_bus_driver::Tca8418::IrqMask::kKeyEvents);
     result &= chip_.tca8418->ClearIrqFlag(
@@ -1388,27 +1560,21 @@ bool TDisplayP4Driver::SetCc1101RfSwitch(Cc1101RfSwitch rf_switch) {
   bool result = true;
   switch (rf_switch) {
     case Cc1101RfSwitch::k315Mhz:
-      result &= chip_.xl9555->GpioWrite(
-          gpio::kXl9555TMixrfCc1101RfSwitch0,
+      result &= chip_.xl9555->GpioWrite(gpio::xl9555::kTMixrfCc1101RfSwitch0,
           cpp_bus_driver::Xl95x5::Value::kLow);
-      result &= chip_.xl9555->GpioWrite(
-          gpio::kXl9555TMixrfCc1101RfSwitch1,
+      result &= chip_.xl9555->GpioWrite(gpio::xl9555::kTMixrfCc1101RfSwitch1,
           cpp_bus_driver::Xl95x5::Value::kHigh);
       break;
     case Cc1101RfSwitch::k434Mhz:
-      result &= chip_.xl9555->GpioWrite(
-          gpio::kXl9555TMixrfCc1101RfSwitch0,
+      result &= chip_.xl9555->GpioWrite(gpio::xl9555::kTMixrfCc1101RfSwitch0,
           cpp_bus_driver::Xl95x5::Value::kHigh);
-      result &= chip_.xl9555->GpioWrite(
-          gpio::kXl9555TMixrfCc1101RfSwitch1,
+      result &= chip_.xl9555->GpioWrite(gpio::xl9555::kTMixrfCc1101RfSwitch1,
           cpp_bus_driver::Xl95x5::Value::kHigh);
       break;
     case Cc1101RfSwitch::k868_915Mhz:
-      result &= chip_.xl9555->GpioWrite(
-          gpio::kXl9555TMixrfCc1101RfSwitch0,
+      result &= chip_.xl9555->GpioWrite(gpio::xl9555::kTMixrfCc1101RfSwitch0,
           cpp_bus_driver::Xl95x5::Value::kHigh);
-      result &= chip_.xl9555->GpioWrite(
-          gpio::kXl9555TMixrfCc1101RfSwitch1,
+      result &= chip_.xl9555->GpioWrite(gpio::xl9555::kTMixrfCc1101RfSwitch1,
           cpp_bus_driver::Xl95x5::Value::kLow);
       break;
 
@@ -1511,12 +1677,12 @@ bool TDisplayP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
 
   sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
   slot_config.width = 4;
-  slot_config.clk = static_cast<gpio_num_t>(gpio::kSdSdioClk);
-  slot_config.cmd = static_cast<gpio_num_t>(gpio::kSdSdioCmd);
-  slot_config.d0 = static_cast<gpio_num_t>(gpio::kSdSdioD0);
-  slot_config.d1 = static_cast<gpio_num_t>(gpio::kSdSdioD1);
-  slot_config.d2 = static_cast<gpio_num_t>(gpio::kSdSdioD2);
-  slot_config.d3 = static_cast<gpio_num_t>(gpio::kSdSdioD3);
+  slot_config.clk = static_cast<gpio_num_t>(gpio::sd::kSdioClk);
+  slot_config.cmd = static_cast<gpio_num_t>(gpio::sd::kSdioCmd);
+  slot_config.d0 = static_cast<gpio_num_t>(gpio::sd::kSdioD0);
+  slot_config.d1 = static_cast<gpio_num_t>(gpio::sd::kSdioD1);
+  slot_config.d2 = static_cast<gpio_num_t>(gpio::sd::kSdioD2);
+  slot_config.d3 = static_cast<gpio_num_t>(gpio::sd::kSdioD3);
   slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
   sdmmc_card_t* card = nullptr;
@@ -1550,9 +1716,9 @@ bool TDisplayP4Driver::InitSdspi(
   host.max_freq_khz = max_freq_khz;
 
   spi_bus_config_t bus_config = {
-      .mosi_io_num = gpio::kSdMosi,
-      .miso_io_num = gpio::kSdMiso,
-      .sclk_io_num = gpio::kSdSclk,
+      .mosi_io_num = gpio::sd::kMosi,
+      .miso_io_num = gpio::sd::kMiso,
+      .sclk_io_num = gpio::sd::kSclk,
       .quadwp_io_num = -1,
       .quadhd_io_num = -1,
       .data4_io_num = -1,
@@ -1577,7 +1743,7 @@ bool TDisplayP4Driver::InitSdspi(
 
   sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
   slot_config.host_id = host_id;
-  slot_config.gpio_cs = static_cast<gpio_num_t>(gpio::kSdCs);
+  slot_config.gpio_cs = static_cast<gpio_num_t>(gpio::sd::kCs);
 
   sdmmc_card_t* card = nullptr;
   result = esp_vfs_fat_sdspi_mount(

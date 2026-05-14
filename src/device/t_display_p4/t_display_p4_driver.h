@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-05-14 22:58:58
+ * @LastEditTime: 2026-05-15 00:57:17
  * @License: GPL 3.0
  */
 
@@ -30,64 +30,6 @@
 #include "kode_bq25896.h"
 #endif
 
-namespace lilygo_device_driver::t_display_p4::device {
-
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4)
-inline constexpr int kScreenRotationDirection = 0;
-#elif defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
-inline constexpr int kScreenRotationDirection = 90;
-#else
-#error "Missing required macro definition."
-#endif
-
-#if defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB565)
-inline constexpr int kScreenBitsPerPixel = 16;
-#elif defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB888)
-inline constexpr int kScreenBitsPerPixel = 24;
-#else
-#error "Missing required macro definition."
-#endif
-
-#if defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB565)
-inline constexpr int kCameraBitsPerPixel = 16;
-#elif defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB888)
-inline constexpr int kCameraBitsPerPixel = 24;
-#else
-#error "Missing required macro definition."
-#endif
-
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
-inline constexpr int kScreenWidth = kHi8561ScreenWidth;
-inline constexpr int kScreenHeight = kHi8561ScreenHeight;
-inline constexpr int kScreenMipiDsiDpiClkMhz = kHi8561ScreenMipiDsiDpiClkMhz;
-inline constexpr int kScreenMipiDsiHsync = kHi8561ScreenMipiDsiHsync;
-inline constexpr int kScreenMipiDsiHbp = kHi8561ScreenMipiDsiHbp;
-inline constexpr int kScreenMipiDsiHfp = kHi8561ScreenMipiDsiHfp;
-inline constexpr int kScreenMipiDsiVsync = kHi8561ScreenMipiDsiVsync;
-inline constexpr int kScreenMipiDsiVbp = kHi8561ScreenMipiDsiVbp;
-inline constexpr int kScreenMipiDsiVfp = kHi8561ScreenMipiDsiVfp;
-inline constexpr int kScreenDataLaneNum = kHi8561ScreenDataLaneNum;
-inline constexpr int kScreenLaneBitRateMbps = kHi8561ScreenLaneBitRateMbps;
-
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
-inline constexpr int kScreenWidth = kRm69a10ScreenWidth;
-inline constexpr int kScreenHeight = kRm69a10ScreenHeight;
-inline constexpr int kScreenMipiDsiDpiClkMhz = kRm69a10ScreenMipiDsiDpiClkMhz;
-inline constexpr int kScreenMipiDsiHsync = kRm69a10ScreenMipiDsiHsync;
-inline constexpr int kScreenMipiDsiHbp = kRm69a10ScreenMipiDsiHbp;
-inline constexpr int kScreenMipiDsiHfp = kRm69a10ScreenMipiDsiHfp;
-inline constexpr int kScreenMipiDsiVsync = kRm69a10ScreenMipiDsiVsync;
-inline constexpr int kScreenMipiDsiVbp = kRm69a10ScreenMipiDsiVbp;
-inline constexpr int kScreenMipiDsiVfp = kRm69a10ScreenMipiDsiVfp;
-inline constexpr int kScreenDataLaneNum = kRm69a10ScreenDataLaneNum;
-inline constexpr int kScreenLaneBitRateMbps = kRm69a10ScreenLaneBitRateMbps;
-
-#else
-#error "Missing required macro definition."
-#endif
-
-}  // namespace lilygo_device_driver::t_display_p4::device
-
 #if defined(CONFIG_CAMERA_TYPE_SC2336)
 #elif defined(CONFIG_CAMERA_TYPE_OV2710)
 #elif defined(CONFIG_CAMERA_TYPE_OV5645)
@@ -96,6 +38,33 @@ inline constexpr int kScreenLaneBitRateMbps = kRm69a10ScreenLaneBitRateMbps;
 #endif
 
 namespace lilygo_device_driver {
+
+namespace t_display_p4::device {
+
+enum class ScreenType {
+  kUnknown,
+  kHi8561,
+  kRm69a10,
+};
+
+struct ScreenDeviceInfo {
+  ScreenType type;
+  const char* name;
+  int width;
+  int height;
+  int bits_per_pixel;
+  int mipi_dsi_dpi_clk_mhz;
+  int mipi_dsi_hsync;
+  int mipi_dsi_hbp;
+  int mipi_dsi_hfp;
+  int mipi_dsi_vsync;
+  int mipi_dsi_vbp;
+  int mipi_dsi_vfp;
+  int data_lane_num;
+  int lane_bit_rate_mbps;
+};
+
+}  // namespace t_display_p4::device
 
 class TDisplayP4Driver {
  public:
@@ -129,12 +98,8 @@ class TDisplayP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareUart> l76k_uart_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
-
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> hi8561_i2c_touch_bus;
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> gt9895_i2c_touch_bus;
-#endif
 
 #if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
     std::shared_ptr<cpp_bus_driver::SoftwareI2c> xl9555_i2c_bus;
@@ -166,15 +131,11 @@ class TDisplayP4Driver {
     std::unique_ptr<cpp_bus_driver::L76k> l76k;
     std::unique_ptr<ICM20948_WE> icm20948;
     std::unique_ptr<cpp_bus_driver::Sx126x> sx1262;
-
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
     std::unique_ptr<cpp_bus_driver::Hi8561> hi8561;
     std::unique_ptr<cpp_bus_driver::Hi8561Touch> hi8561_touch;
     std::unique_ptr<cpp_bus_driver::Pwm> hi8561_backlight;
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
     std::unique_ptr<cpp_bus_driver::Rm69a10> rm69a10;
     std::unique_ptr<cpp_bus_driver::Gt9895> gt9895;
-#endif
 
 #if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
 
@@ -202,7 +163,6 @@ class TDisplayP4Driver {
       bool init_flag = false;
     } sgm38121;
 
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
     struct {
       bool init_flag = false;
     } hi8561;
@@ -214,7 +174,7 @@ class TDisplayP4Driver {
     struct {
       bool init_flag = false;
     } hi8561_backlight;
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
+
     struct {
       bool init_flag = false;
     } rm69a10;
@@ -222,7 +182,6 @@ class TDisplayP4Driver {
     struct {
       bool init_flag = false;
     } gt9895;
-#endif
 
     struct {
       bool init_flag = false;
@@ -285,6 +244,8 @@ class TDisplayP4Driver {
   const Bus& bus() const { return bus_; }
   const Chip& chip() const { return chip_; }
   const Status& status() const { return status_; }
+  const t_display_p4::device::ScreenDeviceInfo& screen_info() const;
+  t_display_p4::device::ScreenType screen_type() const;
 
   void CreateDrivers();
   bool InitDrivers(InitMode mode = InitMode::kSync);
@@ -302,15 +263,11 @@ class TDisplayP4Driver {
   bool InitXl9535();
   bool ConfigXl9535();
   bool InitSgm38121();
-
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
   bool InitHi8561();
   bool InitHi8561Touch();
   bool InitHi8561Backlight();
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
   bool InitRm69a10();
   bool InitGt9895();
-#endif
 
   bool InitPcf8563();
   bool InitAw86224();
@@ -341,6 +298,34 @@ class TDisplayP4Driver {
   Bus bus_;
   Chip chip_;
   Status status_;
+  const t_display_p4::device::ScreenDeviceInfo* screen_info_ = nullptr;
+
+  /**
+   * @brief 通过 GT9895 触摸 ID 自动识别屏幕类型
+   * @return 识别流程完成返回 true，否则返回 false
+   * @Date 2026-05-15 00:00:00
+   */
+  bool DetectScreen();
+
+  /**
+   * @brief 按当前屏幕信息创建对应的 MIPI 屏幕驱动
+   * @Date 2026-05-15 00:00:00
+   */
+  void CreateSelectedScreenDrivers();
+
+  /**
+   * @brief 初始化当前自动识别到的屏幕
+   * @return 初始化成功返回 true，否则返回 false
+   * @Date 2026-05-15 00:00:00
+   */
+  bool InitSelectedScreen();
+
+  /**
+   * @brief 初始化当前屏幕对应的触摸和背光设备
+   * @return 初始化成功返回 true，否则返回 false
+   * @Date 2026-05-15 00:00:00
+   */
+  bool InitSelectedTouchAndBacklight();
 
   TDisplayP4Driver() = default;
   ~TDisplayP4Driver() = default;
