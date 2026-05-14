@@ -564,12 +564,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
 
         if (status_.sx1262.init_flag) {
           // 唤醒
-          tool_->GpioWrite(SX1262_CS, 1);
-          tool_->DelayMs(10);
-          tool_->GpioWrite(SX1262_CS, 0);
-          tool_->DelayMs(10);
-          tool_->GpioWrite(SX1262_CS, 1);
-          tool_->DelayMs(10);
+          result &= chip_.sx1262->Wakeup();
         }
 
         if (status_.sgm38121.init_flag) {
