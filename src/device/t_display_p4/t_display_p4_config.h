@@ -6,251 +6,254 @@
  */
 #pragma once
 
-//// gpio config ////
+#include <cstdint>
 
-// IIC
-#define I2C_1_SDA 7
-#define I2C_1_SCL 8
-#define I2C_2_SDA 20
-#define I2C_2_SCL 21
+#include "cpp_bus_driver_library.h"
 
-// BOOT
-#define ESP32P4_BOOT 35
+namespace lilygo_device_driver::t_display_p4 {
 
-// XL9535
-#define XL9535_SDA I2C_1_SDA
-#define XL9535_SCL I2C_1_SCL
-#define XL9535_INT 5
-// XL9535引脚功能
-#define XL9535_3_3_V_POWER_EN cpp_bus_driver::Xl95x5::Pin::kIo0
-#define XL9535_SKY13453_VCTL cpp_bus_driver::Xl95x5::Pin::kIo1
-#define XL9535_SCREEN_RST cpp_bus_driver::Xl95x5::Pin::kIo2
-#define XL9535_TOUCH_RST cpp_bus_driver::Xl95x5::Pin::kIo3
-#define XL9535_TOUCH_INT cpp_bus_driver::Xl95x5::Pin::kIo4
-#define XL9535_ETHERNET_RST cpp_bus_driver::Xl95x5::Pin::kIo5
-#define XL9535_5_0_V_POWER_EN cpp_bus_driver::Xl95x5::Pin::kIo6
-#define XL9535_ICM20948_INT cpp_bus_driver::Xl95x5::Pin::kIo7
-#define XL9535_ESP32P4_VCCA_POWER_EN cpp_bus_driver::Xl95x5::Pin::kIo10
-#define XL9535_GPS_WAKE_UP cpp_bus_driver::Xl95x5::Pin::kIo11
-#define XL9535_RTC_INT cpp_bus_driver::Xl95x5::Pin::kIo12
-#define XL9535_ESP32C6_WAKE_UP cpp_bus_driver::Xl95x5::Pin::kIo13
-#define XL9535_ESP32C6_EN cpp_bus_driver::Xl95x5::Pin::kIo14
-#define XL9535_SD_EN cpp_bus_driver::Xl95x5::Pin::kIo15
-#define XL9535_SX1262_RST cpp_bus_driver::Xl95x5::Pin::kIo16
-#define XL9535_SX1262_DIO1 cpp_bus_driver::Xl95x5::Pin::kIo17
+namespace gpio {
 
-// ES8311
-#define ES8311_SDA I2C_2_SDA
-#define ES8311_SCL I2C_2_SCL
-#define ES8311_ADC_DATA 11
-#define ES8311_DAC_DATA 10
-#define ES8311_BCLK 12
-#define ES8311_MCLK 13
-#define ES8311_WS_LRCK 9
+inline constexpr int kI2c1Sda = 7;
+inline constexpr int kI2c1Scl = 8;
+inline constexpr int kI2c2Sda = 20;
+inline constexpr int kI2c2Scl = 21;
 
-// AW86224
-#define AW86224_SDA I2C_2_SDA
-#define AW86224_SCL I2C_2_SCL
+inline constexpr int kEsp32p4Boot = 35;
 
-// SGM38121
-#define SGM38121_SDA I2C_2_SDA
-#define SGM38121_SCL I2C_2_SCL
+inline constexpr int kXl9535Sda = kI2c1Sda;
+inline constexpr int kXl9535Scl = kI2c1Scl;
+inline constexpr int kXl9535Int = 5;
+inline constexpr auto kXl9535PowerEn3v3 =
+    cpp_bus_driver::Xl95x5::Pin::kIo0;
+inline constexpr auto kXl9535Sky13453Vctl =
+    cpp_bus_driver::Xl95x5::Pin::kIo1;
+inline constexpr auto kXl9535ScreenRst =
+    cpp_bus_driver::Xl95x5::Pin::kIo2;
+inline constexpr auto kXl9535TouchRst =
+    cpp_bus_driver::Xl95x5::Pin::kIo3;
+inline constexpr auto kXl9535TouchInt =
+    cpp_bus_driver::Xl95x5::Pin::kIo4;
+inline constexpr auto kXl9535EthernetRst =
+    cpp_bus_driver::Xl95x5::Pin::kIo5;
+inline constexpr auto kXl9535PowerEn5v0 =
+    cpp_bus_driver::Xl95x5::Pin::kIo6;
+inline constexpr auto kXl9535Icm20948Int =
+    cpp_bus_driver::Xl95x5::Pin::kIo7;
+inline constexpr auto kXl9535Esp32p4VccaPowerEn =
+    cpp_bus_driver::Xl95x5::Pin::kIo10;
+inline constexpr auto kXl9535GpsWakeUp =
+    cpp_bus_driver::Xl95x5::Pin::kIo11;
+inline constexpr auto kXl9535RtcInt =
+    cpp_bus_driver::Xl95x5::Pin::kIo12;
+inline constexpr auto kXl9535Esp32c6WakeUp =
+    cpp_bus_driver::Xl95x5::Pin::kIo13;
+inline constexpr auto kXl9535Esp32c6En =
+    cpp_bus_driver::Xl95x5::Pin::kIo14;
+inline constexpr auto kXl9535SdEn =
+    cpp_bus_driver::Xl95x5::Pin::kIo15;
+inline constexpr auto kXl9535Sx1262Rst =
+    cpp_bus_driver::Xl95x5::Pin::kIo16;
+inline constexpr auto kXl9535Sx1262Dio1 =
+    cpp_bus_driver::Xl95x5::Pin::kIo17;
 
-// PCF8563
-#define PCF8563_SDA I2C_1_SDA
-#define PCF8563_SCL I2C_1_SCL
+inline constexpr int kEs8311Sda = kI2c2Sda;
+inline constexpr int kEs8311Scl = kI2c2Scl;
+inline constexpr int kEs8311AdcData = 11;
+inline constexpr int kEs8311DacData = 10;
+inline constexpr int kEs8311Bclk = 12;
+inline constexpr int kEs8311Mclk = 13;
+inline constexpr int kEs8311WsLrck = 9;
 
-// BQ27220
-#define BQ27220_SDA I2C_1_SDA
-#define BQ27220_SCL I2C_1_SCL
+inline constexpr int kAw86224Sda = kI2c2Sda;
+inline constexpr int kAw86224Scl = kI2c2Scl;
 
-// SPI
-#define SPI_1_SCLK 2
-#define SPI_1_MOSI 3
-#define SPI_1_MISO 4
+inline constexpr int kSgm38121Sda = kI2c2Sda;
+inline constexpr int kSgm38121Scl = kI2c2Scl;
 
-// SX1262
-#define SX1262_CS 24
-#define SX1262_BUSY 6
-#define SX1262_SCLK SPI_1_SCLK
-#define SX1262_MOSI SPI_1_MOSI
-#define SX1262_MISO SPI_1_MISO
+inline constexpr int kPcf8563Sda = kI2c1Sda;
+inline constexpr int kPcf8563Scl = kI2c1Scl;
 
-// L76K
-#define GPS_TX 22
-#define GPS_RX 23
+inline constexpr int kBq27220Sda = kI2c1Sda;
+inline constexpr int kBq27220Scl = kI2c1Scl;
 
-// ICM20948
-#define ICM20948_SDA I2C_2_SDA
-#define ICM20948_SCL I2C_2_SCL
+inline constexpr int kSpi1Sclk = 2;
+inline constexpr int kSpi1Mosi = 3;
+inline constexpr int kSpi1Miso = 4;
 
-// HI8561
-#define HI8561_SCREEN_BL 51
-#define HI8561_TOUCH_SDA I2C_1_SDA
-#define HI8561_TOUCH_SCL I2C_1_SCL
+inline constexpr int kSx1262Cs = 24;
+inline constexpr int kSx1262Busy = 6;
+inline constexpr int kSx1262Sclk = kSpi1Sclk;
+inline constexpr int kSx1262Mosi = kSpi1Mosi;
+inline constexpr int kSx1262Miso = kSpi1Miso;
 
-// GT9895
-#define GT9895_SDA I2C_1_SDA
-#define GT9895_SCL I2C_1_SCL
+inline constexpr int kGpsTx = 22;
+inline constexpr int kGpsRx = 23;
 
-// Camera
-#define CAMERA_SDA I2C_2_SDA
-#define CAMERA_SCL I2C_2_SCL
+inline constexpr int kIcm20948Sda = kI2c2Sda;
+inline constexpr int kIcm20948Scl = kI2c2Scl;
 
-// SDIO
-#define SDIO_1_CLK 43
-#define SDIO_1_CMD 44
-#define SDIO_1_D0 39
-#define SDIO_1_D1 40
-#define SDIO_1_D2 41
-#define SDIO_1_D3 42
+inline constexpr int kHi8561ScreenBl = 51;
+inline constexpr int kHi8561TouchSda = kI2c1Sda;
+inline constexpr int kHi8561TouchScl = kI2c1Scl;
 
-#define SDIO_2_CLK 18
-#define SDIO_2_CMD 19
-#define SDIO_2_D0 14
-#define SDIO_2_D1 15
-#define SDIO_2_D2 16
-#define SDIO_2_D3 17
+inline constexpr int kGt9895Sda = kI2c1Sda;
+inline constexpr int kGt9895Scl = kI2c1Scl;
 
-// SD
-// SDMMC
-#define SD_SDIO_CLK SDIO_1_CLK
-#define SD_SDIO_CMD SDIO_1_CMD
-#define SD_SDIO_D0 SDIO_1_D0
-#define SD_SDIO_D1 SDIO_1_D1
-#define SD_SDIO_D2 SDIO_1_D2
-#define SD_SDIO_D3 SDIO_1_D3
-// SDSPI
-#define SD_SCLK SDIO_1_CLK
-#define SD_MOSI SDIO_1_CMD
-#define SD_MISO SDIO_1_D0
-#define SD_CS SDIO_1_D3
+inline constexpr int kCameraSda = kI2c2Sda;
+inline constexpr int kCameraScl = kI2c2Scl;
 
-// ESP32C6 SDIO
-#define ESP32C6_SDIO_CLK SDIO_2_CLK
-#define ESP32C6_SDIO_CMD SDIO_2_CMD
-#define ESP32C6_SDIO_D0 SDIO_2_D0
-#define ESP32C6_SDIO_D1 SDIO_2_D1
-#define ESP32C6_SDIO_D2 SDIO_2_D2
-#define ESP32C6_SDIO_D3 SDIO_2_D3
+inline constexpr int kSdio1Clk = 43;
+inline constexpr int kSdio1Cmd = 44;
+inline constexpr int kSdio1D0 = 39;
+inline constexpr int kSdio1D1 = 40;
+inline constexpr int kSdio1D2 = 41;
+inline constexpr int kSdio1D3 = 42;
 
-// extended io
-#define EXT_2X8P_SPI_SCLK SPI_1_SCLK
-#define EXT_2X8P_SPI_MOSI SPI_1_MOSI
-#define EXT_2X8P_SPI_MISO SPI_1_MISO
+inline constexpr int kSdio2Clk = 18;
+inline constexpr int kSdio2Cmd = 19;
+inline constexpr int kSdio2D0 = 14;
+inline constexpr int kSdio2D1 = 15;
+inline constexpr int kSdio2D2 = 16;
+inline constexpr int kSdio2D3 = 17;
 
-#define EXT_2X8P_IO_26 26
-#define EXT_2X8P_IO_27 27
-#define EXT_2X8P_IO_33 33
-#define EXT_2X8P_IO_32 32
-#define EXT_2X8P_IO_25 25
-#define EXT_2X8P_IO_36 36
-#define EXT_2X8P_IO_53 53
-#define EXT_2X8P_IO_54 54
-#define EXT_1X4P_1_IO_47 47
-#define EXT_1X4P_1_IO_48 48
-#define EXT_1X4P_2_IO_45 45
-#define EXT_1X4P_2_IO_46 46
+inline constexpr int kSdSdioClk = kSdio1Clk;
+inline constexpr int kSdSdioCmd = kSdio1Cmd;
+inline constexpr int kSdSdioD0 = kSdio1D0;
+inline constexpr int kSdSdioD1 = kSdio1D1;
+inline constexpr int kSdSdioD2 = kSdio1D2;
+inline constexpr int kSdSdioD3 = kSdio1D3;
 
-// ETHERNET
-#define IP101_PHY_ADDRESS 1
-#define IP101_PHY_RST -1
-#define IP101_RMII_REF_CLK 50
-#define IP101_RMII_CLK_OUT -1
-#define IP101_RMII_MDC 31
-#define IP101_RMII_MDIO 52
-#define IP101_RMII_TX_EN 49
-#define IP101_RMII_TXD0 34
-#define IP101_RMII_TXD1 35
-#define IP101_RMII_CRS_DV 28
-#define IP101_RMII_RXD0 29
-#define IP101_RMII_RXD1 30
+inline constexpr int kSdSclk = kSdio1Clk;
+inline constexpr int kSdMosi = kSdio1Cmd;
+inline constexpr int kSdMiso = kSdio1D0;
+inline constexpr int kSdCs = kSdio1D3;
 
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
+inline constexpr int kEsp32c6SdioClk = kSdio2Clk;
+inline constexpr int kEsp32c6SdioCmd = kSdio2Cmd;
+inline constexpr int kEsp32c6SdioD0 = kSdio2D0;
+inline constexpr int kEsp32c6SdioD1 = kSdio2D1;
+inline constexpr int kEsp32c6SdioD2 = kSdio2D2;
+inline constexpr int kEsp32c6SdioD3 = kSdio2D3;
 
-// BQ25896
-#define BQ25896_SDA I2C_1_SDA
-#define BQ25896_SCL I2C_1_SCL
+inline constexpr int kExt2x8pSpiSclk = kSpi1Sclk;
+inline constexpr int kExt2x8pSpiMosi = kSpi1Mosi;
+inline constexpr int kExt2x8pSpiMiso = kSpi1Miso;
 
-#endif
+inline constexpr int kExt2x8pIo26 = 26;
+inline constexpr int kExt2x8pIo27 = 27;
+inline constexpr int kExt2x8pIo33 = 33;
+inline constexpr int kExt2x8pIo32 = 32;
+inline constexpr int kExt2x8pIo25 = 25;
+inline constexpr int kExt2x8pIo36 = 36;
+inline constexpr int kExt2x8pIo53 = 53;
+inline constexpr int kExt2x8pIo54 = 54;
+inline constexpr int kExt1x4p1Io47 = 47;
+inline constexpr int kExt1x4p1Io48 = 48;
+inline constexpr int kExt1x4p2Io45 = 45;
+inline constexpr int kExt1x4p2Io46 = 46;
 
-//// gpio config ////
+namespace ip101 {
 
-//// other define config ////
+inline constexpr int kPhyRst = -1;
+inline constexpr int kRmiiRefClk = 50;
+inline constexpr int kRmiiClkOut = -1;
+inline constexpr int kRmiiMdc = 31;
+inline constexpr int kRmiiMdio = 52;
+inline constexpr int kRmiiTxEn = 49;
+inline constexpr int kRmiiTxd0 = 34;
+inline constexpr int kRmiiTxd1 = 35;
+inline constexpr int kRmiiCrsDv = 28;
+inline constexpr int kRmiiRxd0 = 29;
+inline constexpr int kRmiiRxd1 = 30;
 
-// XL9535
-#define XL9535_I2C_ADDRESS 0x20
+}  // namespace ip101
 
-// ES8311
-#define ES8311_I2C_ADDRESS 0x18
-#define ES8311_MCLK_MULTIPLE 256
-#define ES8311_SAMPLE_RATE 44100
-#define ES8311_BITS_PER_SAMPLE 16
-#define ES8311_CHANNEL 2
-
-// AW86224
-#define AW86224_I2C_ADDRESS 0x58
-
-// SGM38121
-#define SGM38121_I2C_ADDRESS 0x28
-
-// PCF8563
-#define PCF8563_I2C_ADDRESS 0x51
-
-// BQ27220
-#define BQ27220_I2C_ADDRESS 0x55
-
-// ICM20948
-#define ICM20948_I2C_ADDRESS 0x68
-
-// HI8561
-#define HI8561_SCREEN_WIDTH 540
-#define HI8561_SCREEN_HEIGHT 1168
-#define HI8561_SCREEN_MIPI_DSI_DPI_CLK_MHZ 60
-#define HI8561_SCREEN_MIPI_DSI_HSYNC 28
-#define HI8561_SCREEN_MIPI_DSI_HBP 26
-#define HI8561_SCREEN_MIPI_DSI_HFP 20
-#define HI8561_SCREEN_MIPI_DSI_VSYNC 2
-#define HI8561_SCREEN_MIPI_DSI_VBP 22
-#define HI8561_SCREEN_MIPI_DSI_VFP 200
-#define HI8561_SCREEN_DATA_LANE_NUM 2
-#define HI8561_SCREEN_LANE_BIT_RATE_MBPS 1000
-#define HI8561_TOUCH_I2C_ADDRESS 0x68
-
-// RM69A10
-#define RM69A10_SCREEN_WIDTH 568
-#define RM69A10_SCREEN_HEIGHT 1232
-#define RM69A10_SCREEN_MIPI_DSI_DPI_CLK_MHZ 60
-#define RM69A10_SCREEN_MIPI_DSI_HSYNC 50
-#define RM69A10_SCREEN_MIPI_DSI_HBP 150
-#define RM69A10_SCREEN_MIPI_DSI_HFP 50
-#define RM69A10_SCREEN_MIPI_DSI_VSYNC 40
-#define RM69A10_SCREEN_MIPI_DSI_VBP 120
-#define RM69A10_SCREEN_MIPI_DSI_VFP 80
-#define RM69A10_SCREEN_DATA_LANE_NUM 2
-#define RM69A10_SCREEN_LANE_BIT_RATE_MBPS 1000
-
-// GT9895
-#define GT9895_I2C_ADDRESS 0x5D
-#define GT9895_MAX_X_SIZE 1060
-#define GT9895_MAX_Y_SIZE 2400
-#define GT9895_X_SCALE_FACTOR                \
-  static_cast<float>(RM69A10_SCREEN_WIDTH) / \
-      static_cast<float>(GT9895_MAX_X_SIZE)
-#define GT9895_Y_SCALE_FACTOR                 \
-  static_cast<float>(RM69A10_SCREEN_HEIGHT) / \
-      static_cast<float>(GT9895_MAX_Y_SIZE)
-
-#define CAMERA_BUFFER_COUNT 2
-
-// SD
-#define SD_BASE_PATH "/sdcard"
+inline constexpr int kEthernetPhyRst = ip101::kPhyRst;
+inline constexpr int kEthernetRmiiRefClk = ip101::kRmiiRefClk;
+inline constexpr int kEthernetRmiiClkOut = ip101::kRmiiClkOut;
+inline constexpr int kEthernetMdc = ip101::kRmiiMdc;
+inline constexpr int kEthernetMdio = ip101::kRmiiMdio;
+inline constexpr int kEthernetRmiiTxEn = ip101::kRmiiTxEn;
+inline constexpr int kEthernetRmiiTxd0 = ip101::kRmiiTxd0;
+inline constexpr int kEthernetRmiiTxd1 = ip101::kRmiiTxd1;
+inline constexpr int kEthernetRmiiCrsDv = ip101::kRmiiCrsDv;
+inline constexpr int kEthernetRmiiRxd0 = ip101::kRmiiRxd0;
+inline constexpr int kEthernetRmiiRxd1 = ip101::kRmiiRxd1;
 
 #if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-
-// BQ25896
-#define BQ25896_I2C_ADDRESS 0x6B
-
+inline constexpr int kBq25896Sda = kI2c1Sda;
+inline constexpr int kBq25896Scl = kI2c1Scl;
 #endif
 
-//// other define config ////
+}  // namespace gpio
+
+namespace device {
+
+namespace ip101 {
+
+inline constexpr int kPhyAddress = 1;
+
+}  // namespace ip101
+
+inline constexpr int kEthernetPhyAddress = ip101::kPhyAddress;
+
+inline constexpr uint8_t kXl9535I2cAddress = 0x20;
+
+inline constexpr uint8_t kEs8311I2cAddress = 0x18;
+inline constexpr int kEs8311MclkMultiple = 256;
+inline constexpr int kEs8311SampleRate = 44100;
+inline constexpr int kEs8311BitsPerSample = 16;
+inline constexpr int kEs8311Channel = 2;
+
+inline constexpr uint8_t kAw86224I2cAddress = 0x58;
+inline constexpr uint8_t kSgm38121I2cAddress = 0x28;
+inline constexpr uint8_t kPcf8563I2cAddress = 0x51;
+inline constexpr uint8_t kBq27220I2cAddress = 0x55;
+inline constexpr uint8_t kIcm20948I2cAddress = 0x68;
+
+inline constexpr int kHi8561ScreenWidth = 540;
+inline constexpr int kHi8561ScreenHeight = 1168;
+inline constexpr int kHi8561ScreenMipiDsiDpiClkMhz = 60;
+inline constexpr int kHi8561ScreenMipiDsiHsync = 28;
+inline constexpr int kHi8561ScreenMipiDsiHbp = 26;
+inline constexpr int kHi8561ScreenMipiDsiHfp = 20;
+inline constexpr int kHi8561ScreenMipiDsiVsync = 2;
+inline constexpr int kHi8561ScreenMipiDsiVbp = 22;
+inline constexpr int kHi8561ScreenMipiDsiVfp = 200;
+inline constexpr int kHi8561ScreenDataLaneNum = 2;
+inline constexpr int kHi8561ScreenLaneBitRateMbps = 1000;
+inline constexpr uint8_t kHi8561TouchI2cAddress = 0x68;
+
+inline constexpr int kRm69a10ScreenWidth = 568;
+inline constexpr int kRm69a10ScreenHeight = 1232;
+inline constexpr int kRm69a10ScreenMipiDsiDpiClkMhz = 60;
+inline constexpr int kRm69a10ScreenMipiDsiHsync = 50;
+inline constexpr int kRm69a10ScreenMipiDsiHbp = 150;
+inline constexpr int kRm69a10ScreenMipiDsiHfp = 50;
+inline constexpr int kRm69a10ScreenMipiDsiVsync = 40;
+inline constexpr int kRm69a10ScreenMipiDsiVbp = 120;
+inline constexpr int kRm69a10ScreenMipiDsiVfp = 80;
+inline constexpr int kRm69a10ScreenDataLaneNum = 2;
+inline constexpr int kRm69a10ScreenLaneBitRateMbps = 1000;
+
+inline constexpr uint8_t kGt9895I2cAddress = 0x5D;
+inline constexpr int kGt9895MaxXSize = 1060;
+inline constexpr int kGt9895MaxYSize = 2400;
+inline constexpr float kGt9895XScaleFactor =
+    static_cast<float>(kRm69a10ScreenWidth) /
+    static_cast<float>(kGt9895MaxXSize);
+inline constexpr float kGt9895YScaleFactor =
+    static_cast<float>(kRm69a10ScreenHeight) /
+    static_cast<float>(kGt9895MaxYSize);
+
+inline constexpr int kCameraBufferCount = 2;
+inline constexpr const char* kSdBasePath = "/sdcard";
+
+#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
+inline constexpr uint8_t kBq25896I2cAddress = 0x6B;
+#endif
+
+}  // namespace device
+
+}  // namespace lilygo_device_driver::t_display_p4

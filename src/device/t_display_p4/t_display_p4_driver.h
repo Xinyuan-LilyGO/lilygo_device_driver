@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-05-14 21:51:21
+ * @LastEditTime: 2026-05-14 22:58:58
  * @License: GPL 3.0
  */
 
@@ -12,76 +12,8 @@
 
 #if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4)
 #include "t_display_p4_config.h"
-#define SCREEN_ROTATION_DIRECTION 0
 #elif defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
 #include "t_display_p4_keyboard_config.h"
-#define SCREEN_ROTATION_DIRECTION 90
-#else
-#error "Missing required macro definition."
-#endif
-
-#if defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB565)
-#define SCREEN_BITS_PER_PIXEL 16
-#elif defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB888)
-#define SCREEN_BITS_PER_PIXEL 24
-#else
-#error "Missing required macro definition."
-#endif
-
-#if defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB565)
-#define CAMERA_BITS_PER_PIXEL 16
-#elif defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB888)
-#define CAMERA_BITS_PER_PIXEL 24
-#else
-#error "Missing required macro definition."
-#endif
-
-#if defined(CONFIG_SCREEN_TYPE_HI8561)
-#define SCREEN_WIDTH HI8561_SCREEN_WIDTH
-#define SCREEN_HEIGHT HI8561_SCREEN_HEIGHT
-#define SCREEN_MIPI_DSI_DPI_CLK_MHZ HI8561_SCREEN_MIPI_DSI_DPI_CLK_MHZ
-#define SCREEN_MIPI_DSI_HSYNC HI8561_SCREEN_MIPI_DSI_HSYNC
-#define SCREEN_MIPI_DSI_HBP HI8561_SCREEN_MIPI_DSI_HBP
-#define SCREEN_MIPI_DSI_HFP HI8561_SCREEN_MIPI_DSI_HFP
-#define SCREEN_MIPI_DSI_VSYNC HI8561_SCREEN_MIPI_DSI_VSYNC
-#define SCREEN_MIPI_DSI_VBP HI8561_SCREEN_MIPI_DSI_VBP
-#define SCREEN_MIPI_DSI_VFP HI8561_SCREEN_MIPI_DSI_VFP
-#define SCREEN_DATA_LANE_NUM HI8561_SCREEN_DATA_LANE_NUM
-#define SCREEN_LANE_BIT_RATE_MBPS HI8561_SCREEN_LANE_BIT_RATE_MBPS
-
-#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
-#define SCREEN_WIDTH RM69A10_SCREEN_WIDTH
-#define SCREEN_HEIGHT RM69A10_SCREEN_HEIGHT
-#define SCREEN_MIPI_DSI_DPI_CLK_MHZ RM69A10_SCREEN_MIPI_DSI_DPI_CLK_MHZ
-#define SCREEN_MIPI_DSI_HSYNC RM69A10_SCREEN_MIPI_DSI_HSYNC
-#define SCREEN_MIPI_DSI_HBP RM69A10_SCREEN_MIPI_DSI_HBP
-#define SCREEN_MIPI_DSI_HFP RM69A10_SCREEN_MIPI_DSI_HFP
-#define SCREEN_MIPI_DSI_VSYNC RM69A10_SCREEN_MIPI_DSI_VSYNC
-#define SCREEN_MIPI_DSI_VBP RM69A10_SCREEN_MIPI_DSI_VBP
-#define SCREEN_MIPI_DSI_VFP RM69A10_SCREEN_MIPI_DSI_VFP
-#define SCREEN_DATA_LANE_NUM RM69A10_SCREEN_DATA_LANE_NUM
-#define SCREEN_LANE_BIT_RATE_MBPS RM69A10_SCREEN_LANE_BIT_RATE_MBPS
-
-#else
-#error "Missing required macro definition."
-#endif
-
-#define ETHERNET_PHY_ADDRESS IP101_PHY_ADDRESS
-#define ETHERNET_PHY_RST IP101_PHY_RST
-#define ETHERNET_RMII_REF_CLK IP101_RMII_REF_CLK
-#define ETHERNET_RMII_CLK_OUT IP101_RMII_CLK_OUT
-#define ETHERNET_MDC IP101_RMII_MDC
-#define ETHERNET_MDIO IP101_RMII_MDIO
-#define ETHERNET_RMII_TX_EN IP101_RMII_TX_EN
-#define ETHERNET_RMII_TXD0 IP101_RMII_TXD0
-#define ETHERNET_RMII_TXD1 IP101_RMII_TXD1
-#define ETHERNET_RMII_CRS_DV IP101_RMII_CRS_DV
-#define ETHERNET_RMII_RXD0 IP101_RMII_RXD0
-#define ETHERNET_RMII_RXD1 IP101_RMII_RXD1
-
-#if defined(CONFIG_CAMERA_TYPE_SC2336)
-#elif defined(CONFIG_CAMERA_TYPE_OV2710)
-#elif defined(CONFIG_CAMERA_TYPE_OV5645)
 #else
 #error "Missing required macro definition."
 #endif
@@ -96,6 +28,71 @@
 
 #if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
 #include "kode_bq25896.h"
+#endif
+
+namespace lilygo_device_driver::t_display_p4::device {
+
+#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4)
+inline constexpr int kScreenRotationDirection = 0;
+#elif defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
+inline constexpr int kScreenRotationDirection = 90;
+#else
+#error "Missing required macro definition."
+#endif
+
+#if defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB565)
+inline constexpr int kScreenBitsPerPixel = 16;
+#elif defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB888)
+inline constexpr int kScreenBitsPerPixel = 24;
+#else
+#error "Missing required macro definition."
+#endif
+
+#if defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB565)
+inline constexpr int kCameraBitsPerPixel = 16;
+#elif defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB888)
+inline constexpr int kCameraBitsPerPixel = 24;
+#else
+#error "Missing required macro definition."
+#endif
+
+#if defined(CONFIG_SCREEN_TYPE_HI8561)
+inline constexpr int kScreenWidth = kHi8561ScreenWidth;
+inline constexpr int kScreenHeight = kHi8561ScreenHeight;
+inline constexpr int kScreenMipiDsiDpiClkMhz = kHi8561ScreenMipiDsiDpiClkMhz;
+inline constexpr int kScreenMipiDsiHsync = kHi8561ScreenMipiDsiHsync;
+inline constexpr int kScreenMipiDsiHbp = kHi8561ScreenMipiDsiHbp;
+inline constexpr int kScreenMipiDsiHfp = kHi8561ScreenMipiDsiHfp;
+inline constexpr int kScreenMipiDsiVsync = kHi8561ScreenMipiDsiVsync;
+inline constexpr int kScreenMipiDsiVbp = kHi8561ScreenMipiDsiVbp;
+inline constexpr int kScreenMipiDsiVfp = kHi8561ScreenMipiDsiVfp;
+inline constexpr int kScreenDataLaneNum = kHi8561ScreenDataLaneNum;
+inline constexpr int kScreenLaneBitRateMbps = kHi8561ScreenLaneBitRateMbps;
+
+#elif defined(CONFIG_SCREEN_TYPE_RM69A10)
+inline constexpr int kScreenWidth = kRm69a10ScreenWidth;
+inline constexpr int kScreenHeight = kRm69a10ScreenHeight;
+inline constexpr int kScreenMipiDsiDpiClkMhz = kRm69a10ScreenMipiDsiDpiClkMhz;
+inline constexpr int kScreenMipiDsiHsync = kRm69a10ScreenMipiDsiHsync;
+inline constexpr int kScreenMipiDsiHbp = kRm69a10ScreenMipiDsiHbp;
+inline constexpr int kScreenMipiDsiHfp = kRm69a10ScreenMipiDsiHfp;
+inline constexpr int kScreenMipiDsiVsync = kRm69a10ScreenMipiDsiVsync;
+inline constexpr int kScreenMipiDsiVbp = kRm69a10ScreenMipiDsiVbp;
+inline constexpr int kScreenMipiDsiVfp = kRm69a10ScreenMipiDsiVfp;
+inline constexpr int kScreenDataLaneNum = kRm69a10ScreenDataLaneNum;
+inline constexpr int kScreenLaneBitRateMbps = kRm69a10ScreenLaneBitRateMbps;
+
+#else
+#error "Missing required macro definition."
+#endif
+
+}  // namespace lilygo_device_driver::t_display_p4::device
+
+#if defined(CONFIG_CAMERA_TYPE_SC2336)
+#elif defined(CONFIG_CAMERA_TYPE_OV2710)
+#elif defined(CONFIG_CAMERA_TYPE_OV5645)
+#else
+#error "Missing required macro definition."
 #endif
 
 namespace lilygo_device_driver {
