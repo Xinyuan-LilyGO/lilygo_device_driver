@@ -2,7 +2,7 @@
  * @Description: t_display_p4_config
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-04-30 15:38:59
+ * @LastEditTime: 2026-05-14 21:51:08
  */
 #pragma once
 
@@ -153,8 +153,18 @@
 #define EXT_1X4P_2_IO_46 46
 
 // ETHERNET
-#define ETHERNET_MDIO 52
-#define ETHERNET_MDC 31
+#define IP101_PHY_ADDRESS 1
+#define IP101_PHY_RST -1
+#define IP101_RMII_REF_CLK 50
+#define IP101_RMII_CLK_OUT -1
+#define IP101_RMII_MDC 31
+#define IP101_RMII_MDIO 52
+#define IP101_RMII_TX_EN 49
+#define IP101_RMII_TXD0 34
+#define IP101_RMII_TXD1 35
+#define IP101_RMII_CRS_DV 28
+#define IP101_RMII_RXD0 29
+#define IP101_RMII_RXD1 30
 
 #if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
 
