@@ -541,7 +541,15 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
 bool TDisplayP4Driver::Init(InitMode mode) {
   CreateDrivers();
-  return InitDrivers(mode);
+  const int64_t start_time_us = tool_->GetSystemTimeUs();
+  const bool result = InitDrivers(mode);
+  const int64_t elapsed_time_us = tool_->GetSystemTimeUs() - start_time_us;
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+      "TDisplayP4Driver init finished (mode: %s, result: %s, elapsed: %lld ms)\n",
+      mode == InitMode::kAsync ? "async" : "sync",
+      result ? "success" : "failed",
+      static_cast<long long>(elapsed_time_us / 1000));
+  return result;
 }
 
 bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
