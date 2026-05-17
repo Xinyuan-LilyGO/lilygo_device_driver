@@ -61,10 +61,9 @@ constexpr const ScreenDeviceInfo* kDefaultScreenDeviceInfo =
     &kHi8561ScreenDeviceInfo;
 
 /**
- * @brief 将屏幕像素位宽转换为 MIPI 总线颜色格式
- * @param bits_per_pixel 单个像素的位数
- * @return MIPI 总线颜色格式
- * @Date 2026-05-15 00:00:00
+ * @brief 将屏幕像素位宽转换为 MIPI 颜色格式。
+ * @param bits_per_pixel 单个像素的位数。
+ * @return 匹配的 MIPI 颜色格式，不支持时返回 RGB565。
  */
 cpp_bus_driver::HardwareMipi::ColorFormat ColorFormatFromBitsPerPixel(
     int bits_per_pixel) {
@@ -79,10 +78,9 @@ cpp_bus_driver::HardwareMipi::ColorFormat ColorFormatFromBitsPerPixel(
 }
 
 /**
- * @brief 在屏幕设备信息注册表中查找指定屏幕类型
- * @param type 屏幕类型
- * @return 找到时返回设备信息指针，否则返回 nullptr
- * @Date 2026-05-15 00:00:00
+ * @brief 按屏幕类型查找屏幕设备信息。
+ * @param type 要查找的屏幕类型。
+ * @return 找到时返回屏幕设备信息，否则返回 nullptr。
  */
 const ScreenDeviceInfo* FindScreenDeviceInfo(ScreenType type) {
   for (const ScreenDeviceInfo& info : kScreenDeviceInfoRegistry) {
@@ -94,10 +92,9 @@ const ScreenDeviceInfo* FindScreenDeviceInfo(ScreenType type) {
 }
 
 /**
- * @brief 按屏幕类型查找设备信息，未找到时返回默认屏幕
- * @param type 屏幕类型
- * @return 屏幕设备信息指针
- * @Date 2026-05-15 00:00:00
+ * @brief 按屏幕类型查找设备信息，未找到时返回默认屏幕信息。
+ * @param type 要查找的屏幕类型。
+ * @return 找到时返回屏幕设备信息，否则返回默认屏幕信息。
  */
 const ScreenDeviceInfo* ScreenInfoOrDefault(ScreenType type) {
   const auto* info = FindScreenDeviceInfo(type);

@@ -11,10 +11,9 @@ namespace lilygo_device_driver {
 namespace {
 
 /**
- * @brief 获取日志等级名称
- * @param level 日志等级
- * @return 日志等级名称
- * @Date 2026-05-15 14:40:00
+ * @brief 获取日志等级的可打印名称。
+ * @param level 要描述的日志等级。
+ * @return 日志等级的可打印名称。
  */
 const char* LogLevelName(LogLevel level) {
   switch (level) {
@@ -32,10 +31,9 @@ const char* LogLevelName(LogLevel level) {
 }
 
 /**
- * @brief 判断指定日志等级是否允许输出
- * @param level 日志等级
- * @return 允许输出返回 true，否则返回 false
- * @Date 2026-05-15 14:40:00
+ * @brief 检查日志等级是否已开启。
+ * @param level 要检查的日志等级。
+ * @return 日志等级已开启时返回 true，否则返回 false。
  */
 bool IsLogLevelEnabled(LogLevel level) {
   switch (level) {

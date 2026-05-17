@@ -20,6 +20,13 @@ enum class LogLevel {
   kChip,  // 芯片错误
 };
 
+/**
+ * @brief 在日志等级开启时输出格式化日志。
+ * @param level 要检查并输出的日志等级。
+ * @param file_name 日志对应的源文件名。
+ * @param line_number 日志对应的源代码行号。
+ * @param format printf 兼容的格式化字符串。
+ */
 void LogMessage(LogLevel level, const char* file_name, size_t line_number,
     const char* format, ...);
 }  // namespace lilygo_device_driver

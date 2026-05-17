@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-05-15 00:57:17
+ * @LastEditTime: 2026-05-17 23:17:25
  * @License: GPL 3.0
  */
 
@@ -244,15 +244,40 @@ class TDisplayP4Driver {
   const Bus& bus() const { return bus_; }
   const Chip& chip() const { return chip_; }
   const Status& status() const { return status_; }
+
+  /**
+   * @brief 获取当前选中的屏幕设备信息。
+   * @return 当前屏幕设备信息，检测前返回默认屏幕信息。
+   */
   const t_display_p4::device::ScreenDeviceInfo& screen_info() const;
   t_display_p4::device::ScreenType screen_type() const;
 
   void CreateDrivers();
+
+  /**
+   * @brief 初始化已创建的芯片驱动。
+   * @param mode 初始化模式。
+   * @return 所有必需驱动初始化成功时返回 true，否则返回 false。
+   */
   bool InitDrivers(InitMode mode = InitMode::kSync);
+
+  /**
+   * @brief 创建并初始化所有板级驱动。
+   * @param mode 初始化模式。
+   * @return 初始化成功时返回 true，否则返回 false。
+   */
   bool Init(InitMode mode = InitMode::kSync);
+
+  /**
+   * @brief 开启或关闭指定板级休眠等级。
+   * @param level 要控制的休眠等级。
+   * @param enable 是否开启该休眠等级。
+   * @return 休眠状态设置成功时返回 true，否则返回 false。
+   */
   bool SetSleep(SleepLevel level, bool enable);
 
   bool InitEsp32p4();
+
   bool InitPower();
 
 #if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
@@ -285,11 +310,37 @@ class TDisplayP4Driver {
   bool InitCc1101();
   bool InitNrf24l01();
 
+  /**
+   * @brief 选择 CC1101 RF 开关通路。
+   * @param rf_switch RF 频段开关位置。
+   * @return RF 开关引脚配置成功时返回 true，否则返回 false。
+   */
   bool SetCc1101RfSwitch(Cc1101RfSwitch rf_switch);
 #endif
 
+  /**
+   * @brief 挂载 SPIFFS 文件系统。
+   * @param base_path 文件系统挂载路径。
+   * @param spiffs_conf 返回挂载时使用的 SPIFFS 配置。
+   * @return SPIFFS 挂载成功时返回 true，否则返回 false。
+   */
   bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf);
+
+  /**
+   * @brief 通过 SDMMC 主机挂载 SD 卡。
+   * @param base_path SD 卡挂载路径。
+   * @param max_freq_khz SDMMC 总线最大频率，单位为 kHz。
+   * @return SD 卡挂载成功时返回 true，否则返回 false。
+   */
   bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
+
+  /**
+   * @brief 通过 SDSPI 主机挂载 SD 卡。
+   * @param base_path SD 卡挂载路径。
+   * @param host_id SD 卡使用的 SPI 主机。
+   * @param max_freq_khz SDSPI 总线最大频率，单位为 kHz。
+   * @return SD 卡挂载成功时返回 true，否则返回 false。
+   */
   bool InitSdspi(const char* base_path, spi_host_device_t host_id,
       int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
@@ -301,29 +352,25 @@ class TDisplayP4Driver {
   const t_display_p4::device::ScreenDeviceInfo* screen_info_ = nullptr;
 
   /**
-   * @brief 通过 GT9895 触摸 ID 自动识别屏幕类型
-   * @return 识别流程完成返回 true，否则返回 false
-   * @Date 2026-05-15 00:00:00
+   * @brief 通过 GT9895 触摸 ID 检测屏幕类型。
+   * @return 检测流程完成时返回 true，否则返回 false。
    */
   bool DetectScreen();
 
   /**
-   * @brief 按当前屏幕信息创建对应的 MIPI 屏幕驱动
-   * @Date 2026-05-15 00:00:00
+   * @brief 为当前屏幕创建对应的 MIPI 屏幕驱动。
    */
   void CreateSelectedScreenDrivers();
 
   /**
-   * @brief 初始化当前自动识别到的屏幕
-   * @return 初始化成功返回 true，否则返回 false
-   * @Date 2026-05-15 00:00:00
+   * @brief 初始化当前选中的屏幕。
+   * @return 初始化成功时返回 true，否则返回 false。
    */
   bool InitSelectedScreen();
 
   /**
-   * @brief 初始化当前屏幕对应的触摸和背光设备
-   * @return 初始化成功返回 true，否则返回 false
-   * @Date 2026-05-15 00:00:00
+   * @brief 初始化当前屏幕对应的触摸和背光设备。
+   * @return 初始化成功时返回 true，否则返回 false。
    */
   bool InitSelectedTouchAndBacklight();
 
