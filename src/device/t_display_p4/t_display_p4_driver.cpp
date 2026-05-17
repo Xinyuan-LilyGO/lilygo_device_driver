@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-05-15 01:35:28
+ * @LastEditTime: 2026-05-17 20:38:48
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -122,18 +122,26 @@ device::ScreenType TDisplayP4Driver::screen_type() const {
 void TDisplayP4Driver::CreateDrivers() {
   tool_ = std::make_unique<cpp_bus_driver::Tool>();
 
-  bus_.bq27220_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::bq27220::kSda, gpio::bq27220::kScl, I2C_NUM_0);
   bus_.xl9535_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::xl9535::kSda, gpio::xl9535::kScl, I2C_NUM_0);
+      gpio::i2c::kPort1Sda, gpio::i2c::kPort1Scl, I2C_NUM_0);
   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::sgm38121::kSda, gpio::sgm38121::kScl, I2C_NUM_1);
-  bus_.pcf8563_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::pcf8563::kSda, gpio::pcf8563::kScl, I2C_NUM_0);
-  bus_.aw86224_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::aw86224::kSda, gpio::aw86224::kScl, I2C_NUM_1);
-  bus_.es8311_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::es8311::kSda, gpio::es8311::kScl, I2C_NUM_1);
+      gpio::i2c::kPort2Sda, gpio::i2c::kPort2Scl, I2C_NUM_1);
+  bus_.sx1262_spi_bus =
+      std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::spi::kPort1Mosi,
+          gpio::spi::kPort1Sclk, gpio::spi::kPort1Miso, SPI2_HOST, 0);
+
+#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
+  bus_.bq25896_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
+#endif
+  bus_.bq27220_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
+  bus_.pcf8563_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
+  bus_.aw86224_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
+  bus_.es8311_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
 
   bus_.es8311_i2s_bus = std::make_shared<cpp_bus_driver::HardwareI2s>(
       gpio::es8311::kAdcData, gpio::es8311::kDacData, gpio::es8311::kWsLrck,
@@ -147,14 +155,7 @@ void TDisplayP4Driver::CreateDrivers() {
 
   bus_.icm20948_i2c_bus = std::make_unique<TwoWire>(1);
 
-  bus_.sx1262_spi_bus =
-      std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::sx1262::kMosi,
-          gpio::sx1262::kSclk, gpio::sx1262::kMiso, SPI2_HOST, 0);
-
 #if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-  bus_.bq25896_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::bq25896::kSda, gpio::bq25896::kScl, I2C_NUM_0);
-
   chip_.bq25896_dev = std::make_shared<kode_bq25896::bq25896_dev_t>();
   chip_.bq25896_handle = chip_.bq25896_dev.get();
 #endif
@@ -168,15 +169,15 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.sgm38121 = std::make_unique<cpp_bus_driver::Sgm38121>(
       bus_.sgm38121_i2c_bus, device::sgm38121::kI2cAddress);
 
-  bus_.hi8561_i2c_touch_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::hi8561::kTouchSda, gpio::hi8561::kTouchScl, I2C_NUM_0);
+  bus_.hi8561_i2c_touch_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
       bus_.hi8561_i2c_touch_bus, device::hi8561::kTouchI2cAddress);
   chip_.hi8561_backlight =
       std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBl);
 
-  bus_.gt9895_i2c_touch_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::gt9895::kSda, gpio::gt9895::kScl, I2C_NUM_0);
+  bus_.gt9895_i2c_touch_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
   chip_.gt9895 = std::make_unique<cpp_bus_driver::Gt9895>(
       bus_.gt9895_i2c_touch_bus, device::gt9895::kI2cAddress, -1,
       device::gt9895::kXScaleFactor, device::gt9895::kYScaleFactor);
@@ -209,12 +210,10 @@ void TDisplayP4Driver::CreateDrivers() {
   bus_.tca8418_i2c_bus = std::make_shared<cpp_bus_driver::SoftwareI2c>(
       gpio::tca8418::kSda, gpio::tca8418::kScl);
 
-  bus_.cc1101_spi_bus = std::make_shared<cpp_bus_driver::HardwareSpi>(
-      gpio::tmixrf::cc1101::kMosi, gpio::tmixrf::cc1101::kSclk,
-      gpio::tmixrf::cc1101::kMiso, SPI2_HOST, 0);
-  bus_.nrf24l01_spi_bus = std::make_shared<cpp_bus_driver::HardwareSpi>(
-      gpio::tmixrf::nrf24l01::kMosi, gpio::tmixrf::nrf24l01::kSclk,
-      gpio::tmixrf::nrf24l01::kMiso, SPI2_HOST, 0);
+  bus_.cc1101_spi_bus =
+      std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.sx1262_spi_bus, 0);
+  bus_.nrf24l01_spi_bus =
+      std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.sx1262_spi_bus, 0);
 
   bus_.cc1101_radiolib_hal = new RadiolibCppBusDriverHal(
       bus_.cc1101_spi_bus, 10000000, gpio::tmixrf::cc1101::kCs);
@@ -324,8 +323,6 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
 #if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
   InitBq25896();
-  result &=
-      bus_.xl9535_i2c_bus->set_bus_handle(bus_.bq25896_i2c_bus->bus_handle());
 #endif
 
   InitXl9535();
@@ -334,25 +331,8 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
   InitSgm38121();
 
-  result &= bus_.hi8561_i2c_touch_bus->set_bus_handle(
-      bus_.xl9535_i2c_bus->bus_handle());
-  result &= bus_.gt9895_i2c_touch_bus->set_bus_handle(
-      bus_.xl9535_i2c_bus->bus_handle());
   result &= DetectScreen();
   CreateSelectedScreenDrivers();
-
-  result &=
-      bus_.bq27220_i2c_bus->set_bus_handle(bus_.xl9535_i2c_bus->bus_handle());
-  result &=
-      bus_.pcf8563_i2c_bus->set_bus_handle(bus_.xl9535_i2c_bus->bus_handle());
-  result &=
-      bus_.aw86224_i2c_bus->set_bus_handle(bus_.sgm38121_i2c_bus->bus_handle());
-  result &=
-      bus_.es8311_i2c_bus->set_bus_handle(bus_.sgm38121_i2c_bus->bus_handle());
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
-  bus_.cc1101_spi_bus->set_bus_init_flag(true);
-  bus_.nrf24l01_spi_bus->set_bus_init_flag(true);
-#endif
 
   result &= bus_.icm20948_i2c_bus->set_bus_handle(
       bus_.sgm38121_i2c_bus->bus_handle());
@@ -835,9 +815,9 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           status_.bq25896.init_flag = false;
 #endif
 
-          result &= chip_.sgm38121->Deinit(true);
+          result &= chip_.sgm38121->Deinit();
           status_.sgm38121.init_flag = false;
-          result &= chip_.xl9535->Deinit(true);
+          result &= chip_.xl9535->Deinit();
           status_.xl9535.init_flag = false;
 
 #if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
@@ -847,7 +827,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           status_.nrf24l01.init_flag = false;
 #endif
 
-          result &= chip_.sx1262->Deinit(true);
+          result &= chip_.sx1262->Deinit();
           status_.sx1262.init_flag = false;
           result &= chip_.l76k->Deinit();
           status_.l76k.init_flag = false;
@@ -864,6 +844,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
             default:
               break;
           }
+
         }
       } else {
         result &= InitDrivers(InitMode::kAsync);
