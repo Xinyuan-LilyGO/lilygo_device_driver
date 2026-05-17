@@ -24,12 +24,18 @@ bool InitSdmmc(const char* base_path, int max_freq_khz) {
 
   sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
   slot_config.width = 4;
-  slot_config.clk = static_cast<gpio_num_t>(SD_SDIO_CLK);
-  slot_config.cmd = static_cast<gpio_num_t>(SD_SDIO_CMD);
-  slot_config.d0 = static_cast<gpio_num_t>(SD_SDIO_D0);
-  slot_config.d1 = static_cast<gpio_num_t>(SD_SDIO_D1);
-  slot_config.d2 = static_cast<gpio_num_t>(SD_SDIO_D2);
-  slot_config.d3 = static_cast<gpio_num_t>(SD_SDIO_D3);
+  slot_config.clk =
+      static_cast<gpio_num_t>(t_glasses_p4::gpio::sd::kSdioClk);
+  slot_config.cmd =
+      static_cast<gpio_num_t>(t_glasses_p4::gpio::sd::kSdioCmd);
+  slot_config.d0 =
+      static_cast<gpio_num_t>(t_glasses_p4::gpio::sd::kSdioD0);
+  slot_config.d1 =
+      static_cast<gpio_num_t>(t_glasses_p4::gpio::sd::kSdioD1);
+  slot_config.d2 =
+      static_cast<gpio_num_t>(t_glasses_p4::gpio::sd::kSdioD2);
+  slot_config.d3 =
+      static_cast<gpio_num_t>(t_glasses_p4::gpio::sd::kSdioD3);
 
   slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
@@ -64,9 +70,9 @@ bool InitSdspi(
   host.max_freq_khz = max_freq_khz;
 
   spi_bus_config_t bus_config = {
-      .mosi_io_num = SD_MOSI,
-      .miso_io_num = SD_MISO,
-      .sclk_io_num = SD_SCLK,
+      .mosi_io_num = t_glasses_p4::gpio::sd::kMosi,
+      .miso_io_num = t_glasses_p4::gpio::sd::kMiso,
+      .sclk_io_num = t_glasses_p4::gpio::sd::kSclk,
       .quadwp_io_num = -1,
       .quadhd_io_num = -1,
       .data4_io_num = -1,
@@ -89,7 +95,7 @@ bool InitSdspi(
 
   sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
   slot_config.host_id = host_id;
-  slot_config.gpio_cs = static_cast<gpio_num_t>(SD_CS);
+  slot_config.gpio_cs = static_cast<gpio_num_t>(t_glasses_p4::gpio::sd::kCs);
 
   sdmmc_card_t* card;
 

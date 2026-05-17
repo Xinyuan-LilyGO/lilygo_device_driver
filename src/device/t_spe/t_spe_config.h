@@ -8,22 +8,21 @@
 
 #pragma once
 
-//// gpio config ////
+namespace lilygo_device_driver::t_spe {
+namespace gpio {
+namespace general {
+inline constexpr int kGpio0_50mhzSwitch = 33;
+}  // namespace general
 
-// General
-#define GPIO0_50MHZ_SWITCH 33
+namespace lan8671 {
+inline constexpr int kWakeUp = 13;
+inline constexpr int kInt = 4;
+inline constexpr int kReceiveError = 18;
+}  // namespace lan8671
 
-// LAN8671
-#define LAN8671_WAKE_UP 13
-#define LAN8671_INT 4
-#define LAN8671_RECEIVE_ERROR 18
-
-// TD301D485H-A
-#define TD301D485H_A_TX 15
-#define TD301D485H_A_RX 5
-
-//// gpio config ////
-
-//// other define config ////
-
-//// other define config ////
+namespace td301d485h_a {
+inline constexpr int kTx = 15;
+inline constexpr int kRx = 5;
+}  // namespace td301d485h_a
+}  // namespace gpio
+}  // namespace lilygo_device_driver::t_spe

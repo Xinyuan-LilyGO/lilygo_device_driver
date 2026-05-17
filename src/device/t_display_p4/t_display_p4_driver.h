@@ -30,15 +30,7 @@
 #include "kode_bq25896.h"
 #endif
 
-#if defined(CONFIG_CAMERA_TYPE_SC2336)
-#elif defined(CONFIG_CAMERA_TYPE_OV2710)
-#elif defined(CONFIG_CAMERA_TYPE_OV5645)
-#else
-#error "Missing required macro definition."
-#endif
-
 namespace lilygo_device_driver {
-
 namespace t_display_p4::device {
 
 enum class ScreenType {
