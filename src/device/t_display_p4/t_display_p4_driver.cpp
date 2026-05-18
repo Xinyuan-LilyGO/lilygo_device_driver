@@ -127,10 +127,6 @@ void TDisplayP4Driver::CreateDrivers() {
       std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::spi::kPort1Mosi,
           gpio::spi::kPort1Sclk, gpio::spi::kPort1Miso, SPI2_HOST, 0);
 
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-  bus_.bq25896_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
-#endif
   bus_.bq27220_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
   bus_.pcf8563_i2c_bus =
@@ -151,11 +147,6 @@ void TDisplayP4Driver::CreateDrivers() {
       gpio::l76k::kRx, gpio::l76k::kTx, UART_NUM_1);
 
   bus_.icm20948_i2c_bus = std::make_unique<TwoWire>(1);
-
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-  chip_.bq25896_dev = std::make_shared<kode_bq25896::bq25896_dev_t>();
-  chip_.bq25896_handle = chip_.bq25896_dev.get();
-#endif
 
   chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220>(
       bus_.bq27220_i2c_bus, device::bq27220::kI2cAddress);
@@ -318,10 +309,6 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
   result &= InitEsp32p4();
 
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-  InitBq25896();
-#endif
-
   InitXl9535();
   InitPower();
   result &= ConfigXl9535();
@@ -473,10 +460,6 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 #endif
 
     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
-
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-    result &= status_.bq25896.init_flag;
-#endif
 
     result &= status_.xl9535.init_flag;
     result &= status_.sgm38121.init_flag;
@@ -807,11 +790,6 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           status_.tca8418_backlight.init_flag = false;
 #endif
 
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-          result &= bus_.bq25896_i2c_bus->Deinit();
-          status_.bq25896.init_flag = false;
-#endif
-
           result &= chip_.sgm38121->Deinit();
           status_.sgm38121.init_flag = false;
           result &= chip_.xl9535->Deinit();
@@ -883,50 +861,6 @@ bool TDisplayP4Driver::InitPower() {
   result &= InitLdoPower(4, 3300);
   return result;
 }
-
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-bool TDisplayP4Driver::InitBq25896() {
-  int16_t ret =
-      kode_bq25896::bq25896_init(bus_.bq25896_i2c_bus, chip_.bq25896_handle);
-  if (ret != ESP_OK) {
-    status_.bq25896.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
-        "InitBq25896 failed (error code: %#X)\n", ret);
-    return false;
-  } else {
-    bool result = true;
-
-    ret = kode_bq25896::bq25896_set_input_current_limit(chip_.bq25896_handle,
-        kode_bq25896::bq25896_ilim_t::BQ25896_ILIM_2000MA);
-    if (ret != ESP_OK) {
-      result = false;
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
-          "bq25896_set_input_current_limit failed (error code: %#X)\n", ret);
-    }
-    // 禁用看门狗后不能读取看门狗寄存器状态，否则看门狗禁用会失效
-    ret = kode_bq25896::bq25896_set_watchdog_timer(chip_.bq25896_handle,
-        kode_bq25896::bq25896_watchdog_t::BQ25896_WATCHDOG_DISABLE);
-    if (ret != ESP_OK) {
-      result = false;
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
-          "bq25896_set_watchdog_timer failed (error code: %#X)\n", ret);
-    }
-    ret = kode_bq25896::bq25896_set_charge_current(
-        chip_.bq25896_handle, kode_bq25896::bq25896_ichg_t::BQ25896_ICHG_512MA);
-    if (ret != ESP_OK) {
-      result = false;
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
-          "bq25896_set_charge_current failed (error code: %#X)\n", ret);
-    }
-
-    status_.bq25896.init_flag = result;
-    if (result) {
-      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitBq25896 success\n");
-    }
-    return result;
-  }
-}
-#endif
 
 bool TDisplayP4Driver::InitBq27220() {
   if (!chip_.bq27220->Init()) {

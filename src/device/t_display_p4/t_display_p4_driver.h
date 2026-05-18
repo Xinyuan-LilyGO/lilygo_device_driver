@@ -26,10 +26,6 @@
 
 #include "ICM20948_WE.h"
 
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-#include "kode_bq25896.h"
-#endif
-
 namespace lilygo_device_driver {
 namespace t_display_p4::device {
 
@@ -75,10 +71,6 @@ class TDisplayP4Driver {
 #endif
 
   struct Bus {
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> bq25896_i2c_bus;
-#endif
-
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> bq27220_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> xl9535_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> sgm38121_i2c_bus;
@@ -109,11 +101,6 @@ class TDisplayP4Driver {
   };
 
   struct Chip {
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-    std::shared_ptr<kode_bq25896::bq25896_dev_t> bq25896_dev;
-    kode_bq25896::bq25896_handle_t bq25896_handle = nullptr;
-#endif
-
     std::unique_ptr<cpp_bus_driver::Xl95x5> xl9535;
     std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
@@ -141,12 +128,6 @@ class TDisplayP4Driver {
   };
 
   struct Status {
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-    struct {
-      bool init_flag = false;
-    } bq25896;
-#endif
-
     struct {
       bool init_flag = false;
     } xl9535;
@@ -271,10 +252,6 @@ class TDisplayP4Driver {
   bool InitEsp32p4();
 
   bool InitPower();
-
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-  bool InitBq25896();
-#endif
 
   bool InitBq27220();
   bool InitXl9535();

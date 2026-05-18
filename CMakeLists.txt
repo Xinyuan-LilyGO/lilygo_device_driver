@@ -33,7 +33,6 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
         )
     set(requires 
             "cpp_bus_driver" 
-            "kode_bq25896" 
             "arduino_cpp_bus_driver" 
             "ICM20948_WE"
             "radiolib_cpp_bus_driver")

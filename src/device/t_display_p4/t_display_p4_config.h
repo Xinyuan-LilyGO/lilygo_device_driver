@@ -185,12 +185,6 @@ inline constexpr int kRmiiRxd0 = 29;
 inline constexpr int kRmiiRxd1 = 30;
 }  // namespace ip101
 
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-namespace bq25896 {
-inline constexpr int kSda = i2c::kPort1Sda;
-inline constexpr int kScl = i2c::kPort1Scl;
-}  // namespace bq25896
-#endif
 }  // namespace gpio
 
 namespace device {
@@ -310,10 +304,5 @@ namespace sd {
 inline constexpr const char* kBasePath = "/sdcard";
 }  // namespace sd
 
-#if defined(CONFIG_BOARD_VERSION_T_DISPLAY_P4_V2_0)
-namespace bq25896 {
-inline constexpr uint8_t kI2cAddress = 0x6B;
-}  // namespace bq25896
-#endif
 }  // namespace device
 }  // namespace lilygo_device_driver::t_display_p4
