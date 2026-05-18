@@ -98,7 +98,7 @@ inline constexpr int kScl = i2c::kPort2Scl;
 }  // namespace icm20948
 
 namespace hi8561 {
-inline constexpr int kScreenBl = 51;
+inline constexpr int kScreenBacklight = 51;
 inline constexpr int kTouchSda = i2c::kPort1Sda;
 inline constexpr int kTouchScl = i2c::kPort1Scl;
 }  // namespace hi8561
@@ -154,21 +154,21 @@ inline constexpr int kSdioD3 = sdio2::kD3;
 }  // namespace esp32c6
 
 namespace ext {
-inline constexpr int k2x8pSpiSclk = spi::kPort1Sclk;
-inline constexpr int k2x8pSpiMosi = spi::kPort1Mosi;
-inline constexpr int k2x8pSpiMiso = spi::kPort1Miso;
-inline constexpr int k2x8pIo26 = 26;
-inline constexpr int k2x8pIo27 = 27;
-inline constexpr int k2x8pIo33 = 33;
-inline constexpr int k2x8pIo32 = 32;
-inline constexpr int k2x8pIo25 = 25;
-inline constexpr int k2x8pIo36 = 36;
-inline constexpr int k2x8pIo53 = 53;
-inline constexpr int k2x8pIo54 = 54;
-inline constexpr int k1x4p1Io47 = 47;
-inline constexpr int k1x4p1Io48 = 48;
-inline constexpr int k1x4p2Io45 = 45;
-inline constexpr int k1x4p2Io46 = 46;
+inline constexpr int k2x8PSpiSclk = spi::kPort1Sclk;
+inline constexpr int k2x8PSpiMosi = spi::kPort1Mosi;
+inline constexpr int k2x8PSpiMiso = spi::kPort1Miso;
+inline constexpr int k2x8PIo26 = 26;
+inline constexpr int k2x8PIo27 = 27;
+inline constexpr int k2x8PIo33 = 33;
+inline constexpr int k2x8PIo32 = 32;
+inline constexpr int k2x8PIo25 = 25;
+inline constexpr int k2x8PIo36 = 36;
+inline constexpr int k2x8PIo53 = 53;
+inline constexpr int k2x8PIo54 = 54;
+inline constexpr int k1x4P1Io47 = 47;
+inline constexpr int k1x4P1Io48 = 48;
+inline constexpr int k1x4P2Io45 = 45;
+inline constexpr int k1x4P2Io46 = 46;
 }  // namespace ext
 
 namespace ip101 {
@@ -225,13 +225,7 @@ inline constexpr uint8_t kI2cAddress = 0x68;
 }  // namespace icm20948
 
 namespace screen {
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4)
 inline constexpr int kRotationDirection = 0;
-#elif defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
-inline constexpr int kRotationDirection = 90;
-#else
-#error "Missing required macro definition."
-#endif
 
 #if defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB565)
 inline constexpr int kBitsPerPixel = 16;

@@ -9,20 +9,10 @@
 #pragma once
 
 #include "esp32p4_driver.h"
-
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4)
-#include "t_display_p4_config.h"
-#elif defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
 #include "t_display_p4_keyboard_config.h"
-#else
-#error "Missing required macro definition."
-#endif
 
 #include "cpp_bus_driver_library.h"
-
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
 #include "radiolib_cpp_bus_driver_library.h"
-#endif
 
 #include "ICM20948_WE.h"
 
@@ -62,13 +52,11 @@ class TDisplayP4Driver {
     kPowerOff,
   };
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
   enum class Cc1101RfSwitch {
     k315Mhz,
     k434Mhz,
     k868_915Mhz,
   };
-#endif
 
   struct Bus {
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> bq27220_i2c_bus;
@@ -85,7 +73,6 @@ class TDisplayP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> hi8561_i2c_touch_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> gt9895_i2c_touch_bus;
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
     std::shared_ptr<cpp_bus_driver::SoftwareI2c> xl9555_i2c_bus;
     std::shared_ptr<cpp_bus_driver::SoftwareI2c> tca8418_i2c_bus;
 
@@ -97,7 +84,6 @@ class TDisplayP4Driver {
 
     Module* cc1101_module = nullptr;
     Module* nrf24l01_module = nullptr;
-#endif
   };
 
   struct Chip {
@@ -116,15 +102,12 @@ class TDisplayP4Driver {
     std::unique_ptr<cpp_bus_driver::Rm69a10> rm69a10;
     std::unique_ptr<cpp_bus_driver::Gt9895> gt9895;
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
-
     std::unique_ptr<cpp_bus_driver::Xl95x5> xl9555;
     std::unique_ptr<cpp_bus_driver::Tca8418> tca8418;
     std::unique_ptr<cpp_bus_driver::Pwm> tca8418_backlight;
 
     CC1101* cc1101 = nullptr;
     nRF24* nrf24l01 = nullptr;
-#endif
   };
 
   struct Status {
@@ -185,7 +168,6 @@ class TDisplayP4Driver {
       bool init_flag = false;
     } sx1262;
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
     struct {
       bool init_flag = false;
     } xl9555;
@@ -205,7 +187,6 @@ class TDisplayP4Driver {
     struct {
       bool init_flag = false;
     } nrf24l01;
-#endif
 
     struct {
       bool init_flag = false;
@@ -224,6 +205,12 @@ class TDisplayP4Driver {
    */
   const t_display_p4::device::ScreenDeviceInfo& screen_info() const;
   t_display_p4::device::ScreenType screen_type() const;
+
+  /**
+   * @brief 判断外接键盘设备是否已经探测成功。
+   * @return 已检测到键盘返回 true，否则返回 false。
+   */
+  bool keyboard_connected() const { return keyboard_connected_; }
 
   void CreateDrivers();
 
@@ -249,8 +236,6 @@ class TDisplayP4Driver {
    */
   bool SetSleep(SleepLevel level, bool enable);
 
-  bool InitEsp32p4();
-
   bool InitPower();
 
   bool InitBq27220();
@@ -271,7 +256,6 @@ class TDisplayP4Driver {
   bool InitIcm20948();
   bool InitSx1262();
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
   bool InitXl9555();
   bool ConfigXl9555();
   bool InitTca8418();
@@ -280,12 +264,17 @@ class TDisplayP4Driver {
   bool InitNrf24l01();
 
   /**
+   * @brief 探测并初始化外接键盘相关设备。
+   * @return 检测到键盘并完成初始化返回 true，否则返回 false。
+   */
+  bool InitKeyboardDevices();
+
+  /**
    * @brief 选择 CC1101 RF 开关通路。
    * @param rf_switch RF 频段开关位置。
    * @return RF 开关引脚配置成功时返回 true，否则返回 false。
    */
   bool SetCc1101RfSwitch(Cc1101RfSwitch rf_switch);
-#endif
 
   /**
    * @brief 挂载 SPIFFS 文件系统。
@@ -319,6 +308,7 @@ class TDisplayP4Driver {
   Chip chip_;
   Status status_;
   const t_display_p4::device::ScreenDeviceInfo* screen_info_ = nullptr;
+  bool keyboard_connected_ = false;
 
   /**
    * @brief 通过 GT9895 触摸 ID 检测屏幕类型。

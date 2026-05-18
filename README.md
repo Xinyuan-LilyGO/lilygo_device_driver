@@ -64,7 +64,7 @@ The current device selection in `lilygo_device_driver configuration` supports:
 | Device | Kconfig option | Main driver/API |
 | --- | --- | --- |
 | T-Display-P4 | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4` | `lilygo_device_driver::TDisplayP4Driver` |
-| T-Display-P4 Keyboard | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4` with `CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD` | `lilygo_device_driver::TDisplayP4Driver` |
+| T-Display-P4 Keyboard | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4`, keyboard is detected at runtime | `lilygo_device_driver::TDisplayP4Driver` |
 | T-Display-P4-Air | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR` | Board constants |
 | T-Glasses-P4 | `CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4` | Board constants |
 | T-Spe | `CONFIG_LILYGO_DEVICE_DRIVER_T_SPE` | Board constants |

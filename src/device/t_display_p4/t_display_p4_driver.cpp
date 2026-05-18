@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-05-17 20:38:48
+ * @LastEditTime: 2026-05-18 18:25:10
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -12,6 +12,8 @@
 namespace lilygo_device_driver {
 namespace gpio = t_display_p4::gpio;
 namespace device = t_display_p4::device;
+namespace keyboard_gpio = t_display_p4::keyboard::gpio;
+namespace keyboard_device = t_display_p4::keyboard::device;
 namespace {
 
 constexpr uint16_t kBq27220BatteryCapacityMah = 1000;
@@ -162,7 +164,7 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
       bus_.hi8561_i2c_touch_bus, device::hi8561::kTouchI2cAddress);
   chip_.hi8561_backlight =
-      std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBl);
+      std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBacklight);
 
   bus_.gt9895_i2c_touch_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
@@ -192,11 +194,10 @@ void TDisplayP4Driver::CreateDrivers() {
       cpp_bus_driver::Sx126x::ChipType::kSx1262, gpio::sx1262::kBusy,
       gpio::sx1262::kCs);
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
   bus_.xl9555_i2c_bus = std::make_shared<cpp_bus_driver::SoftwareI2c>(
-      gpio::xl9555::kSda, gpio::xl9555::kScl);
+      keyboard_gpio::xl9555::kSda, keyboard_gpio::xl9555::kScl);
   bus_.tca8418_i2c_bus = std::make_shared<cpp_bus_driver::SoftwareI2c>(
-      gpio::tca8418::kSda, gpio::tca8418::kScl);
+      keyboard_gpio::tca8418::kSda, keyboard_gpio::tca8418::kScl);
 
   bus_.cc1101_spi_bus =
       std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.sx1262_spi_bus, 0);
@@ -204,30 +205,29 @@ void TDisplayP4Driver::CreateDrivers() {
       std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.sx1262_spi_bus, 0);
 
   bus_.cc1101_radiolib_hal = new RadiolibCppBusDriverHal(
-      bus_.cc1101_spi_bus, 10000000, gpio::tmixrf::cc1101::kCs);
+      bus_.cc1101_spi_bus, 10000000, keyboard_gpio::t_mix_rf::cc1101::kCs);
   bus_.nrf24l01_radiolib_hal = new RadiolibCppBusDriverHal(
-      bus_.nrf24l01_spi_bus, 10000000, gpio::tmixrf::nrf24l01::kCs);
+      bus_.nrf24l01_spi_bus, 10000000, keyboard_gpio::t_mix_rf::nrf24l01::kCs);
 
   bus_.cc1101_module = new Module(bus_.cc1101_radiolib_hal,
       static_cast<uint32_t>(RADIOLIB_NC), static_cast<uint32_t>(RADIOLIB_NC),
-      static_cast<uint32_t>(RADIOLIB_NC), gpio::tmixrf::cc1101::kBusy);
+      static_cast<uint32_t>(RADIOLIB_NC), keyboard_gpio::t_mix_rf::cc1101::kBusy);
 
   bus_.nrf24l01_module =
       new Module(bus_.nrf24l01_radiolib_hal, static_cast<uint32_t>(RADIOLIB_NC),
-          static_cast<uint32_t>(gpio::tmixrf::nrf24l01::kInt),
-          static_cast<uint32_t>(gpio::tmixrf::nrf24l01::kCe),
+          static_cast<uint32_t>(keyboard_gpio::t_mix_rf::nrf24l01::kInt),
+          static_cast<uint32_t>(keyboard_gpio::t_mix_rf::nrf24l01::kCe),
           static_cast<uint32_t>(RADIOLIB_NC));
 
   chip_.xl9555 = std::make_unique<cpp_bus_driver::Xl95x5>(
-      bus_.xl9555_i2c_bus, device::xl9555::kI2cAddress);
+      bus_.xl9555_i2c_bus, keyboard_device::xl9555::kI2cAddress);
   chip_.tca8418 = std::make_unique<cpp_bus_driver::Tca8418>(
-      bus_.tca8418_i2c_bus, device::tca8418::kI2cAddress);
+      bus_.tca8418_i2c_bus, keyboard_device::tca8418::kI2cAddress);
   chip_.tca8418_backlight =
-      std::make_unique<cpp_bus_driver::Pwm>(gpio::tca8418::kBl);
+      std::make_unique<cpp_bus_driver::Pwm>(keyboard_gpio::tca8418::kBl);
 
   chip_.cc1101 = new CC1101(bus_.cc1101_module);
   chip_.nrf24l01 = new nRF24(bus_.nrf24l01_module);
-#endif
 }
 
 bool TDisplayP4Driver::DetectScreen() {
@@ -304,10 +304,49 @@ bool TDisplayP4Driver::InitSelectedTouchAndBacklight() {
   }
 }
 
+bool TDisplayP4Driver::InitKeyboardDevices() {
+  keyboard_connected_ = false;
+  status_.xl9555.init_flag = false;
+  status_.tca8418.init_flag = false;
+  status_.tca8418_backlight.init_flag = false;
+  status_.cc1101.init_flag = false;
+  status_.nrf24l01.init_flag = false;
+
+  if (!InitXl9555()) {
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "Keyboard device not connected\n");
+    return false;
+  }
+
+  keyboard_connected_ = true;
+  bool result = ConfigXl9555();
+  if (!result) {
+    return false;
+  }
+
+  tool_->SetGpioMode(
+      keyboard_gpio::t_mix_rf::cc1101::kCs, cpp_bus_driver::Tool::GpioMode::kOutput);
+  tool_->SetGpioMode(
+      keyboard_gpio::t_mix_rf::nrf24l01::kCs, cpp_bus_driver::Tool::GpioMode::kOutput);
+  tool_->SetGpioMode(
+      keyboard_gpio::t_mix_rf::st25r3916::kCs, cpp_bus_driver::Tool::GpioMode::kOutput);
+  tool_->GpioWrite(keyboard_gpio::t_mix_rf::cc1101::kCs, 1);
+  tool_->GpioWrite(keyboard_gpio::t_mix_rf::nrf24l01::kCs, 1);
+  tool_->GpioWrite(keyboard_gpio::t_mix_rf::st25r3916::kCs, 1);
+
+  tool_->SetGpioMode(keyboard_gpio::t_mix_rf::cc1101::kBusy,
+      cpp_bus_driver::Tool::GpioMode::kInput,
+      cpp_bus_driver::Tool::GpioStatus::kPulldown);
+
+  result &= InitTca8418();
+  result &= InitTca8418Backlight();
+  result &= InitCc1101();
+  result &= InitNrf24l01();
+  return result;
+}
+
 bool TDisplayP4Driver::InitDrivers(InitMode mode) {
   bool result = true;
-
-  result &= InitEsp32p4();
 
   InitXl9535();
   InitPower();
@@ -391,41 +430,13 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
         },
         "InitSx1262Task", 4096, this, 3, NULL);
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
     xTaskCreate(
         [](void* arg) {
           auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitXl9555();
-          self->ConfigXl9555();
+          self->InitKeyboardDevices();
           vTaskDelete(NULL);
         },
-        "InitConfigXl9555Task", 2048, this, 3, NULL);
-
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitTca8418();
-          self->InitTca8418Backlight();
-          vTaskDelete(NULL);
-        },
-        "InitTca8418AndBacklightTask", 2048, this, 3, NULL);
-
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitCc1101();
-          vTaskDelete(NULL);
-        },
-        "InitCc1101Task", 2048, this, 3, NULL);
-
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitNrf24l01();
-          vTaskDelete(NULL);
-        },
-        "InitNrf24l01Task", 2048, this, 3, NULL);
-#endif
+        "InitKeyboardTask", 4096, this, 3, NULL);
 
     xTaskCreate(
         [](void* arg) {
@@ -450,14 +461,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     InitIcm20948();
     InitSx1262();
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
-    InitXl9555();
-    result &= ConfigXl9555();
-    InitTca8418();
-    InitTca8418Backlight();
-    InitCc1101();
-    InitNrf24l01();
-#endif
+    InitKeyboardDevices();
 
     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
 
@@ -485,13 +489,6 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     result &= status_.l76k.init_flag;
     result &= status_.icm20948.init_flag;
     result &= status_.sx1262.init_flag;
-
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
-    result &= status_.xl9555.init_flag;
-    result &= status_.tca8418.init_flag;
-    result &= status_.cc1101.init_flag;
-    result &= status_.nrf24l01.init_flag;
-#endif
 
     result &= status_.sd_card.init_flag;
   }
@@ -592,7 +589,6 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
               cpp_bus_driver::Sgm38121::Status::kOff);
         }
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
         if (status_.cc1101.init_flag) {
           int16_t ret = chip_.cc1101->sleep();
           if (ret != RADIOLIB_ERR_NONE) {
@@ -614,8 +610,6 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
         if (status_.tca8418_backlight.init_flag) {
           result &= chip_.tca8418_backlight->Stop(0);
         }
-
-#endif
 
         if (status_.xl9535.init_flag) {
           result &= chip_.xl9535->GpioWrite(
@@ -724,20 +718,18 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
               cpp_bus_driver::Sx126x::SleepMode::kWarmStart);
         }
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
         if (status_.xl9555.init_flag) {
           result &= chip_.xl9555->GpioWrite(
-              gpio::xl9555::kLed1, cpp_bus_driver::Xl95x5::Value::kHigh);
+              keyboard_gpio::xl9555::kLed1, cpp_bus_driver::Xl95x5::Value::kHigh);
           result &= chip_.xl9555->GpioWrite(
-              gpio::xl9555::kLed2, cpp_bus_driver::Xl95x5::Value::kHigh);
+              keyboard_gpio::xl9555::kLed2, cpp_bus_driver::Xl95x5::Value::kHigh);
           result &= chip_.xl9555->GpioWrite(
-              gpio::xl9555::kLed3, cpp_bus_driver::Xl95x5::Value::kHigh);
+              keyboard_gpio::xl9555::kLed3, cpp_bus_driver::Xl95x5::Value::kHigh);
           result &= chip_.xl9555->GpioWrite(
-              gpio::xl9555::kTMixrfEn, cpp_bus_driver::Xl95x5::Value::kLow);
+              keyboard_gpio::xl9555::kTMixRfEn, cpp_bus_driver::Xl95x5::Value::kLow);
           result &= chip_.xl9555->GpioWrite(
-              gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Value::kLow);
+              keyboard_gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Value::kLow);
         }
-#endif
         if (status_.xl9535.init_flag) {
           result &= chip_.xl9535->GpioWrite(
               gpio::xl9535::kScreenRst, cpp_bus_driver::Xl95x5::Value::kLow);
@@ -781,26 +773,33 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.pcf8563->Deinit();
           status_.pcf8563.init_flag = false;
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
-          result &= chip_.xl9555->Deinit();
-          status_.xl9555.init_flag = false;
-          result &= chip_.tca8418->Deinit();
-          status_.tca8418.init_flag = false;
-          result &= chip_.tca8418_backlight->Stop(0);
-          status_.tca8418_backlight.init_flag = false;
-#endif
+          if (status_.xl9555.init_flag) {
+            result &= chip_.xl9555->Deinit();
+            status_.xl9555.init_flag = false;
+            keyboard_connected_ = false;
+          }
+          if (status_.tca8418.init_flag) {
+            result &= chip_.tca8418->Deinit();
+            status_.tca8418.init_flag = false;
+          }
+          if (status_.tca8418_backlight.init_flag) {
+            result &= chip_.tca8418_backlight->Stop(0);
+            status_.tca8418_backlight.init_flag = false;
+          }
 
           result &= chip_.sgm38121->Deinit();
           status_.sgm38121.init_flag = false;
           result &= chip_.xl9535->Deinit();
           status_.xl9535.init_flag = false;
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
-          result &= bus_.cc1101_spi_bus->Deinit();
-          status_.cc1101.init_flag = false;
-          result &= bus_.nrf24l01_spi_bus->Deinit();
-          status_.nrf24l01.init_flag = false;
-#endif
+          if (status_.cc1101.init_flag) {
+            result &= bus_.cc1101_spi_bus->Deinit();
+            status_.cc1101.init_flag = false;
+          }
+          if (status_.nrf24l01.init_flag) {
+            result &= bus_.nrf24l01_spi_bus->Deinit();
+            status_.nrf24l01.init_flag = false;
+          }
 
           result &= chip_.sx1262->Deinit();
           status_.sx1262.init_flag = false;
@@ -829,28 +828,6 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
     default:
       break;
   }
-
-  return result;
-}
-
-bool TDisplayP4Driver::InitEsp32p4() {
-  bool result = true;
-
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
-  tool_->SetGpioMode(
-      gpio::tmixrf::cc1101::kCs, cpp_bus_driver::Tool::GpioMode::kOutput);
-  tool_->SetGpioMode(
-      gpio::tmixrf::nrf24l01::kCs, cpp_bus_driver::Tool::GpioMode::kOutput);
-  tool_->SetGpioMode(
-      gpio::tmixrf::st25r3916::kCs, cpp_bus_driver::Tool::GpioMode::kOutput);
-  tool_->GpioWrite(gpio::tmixrf::cc1101::kCs, 1);
-  tool_->GpioWrite(gpio::tmixrf::nrf24l01::kCs, 1);
-  tool_->GpioWrite(gpio::tmixrf::st25r3916::kCs, 1);
-
-  tool_->SetGpioMode(gpio::tmixrf::cc1101::kBusy,
-      cpp_bus_driver::Tool::GpioMode::kInput,
-      cpp_bus_driver::Tool::GpioStatus::kPulldown);
-#endif
 
   return result;
 }
@@ -1353,11 +1330,10 @@ bool TDisplayP4Driver::InitSx1262() {
   }
 }
 
-#if defined(CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD)
 bool TDisplayP4Driver::InitXl9555() {
   if (!chip_.xl9555->Init()) {
     status_.xl9555.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitXl9555 failed\n");
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitXl9555 failed\n");
     return false;
   } else {
     status_.xl9555.init_flag = true;
@@ -1374,39 +1350,39 @@ bool TDisplayP4Driver::ConfigXl9555() {
 
   bool result = true;
   result &= chip_.xl9555->SetGpioMode(
-      gpio::xl9555::kLed1, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      keyboard_gpio::xl9555::kLed1, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9555->SetGpioMode(
-      gpio::xl9555::kLed2, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      keyboard_gpio::xl9555::kLed2, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9555->SetGpioMode(
-      gpio::xl9555::kLed3, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      keyboard_gpio::xl9555::kLed3, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9555->SetGpioMode(
-      gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      keyboard_gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9555->SetGpioMode(
-      gpio::xl9555::kTMixrfEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetGpioMode(gpio::xl9555::kTMixrfCc1101RfSwitch0,
+      keyboard_gpio::xl9555::kTMixRfEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9555->SetGpioMode(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0,
       cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetGpioMode(gpio::xl9555::kTMixrfCc1101RfSwitch1,
+  result &= chip_.xl9555->SetGpioMode(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1,
       cpp_bus_driver::Xl95x5::Mode::kOutput);
 
   result &= chip_.xl9555->GpioWrite(
-      gpio::xl9555::kLed1, cpp_bus_driver::Xl95x5::Value::kHigh);  // 关闭led
+      keyboard_gpio::xl9555::kLed1, cpp_bus_driver::Xl95x5::Value::kHigh);  // 关闭led
   result &= chip_.xl9555->GpioWrite(
-      gpio::xl9555::kLed2, cpp_bus_driver::Xl95x5::Value::kHigh);
+      keyboard_gpio::xl9555::kLed2, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9555->GpioWrite(
-      gpio::xl9555::kLed3, cpp_bus_driver::Xl95x5::Value::kHigh);
+      keyboard_gpio::xl9555::kLed3, cpp_bus_driver::Xl95x5::Value::kHigh);
   result &= chip_.xl9555->GpioWrite(
-      gpio::xl9555::kTMixrfEn, cpp_bus_driver::Xl95x5::Value::kHigh);
+      keyboard_gpio::xl9555::kTMixRfEn, cpp_bus_driver::Xl95x5::Value::kHigh);
 
   result &= SetCc1101RfSwitch(Cc1101RfSwitch::k868_915Mhz);
 
   result &= chip_.xl9555->GpioWrite(
-      gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Value::kHigh);
+      keyboard_gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(10);
   result &= chip_.xl9555->GpioWrite(
-      gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Value::kLow);
+      keyboard_gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Value::kLow);
   tool_->DelayMs(10);
   result &= chip_.xl9555->GpioWrite(
-      gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Value::kHigh);
+      keyboard_gpio::xl9555::kTca8418Rst, cpp_bus_driver::Xl95x5::Value::kHigh);
   tool_->DelayMs(10);
 
   if (!result) {
@@ -1423,7 +1399,7 @@ bool TDisplayP4Driver::InitTca8418() {
   } else {
     bool result = true;
     result &= chip_.tca8418->SetKeypadScanWindow(0, 0,
-        device::tca8418::kKeypadScanWidth, device::tca8418::kKeypadScanHeight);
+        keyboard_device::tca8418::kKeypadScanWidth, keyboard_device::tca8418::kKeypadScanHeight);
     result &= chip_.tca8418->SetIrqGpioMode(
         cpp_bus_driver::Tca8418::IrqMask::kKeyEvents);
     result &= chip_.tca8418->ClearIrqFlag(
@@ -1480,21 +1456,21 @@ bool TDisplayP4Driver::SetCc1101RfSwitch(Cc1101RfSwitch rf_switch) {
   bool result = true;
   switch (rf_switch) {
     case Cc1101RfSwitch::k315Mhz:
-      result &= chip_.xl9555->GpioWrite(gpio::xl9555::kTMixrfCc1101RfSwitch0,
+      result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0,
           cpp_bus_driver::Xl95x5::Value::kLow);
-      result &= chip_.xl9555->GpioWrite(gpio::xl9555::kTMixrfCc1101RfSwitch1,
+      result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1,
           cpp_bus_driver::Xl95x5::Value::kHigh);
       break;
     case Cc1101RfSwitch::k434Mhz:
-      result &= chip_.xl9555->GpioWrite(gpio::xl9555::kTMixrfCc1101RfSwitch0,
+      result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0,
           cpp_bus_driver::Xl95x5::Value::kHigh);
-      result &= chip_.xl9555->GpioWrite(gpio::xl9555::kTMixrfCc1101RfSwitch1,
+      result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1,
           cpp_bus_driver::Xl95x5::Value::kHigh);
       break;
     case Cc1101RfSwitch::k868_915Mhz:
-      result &= chip_.xl9555->GpioWrite(gpio::xl9555::kTMixrfCc1101RfSwitch0,
+      result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0,
           cpp_bus_driver::Xl95x5::Value::kHigh);
-      result &= chip_.xl9555->GpioWrite(gpio::xl9555::kTMixrfCc1101RfSwitch1,
+      result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1,
           cpp_bus_driver::Xl95x5::Value::kLow);
       break;
 
@@ -1523,7 +1499,6 @@ bool TDisplayP4Driver::InitNrf24l01() {
     return true;
   }
 }
-#endif
 
 bool TDisplayP4Driver::InitSpiffs(
     const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf) {

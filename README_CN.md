@@ -65,7 +65,7 @@ bool es8311_ready = driver.status().es8311.init_flag;
 | 设备 | Kconfig 选项 | 主要驱动/API |
 | --- | --- | --- |
 | T-Display-P4 | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4` | `lilygo_device_driver::TDisplayP4Driver` |
-| T-Display-P4 Keyboard | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4` 搭配 `CONFIG_BOARD_TYPE_T_DISPLAY_P4_KEYBOARD` | `lilygo_device_driver::TDisplayP4Driver` |
+| T-Display-P4 Keyboard | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4`，键盘运行时自动检测 | `lilygo_device_driver::TDisplayP4Driver` |
 | T-Display-P4-Air | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR` | 板级常量 |
 | T-Glasses-P4 | `CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4` | 板级常量 |
 | T-Spe | `CONFIG_LILYGO_DEVICE_DRIVER_T_SPE` | 板级常量 |
