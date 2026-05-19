@@ -305,7 +305,7 @@ bool TDisplayP4Driver::InitSelectedTouchAndBacklight() {
   }
 }
 
-bool TDisplayP4Driver::InitKeyboardDevices() {
+bool TDisplayP4Driver::InitKeyboardDevices(InitMode mode) {
   keyboard_connected_ = false;
   status_.xl9555.init_flag = false;
   status_.tca8418.init_flag = false;
@@ -339,10 +339,48 @@ bool TDisplayP4Driver::InitKeyboardDevices() {
       cpp_bus_driver::Tool::GpioMode::kInput,
       cpp_bus_driver::Tool::GpioStatus::kPulldown);
 
-  result &= InitTca8418();
-  result &= InitTca8418Backlight();
-  result &= InitCc1101();
-  result &= InitNrf24l01();
+  switch (mode) {
+    case InitMode::kAsync:
+      result &= (xTaskCreate(
+                     [](void* arg) {
+                       auto self = static_cast<TDisplayP4Driver*>(arg);
+                       self->InitTca8418();
+                       vTaskDelete(NULL);
+                     },
+                     "InitTca8418Task", 4096, this, 3, NULL) == pdPASS);
+      result &= (xTaskCreate(
+                     [](void* arg) {
+                       auto self = static_cast<TDisplayP4Driver*>(arg);
+                       self->InitTca8418Backlight();
+                       vTaskDelete(NULL);
+                     },
+                     "Tca8418BlTask", 4096, this, 3, NULL) == pdPASS);
+      result &= (xTaskCreate(
+                     [](void* arg) {
+                       auto self = static_cast<TDisplayP4Driver*>(arg);
+                       self->InitCc1101();
+                       vTaskDelete(NULL);
+                     },
+                     "InitCc1101Task", 4096, this, 3, NULL) == pdPASS);
+      result &= (xTaskCreate(
+                     [](void* arg) {
+                       auto self = static_cast<TDisplayP4Driver*>(arg);
+                       self->InitNrf24l01();
+                       vTaskDelete(NULL);
+                     },
+                     "InitNrf24Task", 4096, this, 3, NULL) == pdPASS);
+      break;
+    case InitMode::kSync:
+      result &= InitTca8418();
+      result &= InitTca8418Backlight();
+      result &= InitCc1101();
+      result &= InitNrf24l01();
+      break;
+    default:
+      result = false;
+      break;
+  }
+
   return result;
 }
 
@@ -364,90 +402,82 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
       bus_.icm20948_i2c_bus->begin(gpio::icm20948::kSda, gpio::icm20948::kScl);
 
   if (mode == InitMode::kAsync) {
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          if (self->InitSelectedScreen()) {
-            self->InitSelectedTouchAndBacklight();
-          }
-          vTaskDelete(NULL);
-        },
-        "ScreenTask", 4096, this, 3, NULL);
+    result &= (xTaskCreate(
+                   [](void* arg) {
+                     auto self = static_cast<TDisplayP4Driver*>(arg);
+                     if (self->InitSelectedScreen()) {
+                       self->InitSelectedTouchAndBacklight();
+                     }
+                     vTaskDelete(NULL);
+                   },
+                   "ScreenTask", 4096, this, 3, NULL) == pdPASS);
 
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitBq27220();
-          vTaskDelete(NULL);
-        },
-        "InitBq27220Task", 2048, this, 3, NULL);
+    result &= (xTaskCreate(
+                   [](void* arg) {
+                     auto self = static_cast<TDisplayP4Driver*>(arg);
+                     self->InitBq27220();
+                     vTaskDelete(NULL);
+                   },
+                   "InitBq27220Task", 2048, this, 3, NULL) == pdPASS);
 
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitPcf8563();
-          vTaskDelete(NULL);
-        },
-        "InitPcf8563Task", 2048, this, 3, NULL);
+    result &= (xTaskCreate(
+                   [](void* arg) {
+                     auto self = static_cast<TDisplayP4Driver*>(arg);
+                     self->InitPcf8563();
+                     vTaskDelete(NULL);
+                   },
+                   "InitPcf8563Task", 2048, this, 3, NULL) == pdPASS);
 
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitAw86224();
-          vTaskDelete(NULL);
-        },
-        "InitAw86224Task", 4096, this, 3, NULL);
+    result &= (xTaskCreate(
+                   [](void* arg) {
+                     auto self = static_cast<TDisplayP4Driver*>(arg);
+                     self->InitAw86224();
+                     vTaskDelete(NULL);
+                   },
+                   "InitAw86224Task", 4096, this, 3, NULL) == pdPASS);
 
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitEs8311();
-          self->ConfigEs8311();
-          vTaskDelete(NULL);
-        },
-        "InitConfigEs8311Task", 4096, this, 3, NULL);
+    result &= (xTaskCreate(
+                   [](void* arg) {
+                     auto self = static_cast<TDisplayP4Driver*>(arg);
+                     self->InitEs8311();
+                     self->ConfigEs8311();
+                     vTaskDelete(NULL);
+                   },
+                   "InitConfigEs8311Task", 4096, this, 3, NULL) == pdPASS);
 
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitL76k();
-          vTaskDelete(NULL);
-        },
-        "InitL76kTask", 2048, this, 3, NULL);
+    result &= (xTaskCreate(
+                   [](void* arg) {
+                     auto self = static_cast<TDisplayP4Driver*>(arg);
+                     self->InitL76k();
+                     vTaskDelete(NULL);
+                   },
+                   "InitL76kTask", 2048, this, 3, NULL) == pdPASS);
 
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitIcm20948();
-          vTaskDelete(NULL);
-        },
-        "InitIcm20948Task", 4096, this, 3, NULL);
+    result &= (xTaskCreate(
+                   [](void* arg) {
+                     auto self = static_cast<TDisplayP4Driver*>(arg);
+                     self->InitIcm20948();
+                     vTaskDelete(NULL);
+                   },
+                   "InitIcm20948Task", 4096, this, 3, NULL) == pdPASS);
 
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitSx1262();
-          vTaskDelete(NULL);
-        },
-        "InitSx1262Task", 4096, this, 3, NULL);
+    result &= (xTaskCreate(
+                   [](void* arg) {
+                     auto self = static_cast<TDisplayP4Driver*>(arg);
+                     self->InitSx1262();
+                     vTaskDelete(NULL);
+                   },
+                   "InitSx1262Task", 4096, this, 3, NULL) == pdPASS);
 
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitKeyboardDevices();
-          vTaskDelete(NULL);
-        },
-        "InitKeyboardTask", 4096, this, 3, NULL);
+    result &= InitKeyboardDevices(InitMode::kAsync);
 
-    xTaskCreate(
-        [](void* arg) {
-          auto self = static_cast<TDisplayP4Driver*>(arg);
-          self->InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
-          vTaskDelete(NULL);
-        },
-        "InitSdmmcTask", 4096, this, 3, NULL);
-
-    result = true;
+    result &= (xTaskCreate(
+                   [](void* arg) {
+                     auto self = static_cast<TDisplayP4Driver*>(arg);
+                     self->InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
+                     vTaskDelete(NULL);
+                   },
+                   "InitSdmmcTask", 4096, this, 3, NULL) == pdPASS);
   } else {
     if (InitSelectedScreen()) {
       InitSelectedTouchAndBacklight();

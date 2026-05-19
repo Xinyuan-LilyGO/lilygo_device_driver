@@ -265,9 +265,10 @@ class TDisplayP4Driver {
 
   /**
    * @brief 探测并初始化外接键盘相关设备。
+   * @param mode 键盘扩展子设备初始化模式。
    * @return 检测到键盘并完成初始化返回 true，否则返回 false。
    */
-  bool InitKeyboardDevices();
+  bool InitKeyboardDevices(InitMode mode = InitMode::kSync);
 
   /**
    * @brief 选择 CC1101 RF 开关通路。
