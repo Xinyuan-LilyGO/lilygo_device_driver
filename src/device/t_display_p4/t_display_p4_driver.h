@@ -2,19 +2,17 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-05-17 23:17:25
+ * @LastEditTime: 2026-05-19 10:02:28
  * @License: GPL 3.0
  */
 
 #pragma once
 
-#include "esp32p4_driver.h"
-#include "t_display_p4_keyboard_config.h"
-
-#include "cpp_bus_driver_library.h"
-#include "radiolib_cpp_bus_driver_library.h"
-
 #include "ICM20948_WE.h"
+#include "cpp_bus_driver_library.h"
+#include "esp32p4_driver.h"
+#include "radiolib_cpp_bus_driver_library.h"
+#include "t_display_p4_keyboard_config.h"
 
 namespace lilygo_device_driver {
 namespace t_display_p4::device {
@@ -212,6 +210,9 @@ class TDisplayP4Driver {
    */
   bool keyboard_connected() const { return keyboard_connected_; }
 
+  /**
+   * @brief 创建设备驱动指针
+   */
   void CreateDrivers();
 
   /**
@@ -264,11 +265,10 @@ class TDisplayP4Driver {
   bool InitNrf24l01();
 
   /**
-   * @brief 探测并初始化外接键盘相关设备。
-   * @param mode 键盘扩展子设备初始化模式。
-   * @return 检测到键盘并完成初始化返回 true，否则返回 false。
+   * @brief 探测并同步初始化外接键盘相关设备。
+   * @return 检测到键盘并完成全部键盘设备初始化返回 true，否则返回 false。
    */
-  bool InitKeyboardDevices(InitMode mode = InitMode::kSync);
+  bool InitKeyboardDevices();
 
   /**
    * @brief 选择 CC1101 RF 开关通路。
@@ -333,6 +333,14 @@ class TDisplayP4Driver {
    * @return 初始化成功时返回 true，否则返回 false。
    */
   bool InitSelectedTouchAndBacklight();
+
+  /**
+   * @brief 设置键盘扩展设备睡眠状态。
+   * @param level 睡眠等级。
+   * @param enable 是否开启该睡眠等级。
+   * @return 设置成功返回 true，否则返回 false。
+   */
+  bool SetKeyboardDevicesSleep(SleepLevel level, bool enable);
 
   TDisplayP4Driver() = default;
   ~TDisplayP4Driver() = default;
