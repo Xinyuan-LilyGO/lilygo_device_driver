@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "ICM20948_WE.h"
 #include "cpp_bus_driver_library.h"
 #include "esp32p4_driver.h"
@@ -243,6 +245,25 @@ class TDisplayP4Driver {
   bool InitXl9535();
   bool ConfigXl9535();
   bool InitSgm38121();
+
+  /**
+   * @brief 检测屏幕类型并初始化当前屏幕。
+   * @return 初始化成功返回 true，否则返回 false。
+   */
+  bool InitScreen();
+
+  /**
+   * @brief 初始化当前屏幕对应的触摸设备。
+   * @return 初始化成功返回 true，否则返回 false。
+   */
+  bool InitTouch();
+
+  /**
+   * @brief 初始化当前屏幕对应的背光设备。
+   * @return 初始化成功返回 true，否则返回 false。
+   */
+  bool InitScreenBacklight();
+
   bool InitHi8561();
   bool InitHi8561Touch();
   bool InitHi8561Backlight();
@@ -268,7 +289,7 @@ class TDisplayP4Driver {
    * @brief 探测并同步初始化外接键盘相关设备。
    * @return 检测到键盘并完成全部键盘设备初始化返回 true，否则返回 false。
    */
-  bool InitKeyboardDevices();
+  bool InitKeyboard();
 
   /**
    * @brief 选择 CC1101 RF 开关通路。
@@ -315,24 +336,7 @@ class TDisplayP4Driver {
    * @brief 通过 GT9895 触摸 ID 检测屏幕类型。
    * @return 检测流程完成时返回 true，否则返回 false。
    */
-  bool DetectScreen();
-
-  /**
-   * @brief 为当前屏幕创建对应的 MIPI 屏幕驱动。
-   */
-  void CreateSelectedScreenDrivers();
-
-  /**
-   * @brief 初始化当前选中的屏幕。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
-  bool InitSelectedScreen();
-
-  /**
-   * @brief 初始化当前屏幕对应的触摸和背光设备。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
-  bool InitSelectedTouchAndBacklight();
+  bool DetectScreenType();
 
   /**
    * @brief 设置键盘扩展设备睡眠状态。
@@ -340,7 +344,7 @@ class TDisplayP4Driver {
    * @param enable 是否开启该睡眠等级。
    * @return 设置成功返回 true，否则返回 false。
    */
-  bool SetKeyboardDevicesSleep(SleepLevel level, bool enable);
+  bool SetKeyboardSleep(SleepLevel level, bool enable);
 
   TDisplayP4Driver() = default;
   ~TDisplayP4Driver() = default;

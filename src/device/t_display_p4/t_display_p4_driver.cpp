@@ -98,7 +98,7 @@ const ScreenDeviceInfo* FindScreenDeviceInfo(ScreenType type) {
  * @param type 要查找的屏幕类型。
  * @return 找到时返回屏幕设备信息，否则返回默认屏幕信息。
  */
-const ScreenDeviceInfo* ScreenInfoOrDefault(ScreenType type) {
+const ScreenDeviceInfo* ScreenInfo(ScreenType type) {
   const auto* info = FindScreenDeviceInfo(type);
   return info == nullptr ? kDefaultScreenDeviceInfo : info;
 }
@@ -231,11 +231,11 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.nrf24l01 = new nRF24(bus_.nrf24l01_module);
 }
 
-bool TDisplayP4Driver::DetectScreen() {
+bool TDisplayP4Driver::DetectScreenType() {
   status_.gt9895.init_flag = false;
 
   if (chip_.gt9895 != nullptr && chip_.gt9895->Init()) {
-    screen_info_ = ScreenInfoOrDefault(device::ScreenType::kRm69a10);
+    screen_info_ = ScreenInfo(device::ScreenType::kRm69a10);
     status_.gt9895.init_flag = true;
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
         "Auto detected T-Display-P4 screen: %s\n", screen_info_->name);
@@ -245,13 +245,19 @@ bool TDisplayP4Driver::DetectScreen() {
   if (bus_.gt9895_i2c_touch_bus != nullptr) {
     bus_.gt9895_i2c_touch_bus->Deinit(false);
   }
-  screen_info_ = ScreenInfoOrDefault(device::ScreenType::kHi8561);
+  screen_info_ = ScreenInfo(device::ScreenType::kHi8561);
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
       "Auto detected T-Display-P4 screen: %s\n", screen_info_->name);
   return true;
 }
 
-void TDisplayP4Driver::CreateSelectedScreenDrivers() {
+bool TDisplayP4Driver::InitScreen() {
+  if (!DetectScreenType()) {
+    LogMessage(
+        LogLevel::kChip, __FILE__, __LINE__, "DetectScreenType failed\n");
+    return false;
+  }
+
   const auto& screen = screen_info();
   bus_.screen_mipi_bus = std::make_shared<cpp_bus_driver::HardwareMipi>(
       screen.width, screen.height, screen.mipi_dsi_hsync, screen.mipi_dsi_hbp,
@@ -270,34 +276,20 @@ void TDisplayP4Driver::CreateSelectedScreenDrivers() {
     case device::ScreenType::kHi8561:
       chip_.hi8561 =
           std::make_unique<cpp_bus_driver::Hi8561>(bus_.screen_mipi_bus);
-      break;
+      return InitHi8561();
     case device::ScreenType::kRm69a10:
       chip_.rm69a10 =
           std::make_unique<cpp_bus_driver::Rm69a10>(bus_.screen_mipi_bus);
-      break;
-    default:
-      break;
-  }
-}
-
-bool TDisplayP4Driver::InitSelectedScreen() {
-  switch (screen_type()) {
-    case device::ScreenType::kHi8561:
-      return InitHi8561();
-    case device::ScreenType::kRm69a10:
       return InitRm69a10();
     default:
       return false;
   }
 }
 
-bool TDisplayP4Driver::InitSelectedTouchAndBacklight() {
+bool TDisplayP4Driver::InitTouch() {
   switch (screen_type()) {
-    case device::ScreenType::kHi8561: {
-      const bool touch_result = InitHi8561Touch();
-      const bool backlight_result = InitHi8561Backlight();
-      return touch_result && backlight_result;
-    }
+    case device::ScreenType::kHi8561:
+      return InitHi8561Touch();
     case device::ScreenType::kRm69a10:
       return status_.gt9895.init_flag || InitGt9895();
     default:
@@ -305,7 +297,18 @@ bool TDisplayP4Driver::InitSelectedTouchAndBacklight() {
   }
 }
 
-bool TDisplayP4Driver::InitKeyboardDevices() {
+bool TDisplayP4Driver::InitScreenBacklight() {
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return InitHi8561Backlight();
+    case device::ScreenType::kRm69a10:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool TDisplayP4Driver::InitKeyboard() {
   keyboard_connected_ = false;
   status_.xl9555.init_flag = false;
   status_.tca8418.init_flag = false;
@@ -363,9 +366,6 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
   InitSgm38121();
 
-  result &= DetectScreen();
-  CreateSelectedScreenDrivers();
-
   result &= bus_.icm20948_i2c_bus->set_bus_handle(
       bus_.sgm38121_i2c_bus->bus_handle());
   result &=
@@ -375,8 +375,9 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4Driver*>(arg);
-                     if (self->InitSelectedScreen()) {
-                       self->InitSelectedTouchAndBacklight();
+                     if (self->InitScreen()) {
+                       self->InitTouch();
+                       self->InitScreenBacklight();
                      }
                      vTaskDelete(NULL);
                    },
@@ -385,7 +386,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4Driver*>(arg);
-                     self->InitKeyboardDevices();
+                     self->InitKeyboard();
                      vTaskDelete(NULL);
                    },
                    "InitKeyboardTask", 4096, this, 3, NULL) == pdPASS);
@@ -455,11 +456,12 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
                    },
                    "InitSdmmcTask", 4096, this, 3, NULL) == pdPASS);
   } else {
-    if (InitSelectedScreen()) {
-      InitSelectedTouchAndBacklight();
+    if (InitScreen()) {
+      InitTouch();
+      InitScreenBacklight();
     }
 
-    InitKeyboardDevices();
+    InitKeyboard();
 
     InitBq27220();
     InitPcf8563();
@@ -503,7 +505,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
   return result;
 }
 
-bool TDisplayP4Driver::SetKeyboardDevicesSleep(SleepLevel level, bool enable) {
+bool TDisplayP4Driver::SetKeyboardSleep(SleepLevel level, bool enable) {
   bool result = true;
 
   switch (level) {
@@ -596,7 +598,7 @@ bool TDisplayP4Driver::SetKeyboardDevicesSleep(SleepLevel level, bool enable) {
 
         keyboard_connected_ = false;
       } else {
-        result &= InitKeyboardDevices();
+        result &= InitKeyboard();
       }
       break;
     default:
@@ -695,7 +697,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
               cpp_bus_driver::Sgm38121::Channel::kAvdd2,
               cpp_bus_driver::Sgm38121::Status::kOff);
         }
-        result &= SetKeyboardDevicesSleep(level, enable);
+        result &= SetKeyboardSleep(level, enable);
 
         if (status_.xl9535.init_flag) {
           result &= chip_.xl9535->GpioWrite(
@@ -779,7 +781,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
               cpp_bus_driver::Sgm38121::Channel::kAvdd2,
               cpp_bus_driver::Sgm38121::Status::kOn);
         }
-        result &= SetKeyboardDevicesSleep(level, enable);
+        result &= SetKeyboardSleep(level, enable);
       }
       break;
     case SleepLevel::kPowerOff:
@@ -862,7 +864,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           status_.sgm38121.init_flag = false;
         }
 
-        result &= SetKeyboardDevicesSleep(level, enable);
+        result &= SetKeyboardSleep(level, enable);
 
         if (status_.xl9535.init_flag) {
           result &= chip_.xl9535->GpioWrite(
