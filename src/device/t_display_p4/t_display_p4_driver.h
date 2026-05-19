@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-05-19 10:02:28
+ * @LastEditTime: 2026-05-20 01:51:15
  * @License: GPL 3.0
  */
 
@@ -25,12 +25,14 @@ enum class ScreenType {
   kRm69a10,
 };
 
-struct ScreenDeviceInfo {
+// 屏幕型号、分辨率和 MIPI 参数信息
+struct ScreenInfo {
   ScreenType type;
   const char* name;
   int width;
   int height;
   int bits_per_pixel;
+  const char* pixel_format;
   int mipi_dsi_dpi_clk_mhz;
   int mipi_dsi_hsync;
   int mipi_dsi_hbp;
@@ -40,6 +42,41 @@ struct ScreenDeviceInfo {
   int mipi_dsi_vfp;
   int data_lane_num;
   int lane_bit_rate_mbps;
+};
+
+// 设备型号名称和版本信息
+struct DeviceModelInfo {
+  const char* name;
+  const char* version;
+};
+
+inline constexpr DeviceModelInfo kDeviceModelInfo = {
+    .name = "T-Display-P4",
+    .version = "v1.0",
+};
+
+// 相机型号、像素格式和缓冲区信息
+struct CameraInfo {
+  CameraType type;
+  const char* name;
+  const char* pixel_format;
+  int bits_per_pixel;
+  int buffer_count;
+};
+
+inline constexpr CameraInfo kCameraInfo = {
+    .type = camera::kType,
+    .name = camera::kName,
+    .pixel_format = camera::kPixelFormat,
+    .bits_per_pixel = camera::kBitsPerPixel,
+    .buffer_count = camera::kBufferCount,
+};
+
+// T-Display-P4 设备聚合信息
+struct DeviceInfo {
+  DeviceModelInfo model;
+  ScreenInfo screen;
+  CameraInfo camera;
 };
 
 }  // namespace t_display_p4::device
@@ -199,12 +236,21 @@ class TDisplayP4Driver {
   const Chip& chip() const { return chip_; }
   const Status& status() const { return status_; }
 
-  /**
-   * @brief 获取当前选中的屏幕设备信息。
-   * @return 当前屏幕设备信息，检测前返回默认屏幕信息。
-   */
-  const t_display_p4::device::ScreenDeviceInfo& screen_info() const;
+  const t_display_p4::device::DeviceModelInfo& device_model_info() const {
+    return t_display_p4::device::kDeviceModelInfo;
+  }
   t_display_p4::device::ScreenType screen_type() const;
+  const t_display_p4::device::ScreenInfo& screen_info() const;
+  const t_display_p4::device::CameraInfo& camera_info() const {
+    return t_display_p4::device::kCameraInfo;
+  }
+  t_display_p4::device::DeviceInfo device_info() const {
+    return {
+        .model = device_model_info(),
+        .screen = screen_info(),
+        .camera = camera_info(),
+    };
+  }
 
   /**
    * @brief 判断外接键盘设备是否已经探测成功。
@@ -329,7 +375,7 @@ class TDisplayP4Driver {
   Bus bus_;
   Chip chip_;
   Status status_;
-  const t_display_p4::device::ScreenDeviceInfo* screen_info_ = nullptr;
+  const t_display_p4::device::ScreenInfo* screen_info_ = nullptr;
   bool keyboard_connected_ = false;
 
   /**

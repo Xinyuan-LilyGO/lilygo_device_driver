@@ -229,27 +229,46 @@ inline constexpr int kRotationDirection = 0;
 
 #if defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB565)
 inline constexpr int kBitsPerPixel = 16;
+inline constexpr const char* kPixelFormat = "rgb565";
 #elif defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB888)
 inline constexpr int kBitsPerPixel = 24;
+inline constexpr const char* kPixelFormat = "rgb888";
 #else
 #error "Missing required macro definition."
 #endif
 }  // namespace screen
 
+enum class CameraType {
+  kUnknown,
+  kSc2336,
+  kOv2710,
+  kOv5645,
+};
+
 namespace camera {
 #if defined(CONFIG_CAMERA_TYPE_SC2336)
+inline constexpr CameraType kType = CameraType::kSc2336;
+inline constexpr const char* kName = "sc2336";
 #elif defined(CONFIG_CAMERA_TYPE_OV2710)
+inline constexpr CameraType kType = CameraType::kOv2710;
+inline constexpr const char* kName = "ov2710";
 #elif defined(CONFIG_CAMERA_TYPE_OV5645)
+inline constexpr CameraType kType = CameraType::kOv5645;
+inline constexpr const char* kName = "ov5645";
 #else
-#error "Missing required macro definition."
+inline constexpr CameraType kType = CameraType::kUnknown;
+inline constexpr const char* kName = "unknown";
 #endif
 
 #if defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB565)
 inline constexpr int kBitsPerPixel = 16;
+inline constexpr const char* kPixelFormat = "rgb565";
 #elif defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB888)
 inline constexpr int kBitsPerPixel = 24;
+inline constexpr const char* kPixelFormat = "rgb888";
 #else
-#error "Missing required macro definition."
+inline constexpr int kBitsPerPixel = 0;
+inline constexpr const char* kPixelFormat = "unknown";
 #endif
 
 inline constexpr int kBufferCount = 2;

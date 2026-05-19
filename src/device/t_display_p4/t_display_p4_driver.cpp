@@ -17,15 +17,16 @@ namespace keyboard_device = t_display_p4::keyboard::device;
 namespace {
 
 constexpr uint16_t kBq27220BatteryCapacityMah = 1000;
-using ScreenDeviceInfo = device::ScreenDeviceInfo;
+using ScreenInfo = device::ScreenInfo;
 using ScreenType = device::ScreenType;
 
-constexpr ScreenDeviceInfo kHi8561ScreenDeviceInfo = {
+constexpr ScreenInfo kHi8561ScreenInfo = {
     .type = ScreenType::kHi8561,
     .name = "hi8561",
     .width = device::hi8561::kScreenWidth,
     .height = device::hi8561::kScreenHeight,
     .bits_per_pixel = device::screen::kBitsPerPixel,
+    .pixel_format = device::screen::kPixelFormat,
     .mipi_dsi_dpi_clk_mhz = device::hi8561::kScreenMipiDsiDpiClkMhz,
     .mipi_dsi_hsync = device::hi8561::kScreenMipiDsiHsync,
     .mipi_dsi_hbp = device::hi8561::kScreenMipiDsiHbp,
@@ -37,12 +38,13 @@ constexpr ScreenDeviceInfo kHi8561ScreenDeviceInfo = {
     .lane_bit_rate_mbps = device::hi8561::kScreenLaneBitRateMbps,
 };
 
-constexpr ScreenDeviceInfo kRm69a10ScreenDeviceInfo = {
+constexpr ScreenInfo kRm69a10ScreenInfo = {
     .type = ScreenType::kRm69a10,
     .name = "rm69a10",
     .width = device::rm69a10::kScreenWidth,
     .height = device::rm69a10::kScreenHeight,
     .bits_per_pixel = device::screen::kBitsPerPixel,
+    .pixel_format = device::screen::kPixelFormat,
     .mipi_dsi_dpi_clk_mhz = device::rm69a10::kScreenMipiDsiDpiClkMhz,
     .mipi_dsi_hsync = device::rm69a10::kScreenMipiDsiHsync,
     .mipi_dsi_hbp = device::rm69a10::kScreenMipiDsiHbp,
@@ -54,13 +56,12 @@ constexpr ScreenDeviceInfo kRm69a10ScreenDeviceInfo = {
     .lane_bit_rate_mbps = device::rm69a10::kScreenLaneBitRateMbps,
 };
 
-constexpr ScreenDeviceInfo kScreenDeviceInfoRegistry[] = {
-    kHi8561ScreenDeviceInfo,
-    kRm69a10ScreenDeviceInfo,
+constexpr ScreenInfo kScreenInfoRegistry[] = {
+    kHi8561ScreenInfo,
+    kRm69a10ScreenInfo,
 };
 
-constexpr const ScreenDeviceInfo* kDefaultScreenDeviceInfo =
-    &kHi8561ScreenDeviceInfo;
+constexpr const ScreenInfo* kDefaultScreenInfo = &kHi8561ScreenInfo;
 
 /**
  * @brief 将屏幕像素位宽转换为 MIPI 颜色格式。
@@ -84,8 +85,8 @@ cpp_bus_driver::HardwareMipi::ColorFormat ColorFormatFromBitsPerPixel(
  * @param type 要查找的屏幕类型。
  * @return 找到时返回屏幕设备信息，否则返回 nullptr。
  */
-const ScreenDeviceInfo* FindScreenDeviceInfo(ScreenType type) {
-  for (const ScreenDeviceInfo& info : kScreenDeviceInfoRegistry) {
+const ScreenInfo* FindScreenInfo(ScreenType type) {
+  for (const ScreenInfo& info : kScreenInfoRegistry) {
     if (info.type == type) {
       return &info;
     }
@@ -98,9 +99,9 @@ const ScreenDeviceInfo* FindScreenDeviceInfo(ScreenType type) {
  * @param type 要查找的屏幕类型。
  * @return 找到时返回屏幕设备信息，否则返回默认屏幕信息。
  */
-const ScreenDeviceInfo* ScreenInfo(ScreenType type) {
-  const auto* info = FindScreenDeviceInfo(type);
-  return info == nullptr ? kDefaultScreenDeviceInfo : info;
+const ScreenInfo* ScreenInfoForType(ScreenType type) {
+  const auto* info = FindScreenInfo(type);
+  return info == nullptr ? kDefaultScreenInfo : info;
 }
 
 }  // namespace
@@ -110,8 +111,8 @@ TDisplayP4Driver& TDisplayP4Driver::GetInstance() {
   return *instance;
 }
 
-const device::ScreenDeviceInfo& TDisplayP4Driver::screen_info() const {
-  return *(screen_info_ == nullptr ? kDefaultScreenDeviceInfo : screen_info_);
+const device::ScreenInfo& TDisplayP4Driver::screen_info() const {
+  return *(screen_info_ == nullptr ? kDefaultScreenInfo : screen_info_);
 }
 
 device::ScreenType TDisplayP4Driver::screen_type() const {
@@ -235,7 +236,7 @@ bool TDisplayP4Driver::DetectScreenType() {
   status_.gt9895.init_flag = false;
 
   if (chip_.gt9895 != nullptr && chip_.gt9895->Init()) {
-    screen_info_ = ScreenInfo(device::ScreenType::kRm69a10);
+    screen_info_ = ScreenInfoForType(device::ScreenType::kRm69a10);
     status_.gt9895.init_flag = true;
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
         "Auto detected T-Display-P4 screen: %s\n", screen_info_->name);
@@ -245,7 +246,7 @@ bool TDisplayP4Driver::DetectScreenType() {
   if (bus_.gt9895_i2c_touch_bus != nullptr) {
     bus_.gt9895_i2c_touch_bus->Deinit(false);
   }
-  screen_info_ = ScreenInfo(device::ScreenType::kHi8561);
+  screen_info_ = ScreenInfoForType(device::ScreenType::kHi8561);
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
       "Auto detected T-Display-P4 screen: %s\n", screen_info_->name);
   return true;
