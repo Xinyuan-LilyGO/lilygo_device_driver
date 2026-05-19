@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-05-19 10:54:51
+ * @LastEditTime: 2026-05-19 11:31:57
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -321,22 +321,28 @@ bool TDisplayP4Driver::InitKeyboardDevices() {
 
   bool result = ConfigXl9555();
   if (!result) {
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "ConfigXl9555 failed\n");
     return false;
   }
 
-  tool_->SetGpioMode(keyboard_gpio::t_mix_rf::cc1101::kCs,
+  result &= tool_->SetGpioMode(keyboard_gpio::t_mix_rf::cc1101::kCs,
       cpp_bus_driver::Tool::GpioMode::kOutput);
-  tool_->SetGpioMode(keyboard_gpio::t_mix_rf::nrf24l01::kCs,
+  result &= tool_->SetGpioMode(keyboard_gpio::t_mix_rf::nrf24l01::kCs,
       cpp_bus_driver::Tool::GpioMode::kOutput);
-  tool_->SetGpioMode(keyboard_gpio::t_mix_rf::st25r3916::kCs,
+  result &= tool_->SetGpioMode(keyboard_gpio::t_mix_rf::st25r3916::kCs,
       cpp_bus_driver::Tool::GpioMode::kOutput);
-  tool_->GpioWrite(keyboard_gpio::t_mix_rf::cc1101::kCs, 1);
-  tool_->GpioWrite(keyboard_gpio::t_mix_rf::nrf24l01::kCs, 1);
-  tool_->GpioWrite(keyboard_gpio::t_mix_rf::st25r3916::kCs, 1);
+  result &= tool_->GpioWrite(keyboard_gpio::t_mix_rf::cc1101::kCs, 1);
+  result &= tool_->GpioWrite(keyboard_gpio::t_mix_rf::nrf24l01::kCs, 1);
+  result &= tool_->GpioWrite(keyboard_gpio::t_mix_rf::st25r3916::kCs, 1);
 
-  tool_->SetGpioMode(keyboard_gpio::t_mix_rf::cc1101::kBusy,
+  result &= tool_->SetGpioMode(keyboard_gpio::t_mix_rf::cc1101::kBusy,
       cpp_bus_driver::Tool::GpioMode::kInput,
       cpp_bus_driver::Tool::GpioStatus::kPulldown);
+
+  if (!result) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "Keyboard gpio failed\n");
+    return false;
+  }
 
   result &= InitTca8418();
   result &= InitTca8418Backlight();
@@ -583,10 +589,10 @@ bool TDisplayP4Driver::SetKeyboardDevicesSleep(SleepLevel level, bool enable) {
           status_.xl9555.init_flag = false;
         }
 
-        tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kCs);
-        tool_->ResetGpio(keyboard_gpio::t_mix_rf::nrf24l01::kCs);
-        tool_->ResetGpio(keyboard_gpio::t_mix_rf::st25r3916::kCs);
-        tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kBusy);
+        result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kCs);
+        result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::nrf24l01::kCs);
+        result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::st25r3916::kCs);
+        result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kBusy);
 
         keyboard_connected_ = false;
       } else {
