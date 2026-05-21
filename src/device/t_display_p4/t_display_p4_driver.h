@@ -2,12 +2,13 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-05-20 01:51:15
+ * @LastEditTime: 2026-05-21 18:05:18
  * @License: GPL 3.0
  */
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 
 #include "ICM20948_WE.h"
@@ -72,11 +73,23 @@ inline constexpr CameraInfo kCameraInfo = {
     .buffer_count = camera::kBufferCount,
 };
 
-// T-Display-P4 设备聚合信息
+// Battery fuel gauge and capacity information
+struct BatteryInfo {
+  const char* fuel_gauge_name;
+  uint16_t capacity_mah;
+};
+
+inline constexpr BatteryInfo kBatteryInfo = {
+    .fuel_gauge_name = "bq27220",
+    .capacity_mah = 1000,
+};
+
+// T-Display-P4 aggregate device information
 struct DeviceInfo {
   DeviceModelInfo model;
   ScreenInfo screen;
   CameraInfo camera;
+  BatteryInfo battery;
 };
 
 }  // namespace t_display_p4::device
@@ -244,11 +257,15 @@ class TDisplayP4Driver {
   const t_display_p4::device::CameraInfo& camera_info() const {
     return t_display_p4::device::kCameraInfo;
   }
+  const t_display_p4::device::BatteryInfo& battery_info() const {
+    return t_display_p4::device::kBatteryInfo;
+  }
   t_display_p4::device::DeviceInfo device_info() const {
     return {
         .model = device_model_info(),
         .screen = screen_info(),
         .camera = camera_info(),
+        .battery = battery_info(),
     };
   }
 

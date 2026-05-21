@@ -16,7 +16,6 @@ namespace keyboard_gpio = t_display_p4::keyboard::gpio;
 namespace keyboard_device = t_display_p4::keyboard::device;
 namespace {
 
-constexpr uint16_t kBq27220BatteryCapacityMah = 1000;
 using ScreenInfo = device::ScreenInfo;
 using ScreenType = device::ScreenType;
 
@@ -959,8 +958,8 @@ bool TDisplayP4Driver::InitBq27220() {
     return false;
   } else {
     cpp_bus_driver::Bq27220::CedvProfile battery_profile;
-    battery_profile.design_capacity = kBq27220BatteryCapacityMah;
-    battery_profile.full_charge_capacity = kBq27220BatteryCapacityMah;
+    battery_profile.design_capacity = battery_info().capacity_mah;
+    battery_profile.full_charge_capacity = battery_info().capacity_mah;
     cpp_bus_driver::Bq27220::GaugingConfig gauging_config;
 
     bool result = true;
