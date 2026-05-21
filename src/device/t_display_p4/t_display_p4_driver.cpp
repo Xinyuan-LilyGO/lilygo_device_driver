@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-05-19 11:31:57
+ * @LastEditTime: 2026-05-21 10:56:44
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -287,6 +287,29 @@ bool TDisplayP4Driver::InitScreen() {
   }
 }
 
+bool TDisplayP4Driver::DeinitScreen() {
+  bool result = true;
+
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      if (status_.hi8561.init_flag) {
+        result &= chip_.hi8561->Deinit();
+        status_.hi8561.init_flag = false;
+      }
+      break;
+    case device::ScreenType::kRm69a10:
+      if (status_.rm69a10.init_flag) {
+        result &= chip_.rm69a10->Deinit();
+        status_.rm69a10.init_flag = false;
+      }
+      break;
+    default:
+      break;
+  }
+
+  return result;
+}
+
 bool TDisplayP4Driver::InitTouch() {
   switch (screen_type()) {
     case device::ScreenType::kHi8561:
@@ -298,6 +321,29 @@ bool TDisplayP4Driver::InitTouch() {
   }
 }
 
+bool TDisplayP4Driver::DeinitTouch() {
+  bool result = true;
+
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      if (status_.hi8561_touch.init_flag) {
+        result &= chip_.hi8561_touch->Deinit();
+        status_.hi8561_touch.init_flag = false;
+      }
+      break;
+    case device::ScreenType::kRm69a10:
+      if (status_.gt9895.init_flag) {
+        result &= chip_.gt9895->Deinit();
+        status_.gt9895.init_flag = false;
+      }
+      break;
+    default:
+      break;
+  }
+
+  return result;
+}
+
 bool TDisplayP4Driver::InitScreenBacklight() {
   switch (screen_type()) {
     case device::ScreenType::kHi8561:
@@ -307,6 +353,25 @@ bool TDisplayP4Driver::InitScreenBacklight() {
     default:
       return false;
   }
+}
+
+bool TDisplayP4Driver::DeinitScreenBacklight() {
+  bool result = true;
+
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      if (status_.hi8561_backlight.init_flag) {
+        result &= chip_.hi8561_backlight->Stop(0);
+        status_.hi8561_backlight.init_flag = false;
+      }
+      break;
+    case device::ScreenType::kRm69a10:
+      break;
+    default:
+      break;
+  }
+
+  return result;
 }
 
 bool TDisplayP4Driver::InitKeyboard() {
@@ -354,6 +419,51 @@ bool TDisplayP4Driver::InitKeyboard() {
   result &= InitNrf24l01();
 
   keyboard_connected_ = result;
+
+  return result;
+}
+
+bool TDisplayP4Driver::DeinitKeyboard() {
+  bool result = true;
+
+  if (status_.tca8418_backlight.init_flag) {
+    result &= chip_.tca8418_backlight->Stop(0);
+    status_.tca8418_backlight.init_flag = false;
+  }
+  if (status_.tca8418.init_flag) {
+    result &= chip_.tca8418->Deinit();
+    status_.tca8418.init_flag = false;
+  }
+  if (status_.cc1101.init_flag) {
+    result &= bus_.cc1101_spi_bus->Deinit();
+    status_.cc1101.init_flag = false;
+  }
+  if (status_.nrf24l01.init_flag) {
+    result &= bus_.nrf24l01_spi_bus->Deinit();
+    status_.nrf24l01.init_flag = false;
+  }
+  if (status_.xl9555.init_flag) {
+    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1,
+        cpp_bus_driver::Xl95x5::Value::kHigh);
+    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2,
+        cpp_bus_driver::Xl95x5::Value::kHigh);
+    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3,
+        cpp_bus_driver::Xl95x5::Value::kHigh);
+    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn,
+        cpp_bus_driver::Xl95x5::Value::kLow);
+    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst,
+        cpp_bus_driver::Xl95x5::Value::kLow);
+
+    result &= chip_.xl9555->Deinit();
+    status_.xl9555.init_flag = false;
+  }
+
+  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kCs);
+  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::nrf24l01::kCs);
+  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::st25r3916::kCs);
+  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kBusy);
+
+  keyboard_connected_ = false;
 
   return result;
 }
@@ -560,44 +670,7 @@ bool TDisplayP4Driver::SetKeyboardSleep(SleepLevel level, bool enable) {
       break;
     case SleepLevel::kPowerOff:
       if (enable) {
-        if (status_.tca8418_backlight.init_flag) {
-          result &= chip_.tca8418_backlight->Stop(0);
-          status_.tca8418_backlight.init_flag = false;
-        }
-        if (status_.tca8418.init_flag) {
-          result &= chip_.tca8418->Deinit();
-          status_.tca8418.init_flag = false;
-        }
-        if (status_.cc1101.init_flag) {
-          result &= bus_.cc1101_spi_bus->Deinit();
-          status_.cc1101.init_flag = false;
-        }
-        if (status_.nrf24l01.init_flag) {
-          result &= bus_.nrf24l01_spi_bus->Deinit();
-          status_.nrf24l01.init_flag = false;
-        }
-        if (status_.xl9555.init_flag) {
-          result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1,
-              cpp_bus_driver::Xl95x5::Value::kHigh);
-          result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2,
-              cpp_bus_driver::Xl95x5::Value::kHigh);
-          result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3,
-              cpp_bus_driver::Xl95x5::Value::kHigh);
-          result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn,
-              cpp_bus_driver::Xl95x5::Value::kLow);
-          result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst,
-              cpp_bus_driver::Xl95x5::Value::kLow);
-
-          result &= chip_.xl9555->Deinit();
-          status_.xl9555.init_flag = false;
-        }
-
-        result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kCs);
-        result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::nrf24l01::kCs);
-        result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::st25r3916::kCs);
-        result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kBusy);
-
-        keyboard_connected_ = false;
+        result &= DeinitKeyboard();
       } else {
         result &= InitKeyboard();
       }
@@ -815,34 +888,9 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           status_.icm20948.init_flag = false;
         }
 
-        switch (screen_type()) {
-          case device::ScreenType::kHi8561:
-            if (status_.hi8561_touch.init_flag) {
-              result &= chip_.hi8561_touch->Deinit();
-              status_.hi8561_touch.init_flag = false;
-            }
-            if (status_.hi8561_backlight.init_flag) {
-              result &= chip_.hi8561_backlight->Stop(0);
-              status_.hi8561_backlight.init_flag = false;
-            }
-            if (status_.hi8561.init_flag) {
-              result &= chip_.hi8561->Deinit();
-              status_.hi8561.init_flag = false;
-            }
-            break;
-          case device::ScreenType::kRm69a10:
-            if (status_.gt9895.init_flag) {
-              result &= chip_.gt9895->Deinit();
-              status_.gt9895.init_flag = false;
-            }
-            if (status_.rm69a10.init_flag) {
-              result &= chip_.rm69a10->Deinit();
-              status_.rm69a10.init_flag = false;
-            }
-            break;
-          default:
-            break;
-        }
+        result &= DeinitTouch();
+        result &= DeinitScreenBacklight();
+        result &= DeinitScreen();
 
         if (status_.bq27220.init_flag) {
           result &= chip_.bq27220->Deinit();
@@ -865,7 +913,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           status_.sgm38121.init_flag = false;
         }
 
-        result &= SetKeyboardSleep(level, enable);
+        result &= DeinitKeyboard();
 
         if (status_.xl9535.init_flag) {
           result &= chip_.xl9535->GpioWrite(

@@ -292,23 +292,12 @@ class TDisplayP4Driver {
   bool ConfigXl9535();
   bool InitSgm38121();
 
-  /**
-   * @brief 检测屏幕类型并初始化当前屏幕。
-   * @return 初始化成功返回 true，否则返回 false。
-   */
   bool InitScreen();
-
-  /**
-   * @brief 初始化当前屏幕对应的触摸设备。
-   * @return 初始化成功返回 true，否则返回 false。
-   */
+  bool DeinitScreen();
   bool InitTouch();
-
-  /**
-   * @brief 初始化当前屏幕对应的背光设备。
-   * @return 初始化成功返回 true，否则返回 false。
-   */
+  bool DeinitTouch();
   bool InitScreenBacklight();
+  bool DeinitScreenBacklight();
 
   bool InitHi8561();
   bool InitHi8561Touch();
@@ -331,11 +320,8 @@ class TDisplayP4Driver {
   bool InitCc1101();
   bool InitNrf24l01();
 
-  /**
-   * @brief 探测并同步初始化外接键盘相关设备。
-   * @return 检测到键盘并完成全部键盘设备初始化返回 true，否则返回 false。
-   */
   bool InitKeyboard();
+  bool DeinitKeyboard();
 
   /**
    * @brief 选择 CC1101 RF 开关通路。
