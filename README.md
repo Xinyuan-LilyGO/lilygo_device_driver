@@ -15,7 +15,6 @@ The library is designed to work together with [`cpp_bus_driver`](https://github.
 
 - [Features](#features)
 - [Supported Frameworks](#supported-frameworks)
-- [Supported Devices](#supported-devices)
 - [Quick Start](#quick-start)
 - [Driver Access](#driver-access)
 - [Log Configuration](#log-configuration)
@@ -56,18 +55,6 @@ Each supported device has its own configuration header under `src/device/`. Thes
 
 > [!NOTE]
 > The current implementation is aimed at ESP-IDF projects. Available APIs differ by selected device because each board exposes different hardware.
-
-## Supported Devices
-
-The current device selection in `lilygo_device_driver configuration` supports:
-
-| Device | Kconfig option | Main driver/API |
-| --- | --- | --- |
-| T-Display-P4 | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4` | `lilygo_device_driver::TDisplayP4Driver` |
-| T-Display-P4 Keyboard | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4`, keyboard is detected at runtime | `lilygo_device_driver::TDisplayP4Driver` |
-| T-Display-P4-Air | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR` | Board constants |
-| T-Glasses-P4 | `CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4` | Board constants |
-| T-Spe | `CONFIG_LILYGO_DEVICE_DRIVER_T_SPE` | Board constants |
 
 ## Quick Start
 

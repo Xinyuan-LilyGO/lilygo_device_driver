@@ -15,10 +15,8 @@
 
 - [特性](#特性)
 - [支持框架](#支持框架)
-- [当前支持的设备](#当前支持的设备)
 - [快速开始](#快速开始)
 - [驱动访问](#驱动访问)
-- [存储工具](#存储工具)
 - [日志配置](#日志配置)
 - [开发说明](#开发说明)
 
@@ -57,18 +55,6 @@ bool es8311_ready = driver.status().es8311.init_flag;
 
 > [!NOTE]
 > 当前实现主要面向 ESP-IDF 工程。不同设备暴露的硬件不同，因此可用 API 会随所选设备变化。
-
-## 当前支持的设备
-
-`lilygo_device_driver configuration` 当前支持选择以下设备：
-
-| 设备 | Kconfig 选项 | 主要驱动/API |
-| --- | --- | --- |
-| T-Display-P4 | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4` | `lilygo_device_driver::TDisplayP4Driver` |
-| T-Display-P4 Keyboard | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4`，键盘运行时自动检测 | `lilygo_device_driver::TDisplayP4Driver` |
-| T-Display-P4-Air | `CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR` | 板级常量 |
-| T-Glasses-P4 | `CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4` | 板级常量 |
-| T-Spe | `CONFIG_LILYGO_DEVICE_DRIVER_T_SPE` | 板级常量 |
 
 ## 快速开始
 
