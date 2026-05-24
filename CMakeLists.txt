@@ -16,6 +16,9 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR)
             "./src/camera/ov2710/"
             "./src/camera/sc2336/"
         )
+    set(requires
+            "cpp_bus_driver"
+            "radiolib_cpp_bus_driver")
 elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_SPE)
     set(
             src_dirs 

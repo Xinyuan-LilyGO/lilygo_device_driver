@@ -190,10 +190,14 @@ inline constexpr int kLaneBitRateMbps = kScreenLaneBitRateMbps;
 }  // namespace hi8561
 
 namespace screen {
+inline constexpr int kRotationDirection = 0;
+
 #if defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB565)
 inline constexpr int kBitsPerPixel = 16;
+inline constexpr const char* kPixelFormat = "rgb565";
 #elif defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB888)
 inline constexpr int kBitsPerPixel = 24;
+inline constexpr const char* kPixelFormat = "rgb888";
 #else
 #error "Missing required macro definition."
 #endif
@@ -209,6 +213,10 @@ inline constexpr uint8_t kI2cAddress = 0x58;
 
 namespace es8388 {
 inline constexpr uint8_t kI2cAddress = 0x11;
+inline constexpr int kMclkMultiple = 256;
+inline constexpr int kSampleRate = 44100;
+inline constexpr int kBitsPerSample = 16;
+inline constexpr int kChannel = 2;
 }  // namespace es8388
 
 namespace spiffs {
@@ -227,13 +235,37 @@ namespace sgm38121 {
 inline constexpr uint8_t kI2cAddress = 0x28;
 }  // namespace sgm38121
 
+enum class CameraType {
+  kUnknown,
+  kSc2336,
+  kOv2710,
+  kOv5645,
+};
+
 namespace camera {
+#if defined(CONFIG_CAMERA_TYPE_SC2336)
+inline constexpr CameraType kType = CameraType::kSc2336;
+inline constexpr const char* kName = "sc2336";
+#elif defined(CONFIG_CAMERA_TYPE_OV2710)
+inline constexpr CameraType kType = CameraType::kOv2710;
+inline constexpr const char* kName = "ov2710";
+#elif defined(CONFIG_CAMERA_TYPE_OV5645)
+inline constexpr CameraType kType = CameraType::kOv5645;
+inline constexpr const char* kName = "ov5645";
+#else
+inline constexpr CameraType kType = CameraType::kUnknown;
+inline constexpr const char* kName = "unknown";
+#endif
+
 #if defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB565)
 inline constexpr int kBitsPerPixel = 16;
+inline constexpr const char* kPixelFormat = "rgb565";
 #elif defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB888)
 inline constexpr int kBitsPerPixel = 24;
+inline constexpr const char* kPixelFormat = "rgb888";
 #else
-#error "Missing required macro definition."
+inline constexpr int kBitsPerPixel = 0;
+inline constexpr const char* kPixelFormat = "unknown";
 #endif
 
 inline constexpr int kBufferCount = 2;
@@ -251,5 +283,9 @@ inline constexpr int kNecDecodeMargin = 200;
 namespace sd {
 inline constexpr const char* kBasePath = "/sdcard";
 }  // namespace sd
+
+namespace nrf9151 {
+inline constexpr int kDefaultBaudRate = 115200;
+}  // namespace nrf9151
 }  // namespace device
 }  // namespace lilygo_device_driver::t_display_p4_air
