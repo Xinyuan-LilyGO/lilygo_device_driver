@@ -91,12 +91,6 @@ inline constexpr int kMiso = sdio1::kD0;
 inline constexpr int kCs = sdio1::kD3;
 }  // namespace sd
 
-namespace gz030pcc02 {
-inline constexpr int kSda = i2c::kPort2Sda;
-inline constexpr int kScl = i2c::kPort2Scl;
-inline constexpr int kRst = 21;
-}  // namespace gz030pcc02
-
 namespace bhi260ap {
 inline constexpr int kSda = i2c::kPort2Sda;
 inline constexpr int kScl = i2c::kPort2Scl;
@@ -131,13 +125,6 @@ inline constexpr int kMosi = spi::kPort1Mosi;
 inline constexpr int kMiso = spi::kPort1Miso;
 }  // namespace sx1262
 
-namespace ecx336cn {
-inline constexpr int kSclk = spi::kPort1Sclk;
-inline constexpr int kMosi = spi::kPort1Mosi;
-inline constexpr int kMiso = spi::kPort1Miso;
-inline constexpr int kCs = 34;
-}  // namespace ecx336cn
-
 namespace s023msafjf10111e1 {
 inline constexpr int kSda = i2c::kPort2Sda;
 inline constexpr int kScl = i2c::kPort2Scl;
@@ -146,6 +133,13 @@ inline constexpr int kRst = 21;
 }  // namespace gpio
 
 namespace device {
+enum class CameraType {
+  kUnknown,
+  kSc2336,
+  kOv2710,
+  kOv5645,
+};
+
 namespace sy6970 {
 inline constexpr uint8_t kI2cAddress = 0x6A;
 }  // namespace sy6970
@@ -160,32 +154,37 @@ inline constexpr uint8_t kI2cAddress = 0x28;
 
 namespace es8311 {
 inline constexpr uint8_t kI2cAddress = 0x18;
+inline constexpr int kMclkMultiple = 256;
+inline constexpr int kSampleRate = 48000;
+inline constexpr int kBitsPerSample = 16;
+inline constexpr int kChannel = 2;
 }  // namespace es8311
 
-namespace gz030pcc02 {
-inline constexpr uint8_t kI2cAddress = 0x54;
-inline constexpr int kScreenWidth = 1280;
-inline constexpr int kScreenHeight = 720;
-inline constexpr int kScreenMipiDsiDpiClkMhz = 60;
-inline constexpr int kScreenMipiDsiHsync = 40;
-inline constexpr int kScreenMipiDsiHbp = 220;
-inline constexpr int kScreenMipiDsiHfp = 110;
-inline constexpr int kScreenMipiDsiVsync = 5;
-inline constexpr int kScreenMipiDsiVbp = 20;
-inline constexpr int kScreenMipiDsiVfp = 5;
-inline constexpr int kScreenDataLaneNum = 2;
-inline constexpr int kScreenLaneBitRateMbps = 1000;
-}  // namespace gz030pcc02
-
 namespace camera {
-#if defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB565)
-inline constexpr int kBitsPerPixel = 16;
-#elif defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB888)
-inline constexpr int kBitsPerPixel = 24;
+#if defined(CONFIG_CAMERA_TYPE_SC2336)
+inline constexpr CameraType kType = CameraType::kSc2336;
+inline constexpr const char* kName = "sc2336";
+#elif defined(CONFIG_CAMERA_TYPE_OV2710)
+inline constexpr CameraType kType = CameraType::kOv2710;
+inline constexpr const char* kName = "ov2710";
+#elif defined(CONFIG_CAMERA_TYPE_OV5645)
+inline constexpr CameraType kType = CameraType::kOv5645;
+inline constexpr const char* kName = "ov5645";
 #else
 #error "Missing required macro definition."
 #endif
 
+#if defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB565)
+inline constexpr int kBitsPerPixel = 16;
+inline constexpr const char* kPixelFormat = "rgb565";
+#elif defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB888)
+inline constexpr int kBitsPerPixel = 24;
+inline constexpr const char* kPixelFormat = "rgb888";
+#else
+#error "Missing required macro definition."
+#endif
+
+inline constexpr int kBufferCount = 2;
 inline constexpr int kWidth = 1280;
 inline constexpr int kHeight = 720;
 inline constexpr int kDataLaneNum = 2;
@@ -209,32 +208,6 @@ namespace sd {
 inline constexpr const char* kBasePath = "/sdcard";
 }  // namespace sd
 
-namespace ecx336cn {
-inline constexpr int kHeight = 400;
-inline constexpr int kWidth = 640;
-inline constexpr double kClockMhz = 27.027;
-inline constexpr int kScreenRgbDsiHsync = 64;
-inline constexpr int kScreenRgbDsiHbp = 58;
-inline constexpr int kScreenRgbDsiHfp = 96;
-inline constexpr int kScreenRgbDsiVsync = 6;
-inline constexpr int kScreenRgbDsiVbp = 32;
-inline constexpr int kScreenRgbDsiVfp = 87;
-}  // namespace ecx336cn
-
-namespace icn6211 {
-inline constexpr uint8_t kI2cAddress = 0x2C;
-inline constexpr double kExternalReferenceClockMhz = 26.0;
-inline constexpr double kScreenMipiDsiDpiClkMhz = 24.0;
-inline constexpr int kScreenMipiDsiHsync = ecx336cn::kScreenRgbDsiHsync;
-inline constexpr int kScreenMipiDsiHbp = ecx336cn::kScreenRgbDsiHbp;
-inline constexpr int kScreenMipiDsiHfp = ecx336cn::kScreenRgbDsiHfp;
-inline constexpr int kScreenMipiDsiVsync = ecx336cn::kScreenRgbDsiVsync;
-inline constexpr int kScreenMipiDsiVbp = ecx336cn::kScreenRgbDsiVbp;
-inline constexpr int kScreenMipiDsiVfp = ecx336cn::kScreenRgbDsiVfp;
-inline constexpr int kScreenDataLaneNum = 2;
-inline constexpr int kScreenLaneBitRateMbps = 1000;
-}  // namespace icn6211
-
 namespace s023msafjf10111e1 {
 inline constexpr uint8_t kI2cAddress = 0x54;
 inline constexpr int kScreenWidth = 640;
@@ -253,35 +226,11 @@ inline constexpr int kScreenLaneBitRateMbps = 1000;
 namespace screen {
 #if defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB888)
 inline constexpr int kBitsPerPixel = 24;
+inline constexpr const char* kPixelFormat = "rgb888";
 #else
 #error "Missing required macro definition."
 #endif
 
-#if defined(CONFIG_SCREEN_TYPE_GZ030PCC02)
-inline constexpr int kWidth = gz030pcc02::kScreenWidth;
-inline constexpr int kHeight = gz030pcc02::kScreenHeight;
-inline constexpr auto kMipiDsiDpiClkMhz = gz030pcc02::kScreenMipiDsiDpiClkMhz;
-inline constexpr int kMipiDsiHsync = gz030pcc02::kScreenMipiDsiHsync;
-inline constexpr int kMipiDsiHbp = gz030pcc02::kScreenMipiDsiHbp;
-inline constexpr int kMipiDsiHfp = gz030pcc02::kScreenMipiDsiHfp;
-inline constexpr int kMipiDsiVsync = gz030pcc02::kScreenMipiDsiVsync;
-inline constexpr int kMipiDsiVbp = gz030pcc02::kScreenMipiDsiVbp;
-inline constexpr int kMipiDsiVfp = gz030pcc02::kScreenMipiDsiVfp;
-inline constexpr int kDataLaneNum = gz030pcc02::kScreenDataLaneNum;
-inline constexpr int kLaneBitRateMbps = gz030pcc02::kScreenLaneBitRateMbps;
-#elif defined(CONFIG_SCREEN_TYPE_ICN6211_ECX336CN)
-inline constexpr int kWidth = ecx336cn::kWidth;
-inline constexpr int kHeight = ecx336cn::kHeight;
-inline constexpr auto kMipiDsiDpiClkMhz = icn6211::kScreenMipiDsiDpiClkMhz;
-inline constexpr int kMipiDsiHsync = icn6211::kScreenMipiDsiHsync;
-inline constexpr int kMipiDsiHbp = icn6211::kScreenMipiDsiHbp;
-inline constexpr int kMipiDsiHfp = icn6211::kScreenMipiDsiHfp;
-inline constexpr int kMipiDsiVsync = icn6211::kScreenMipiDsiVsync;
-inline constexpr int kMipiDsiVbp = icn6211::kScreenMipiDsiVbp;
-inline constexpr int kMipiDsiVfp = icn6211::kScreenMipiDsiVfp;
-inline constexpr int kDataLaneNum = icn6211::kScreenDataLaneNum;
-inline constexpr int kLaneBitRateMbps = icn6211::kScreenLaneBitRateMbps;
-#elif defined(CONFIG_SCREEN_TYPE_S023MSAFJF10111E1)
 inline constexpr int kWidth = s023msafjf10111e1::kScreenWidth;
 inline constexpr int kHeight = s023msafjf10111e1::kScreenHeight;
 inline constexpr auto kMipiDsiDpiClkMhz =
@@ -295,9 +244,6 @@ inline constexpr int kMipiDsiVfp = s023msafjf10111e1::kScreenMipiDsiVfp;
 inline constexpr int kDataLaneNum = s023msafjf10111e1::kScreenDataLaneNum;
 inline constexpr int kLaneBitRateMbps =
     s023msafjf10111e1::kScreenLaneBitRateMbps;
-#else
-#error "Missing required macro definition."
-#endif
 }  // namespace screen
 }  // namespace device
 }  // namespace lilygo_device_driver::t_glasses_p4

@@ -1,15 +1,24 @@
+set(
+        requires
+        "driver"
+        "fatfs"
+        "spiffs"
+)
+
 if(CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4)
     set(
-            src_dirs 
+            src_dirs
             "./src/"
             "./src/chip/esp32p4/"
             "./src/device/t_glasses_p4/"
             "./src/camera/ov2710/"
             "./src/camera/sc2336/"
     )
+    list(APPEND requires
+            "cpp_bus_driver")
 elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR)
     set(
-            src_dirs 
+            src_dirs
             "./src/"
             "./src/chip/esp32p4/"
             "./src/device/t_display_p4_air/"
@@ -21,34 +30,31 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR)
             "radiolib_cpp_bus_driver")
 elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_SPE)
     set(
-            src_dirs 
+            src_dirs
             "./src/"
             "./src/device/t_spe/"
         )
 elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
     set(
-            src_dirs 
+            src_dirs
             "./src/"
             "./src/chip/esp32p4/"
             "./src/device/t_display_p4/"
             "./src/camera/ov2710/"
             "./src/camera/sc2336/"
         )
-    set(requires 
-            "cpp_bus_driver" 
-            "arduino_cpp_bus_driver" 
+    list(APPEND requires
+            "cpp_bus_driver"
+            "arduino_cpp_bus_driver"
             "ICM20948_WE"
             "radiolib_cpp_bus_driver")
 endif()
-    
+
 idf_component_register(
-        SRC_DIRS 
-        ${src_dirs} 
-        INCLUDE_DIRS 
-        ${src_dirs} 
-        REQUIRES 
-        "driver"
-        "fatfs"
-        "spiffs"
+        SRC_DIRS
+        ${src_dirs}
+        INCLUDE_DIRS
+        ${src_dirs}
+        REQUIRES
         ${requires}
     )
