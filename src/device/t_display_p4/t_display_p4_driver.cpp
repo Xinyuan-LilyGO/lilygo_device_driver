@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-05-21 10:56:44
+ * @LastEditTime: 2026-05-25 15:29:55
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -507,7 +507,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
                      self->InitBq27220();
                      vTaskDelete(NULL);
                    },
-                   "InitBq27220Task", 2048, this, 3, NULL) == pdPASS);
+                   "InitBq27220Task", 4096, this, 3, NULL) == pdPASS);
 
     result &= (xTaskCreate(
                    [](void* arg) {
