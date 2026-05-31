@@ -7,7 +7,7 @@ dependencies:
   idf: ">=5.5.3"
 
   llgok/cpp_bus_driver:
-    version: "^2.1.0"
+    version: "^2.2.0"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_GLASSES_P4} == True"

@@ -182,23 +182,17 @@ bool TDisplayP4AirDriver::SetSleep(SleepLevel level, bool enable) {
 
         if (status_.xl9535.init_flag) {
           result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kLr1121PowerEn,
-              cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kLr1121PowerEn, 0);
           result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kSdPowerEn,
-              cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kSdPowerEn, 0);
           result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kEsp32c5En,
-              cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kEsp32c5En, 0);
           result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kNrf9151En,
-              cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kNrf9151En, 0);
           result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kNs4150En,
-              cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kNs4150En, 0);
           result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kPowerEn3v3,
-              cpp_bus_driver::Xl95x5::Value::kLow);
+              gpio::xl9535::kPowerEn3v3, 0);
         }
       } else {
         result &= ConfigXl9535();
@@ -254,8 +248,6 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
 
   bool result = true;
   constexpr auto kOutput = cpp_bus_driver::Xl95x5::Mode::kOutput;
-  constexpr auto kHigh = cpp_bus_driver::Xl95x5::Value::kHigh;
-  constexpr auto kLow = cpp_bus_driver::Xl95x5::Value::kLow;
 
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kSdPowerEn, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kNrf9151En, kOutput);
@@ -271,28 +263,28 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kPowerEn3v3, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kNs4150En, kOutput);
 
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, kHigh);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbphyPowerEn, kHigh);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, kHigh);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbphyPowerEn, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 1);
   result &= chip_.xl9535->GpioWrite(
-      gpio::xl9535::kEsp32p4Esp32c5UartSwitch, kHigh);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, kHigh);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, kLow);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, kLow);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, kLow);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLed1, kHigh);
+      gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLed1, 1);
 
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, kHigh);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, kHigh);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, kHigh);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 1);
   tool_->DelayMs(10);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, kLow);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, kLow);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, kLow);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
   tool_->DelayMs(10);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, kHigh);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, kHigh);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, kHigh);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 1);
   tool_->DelayMs(120);
 
   if (!result) {
@@ -486,14 +478,12 @@ bool TDisplayP4AirDriver::InitAw86224() {
 
 bool TDisplayP4AirDriver::InitLr1121() {
   bool result = true;
-  constexpr auto kHigh = cpp_bus_driver::Xl95x5::Value::kHigh;
-  constexpr auto kLow = cpp_bus_driver::Xl95x5::Value::kLow;
 
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, kHigh);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 1);
   tool_->DelayMs(100);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, kLow);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
   tool_->DelayMs(100);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, kHigh);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 1);
   tool_->DelayMs(100);
 
   int16_t ret = chip_.lr1121->begin(2450.0, 406.25, 12, 7,
@@ -513,7 +503,7 @@ bool TDisplayP4AirDriver::InitLr1121() {
 bool TDisplayP4AirDriver::InitNrf9151(int baud_rate) {
   bool result = true;
   result &= chip_.xl9535->GpioWrite(
-      gpio::xl9535::kNrf9151En, cpp_bus_driver::Xl95x5::Value::kHigh);
+      gpio::xl9535::kNrf9151En, 1);
   tool_->DelayMs(100);
   result &= bus_.nrf9151_uart_bus->Init(baud_rate);
 
@@ -590,7 +580,7 @@ bool TDisplayP4AirDriver::InitSdmmc(
     const char* base_path, int max_freq_khz) {
   if (status_.xl9535.init_flag) {
     chip_.xl9535->GpioWrite(
-        gpio::xl9535::kSdPowerEn, cpp_bus_driver::Xl95x5::Value::kHigh);
+        gpio::xl9535::kSdPowerEn, 1);
     tool_->DelayMs(10);
   }
 
@@ -635,7 +625,7 @@ bool TDisplayP4AirDriver::InitSdspi(const char* base_path,
     spi_host_device_t host_id, int max_freq_khz) {
   if (status_.xl9535.init_flag) {
     chip_.xl9535->GpioWrite(
-        gpio::xl9535::kSdPowerEn, cpp_bus_driver::Xl95x5::Value::kHigh);
+        gpio::xl9535::kSdPowerEn, 1);
     tool_->DelayMs(10);
   }
 
