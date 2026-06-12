@@ -2,7 +2,7 @@
  * @Description: t_can485_c5_config
  * @Author: LILYGO_L
  * @Date: 2026-06-12 12:00:00
- * @LastEditTime: 2026-06-12 12:00:00
+ * @LastEditTime: 2026-06-12 17:56:48
  * @License: GPL 3.0
  */
 
@@ -26,8 +26,8 @@ inline constexpr int kCs = 10;
 
 namespace adc {
 inline constexpr int kChannel1 = 3;
-inline constexpr int kChannel2 = 4;
-inline constexpr int kChannel3 = 5;
+inline constexpr int kChannel2 = 5;
+inline constexpr int kChannel3 = 4;
 }  // namespace adc
 
 namespace rs485 {
