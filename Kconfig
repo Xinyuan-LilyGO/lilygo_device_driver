@@ -9,6 +9,8 @@ menu "lilygo_device_driver configuration"
                 bool "T-Display-P4-Air"
             config LILYGO_DEVICE_DRIVER_T_SPE
                 bool "T-Spe"
+            config LILYGO_DEVICE_DRIVER_T_CAN485_C5
+                bool "T-CAN485-C5"
             config LILYGO_DEVICE_DRIVER_T_DISPLAY_P4
                 bool "T-Display-P4"
     endchoice

@@ -34,6 +34,12 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_SPE)
             "./src/"
             "./src/device/t_spe/"
         )
+elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_CAN485_C5)
+    set(
+            src_dirs
+            "./src/"
+            "./src/device/t_can485_c5/"
+        )
 elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
     set(
             src_dirs
