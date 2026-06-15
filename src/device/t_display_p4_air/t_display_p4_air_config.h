@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-04-16 15:32:03
+ * @LastEditTime: 2026-06-15 11:47:35
  * @License: GPL 3.0
  */
 
@@ -14,7 +14,15 @@
 
 namespace lilygo_device_driver::t_display_p4_air {
 namespace gpio {
-inline constexpr int kChipBoot = 35;
+namespace button {
+inline constexpr int kEsp32p4Boot = 35;
+inline constexpr int kKey1 = 49;
+inline constexpr int kPower = 11;
+}  // namespace button
+
+namespace power {
+inline constexpr int kEnable3v3 = 12;
+}  // namespace power
 
 namespace i2c {
 inline constexpr int kPort1Sda = 9;
@@ -53,15 +61,17 @@ inline constexpr int kScl = i2c::kPort1Scl;
 inline constexpr auto kSdPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo0;
 inline constexpr auto kNrf9151En = cpp_bus_driver::Xl95x5::Pin::kIo1;
 inline constexpr auto kBhi260apRst = cpp_bus_driver::Xl95x5::Pin::kIo2;
+inline constexpr auto kAdl161Trig = cpp_bus_driver::Xl95x5::Pin::kIo3;
+inline constexpr auto kAdl161Rst = cpp_bus_driver::Xl95x5::Pin::kIo4;
 inline constexpr auto kLr1121PowerEn = cpp_bus_driver::Xl95x5::Pin::kIo5;
-inline constexpr auto kUsbphyPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo10;
+inline constexpr auto kUsbPhyPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo10;
 inline constexpr auto kEsp32p4Esp32c5UartSwitch =
     cpp_bus_driver::Xl95x5::Pin::kIo11;
 inline constexpr auto kEsp32c5En = cpp_bus_driver::Xl95x5::Pin::kIo12;
 inline constexpr auto kTouchRst = cpp_bus_driver::Xl95x5::Pin::kIo13;
 inline constexpr auto kScreenRst = cpp_bus_driver::Xl95x5::Pin::kIo14;
-inline constexpr auto kLed1 = cpp_bus_driver::Xl95x5::Pin::kIo15;
-inline constexpr auto kPowerEn3v3 = cpp_bus_driver::Xl95x5::Pin::kIo16;
+inline constexpr auto kEsp32c5Boot = cpp_bus_driver::Xl95x5::Pin::kIo15;
+inline constexpr auto kLed1 = cpp_bus_driver::Xl95x5::Pin::kIo16;
 inline constexpr auto kNs4150En = cpp_bus_driver::Xl95x5::Pin::kIo17;
 }  // namespace xl9535
 
@@ -69,6 +79,7 @@ namespace hi8561 {
 inline constexpr int kScreenBl = 50;
 inline constexpr int kTouchSda = i2c::kPort2Sda;
 inline constexpr int kTouchScl = i2c::kPort2Scl;
+inline constexpr int kTouchInt = 52;
 }  // namespace hi8561
 
 namespace axp517 {
@@ -94,6 +105,7 @@ inline constexpr int kWsLrck = 34;
 namespace bhi260ap {
 inline constexpr int kSda = i2c::kPort2Sda;
 inline constexpr int kScl = i2c::kPort2Scl;
+inline constexpr int kInt = 51;
 }  // namespace bhi260ap
 
 namespace qmc6310n {

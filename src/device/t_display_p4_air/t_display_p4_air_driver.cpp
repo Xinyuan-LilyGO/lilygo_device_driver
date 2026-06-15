@@ -2,7 +2,8 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-05-24 16:30:00
+
+ * @LastEditTime: 2026-06-15 16:04:59
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -122,9 +123,9 @@ bool TDisplayP4AirDriver::Init(InitMode mode) {
 bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
   bool result = true;
 
+  result &= InitPower();
   result &= InitAxp517();
   result &= InitXl9535();
-  result &= InitPower();
   result &= ConfigXl9535();
   result &= InitSgm38121();
 
@@ -191,10 +192,10 @@ bool TDisplayP4AirDriver::SetSleep(SleepLevel level, bool enable) {
               gpio::xl9535::kNrf9151En, 0);
           result &= chip_.xl9535->GpioWrite(
               gpio::xl9535::kNs4150En, 0);
-          result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kPowerEn3v3, 0);
         }
+        result &= tool_->GpioWrite(gpio::power::kEnable3v3, 0);
       } else {
+        result &= tool_->GpioWrite(gpio::power::kEnable3v3, 1);
         result &= ConfigXl9535();
         result &= InitScreen();
         result &= InitTouch();
@@ -211,6 +212,11 @@ bool TDisplayP4AirDriver::SetSleep(SleepLevel level, bool enable) {
 
 bool TDisplayP4AirDriver::InitPower() {
   bool result = true;
+
+  result &= tool_->SetGpioMode(gpio::power::kEnable3v3,
+      cpp_bus_driver::Tool::GpioMode::kOutput);
+  result &= tool_->GpioWrite(gpio::power::kEnable3v3, 1);
+
   result &= InitLdoPower(3, 2500);
   result &= InitLdoPower(4, 3300);
   return result;
@@ -253,37 +259,35 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kNrf9151En, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kBhi260apRst, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kLr1121PowerEn, kOutput);
-  result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kUsbphyPowerEn, kOutput);
+  result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kUsbPhyPowerEn, kOutput);
   result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kEsp32p4Esp32c5UartSwitch, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kEsp32c5En, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kTouchRst, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kScreenRst, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kLed1, kOutput);
-  result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kPowerEn3v3, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kNs4150En, kOutput);
 
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbphyPowerEn, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 1);
   result &= chip_.xl9535->GpioWrite(
-      gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 1);
+      gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLed1, 1);
 
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 1);
+  tool_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
   tool_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
-  tool_->DelayMs(10);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 1);
   tool_->DelayMs(120);
 
@@ -457,19 +461,33 @@ bool TDisplayP4AirDriver::InitHi8561Backlight() {
 bool TDisplayP4AirDriver::InitAw86224() {
   if (!chip_.aw86224->Init(500000)) {
     status_.aw86224.init_flag = false;
-    status_.aw86224.ram_waveform_selection =
-        cpp_bus_driver::Aw862xx::RamWaveformSelection();
+    status_.aw86224.ram_waveform_info =
+        cpp_bus_driver::Aw862xx::RamWaveformInfo();
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
     return false;
   }
 
-  cpp_bus_driver::Aw862xx::RamWaveformSelection selection;
-  const bool result = chip_.aw86224->InitRamModeByF0(selection);
+  const uint32_t detected_f0 = chip_.aw86224->GetF0Detection();
+  if (detected_f0 == 0 || detected_f0 == static_cast<uint32_t>(-1)) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+        "Aw86224 F0 reference read failed\n");
+  } else {
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "Aw86224 F0 reference: %u.%uHz\n",
+        static_cast<unsigned int>(detected_f0 / 10),
+        static_cast<unsigned int>(detected_f0 % 10));
+  }
+
+  const bool result = chip_.aw86224->InitRamMode(
+      cpp_bus_driver::Aw862xx::RamWaveformLibrary::kRam12k041230_235);
   status_.aw86224.init_flag = result;
-  status_.aw86224.ram_waveform_selection =
-      result ? selection : cpp_bus_driver::Aw862xx::RamWaveformSelection();
+  status_.aw86224.ram_waveform_info =
+      cpp_bus_driver::Aw862xx::GetRamWaveformInfo(
+          cpp_bus_driver::Aw862xx::RamWaveformLibrary::kRam12k041230_235);
   if (result) {
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitAw86224 success\n");
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "InitAw86224 success (RAM library: %s)\n",
+        status_.aw86224.ram_waveform_info.name);
   } else {
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
   }
