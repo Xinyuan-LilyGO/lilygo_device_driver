@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-06-15 11:47:35
+ * @LastEditTime: 2026-06-17 10:55:00
  * @License: GPL 3.0
  */
 
@@ -92,7 +92,7 @@ inline constexpr int kSda = i2c::kPort1Sda;
 inline constexpr int kScl = i2c::kPort1Scl;
 }  // namespace aw86224
 
-namespace es8388 {
+namespace es8389 {
 inline constexpr int kSda = i2c::kPort1Sda;
 inline constexpr int kScl = i2c::kPort1Scl;
 inline constexpr int kAdcData = 33;
@@ -100,7 +100,7 @@ inline constexpr int kDacData = 32;
 inline constexpr int kBclk = 31;
 inline constexpr int kMclk = 30;
 inline constexpr int kWsLrck = 34;
-}  // namespace es8388
+}  // namespace es8389
 
 namespace bhi260ap {
 inline constexpr int kSda = i2c::kPort2Sda;
@@ -223,13 +223,13 @@ namespace aw86224 {
 inline constexpr uint8_t kI2cAddress = 0x58;
 }  // namespace aw86224
 
-namespace es8388 {
-inline constexpr uint8_t kI2cAddress = 0x11;
+namespace es8389 {
+inline constexpr uint8_t kI2cAddress = 0x10;
 inline constexpr int kMclkMultiple = 256;
 inline constexpr int kSampleRate = 44100;
 inline constexpr int kBitsPerSample = 16;
 inline constexpr int kChannel = 2;
-}  // namespace es8388
+}  // namespace es8389
 
 namespace spiffs {
 inline constexpr const char* kBasePath = "/spiffs";
