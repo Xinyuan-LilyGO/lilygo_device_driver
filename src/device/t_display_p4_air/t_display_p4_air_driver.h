@@ -89,6 +89,10 @@ class TDisplayP4AirDriver {
     kChipSleep,
     kPowerOff,
   };
+  enum class UartTarget {
+    kEsp32p4,
+    kEsp32c5,
+  };
 
   struct Bus {
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> axp517_i2c_bus;
@@ -225,6 +229,17 @@ class TDisplayP4AirDriver {
   bool InitAxp517();
   bool InitXl9535();
   bool ConfigXl9535();
+  /**
+   * @brief 使 ESP32-C5 进入下载模式。
+   * @return 时序控制成功时返回 true，否则返回 false。
+   */
+  bool EnterEsp32c5DownloadMode();
+  /**
+   * @brief 切换外部串口连接目标。
+   * @param target 串口连接到 ESP32-P4 或 ESP32-C5。
+   * @return 串口切换成功时返回 true，否则返回 false。
+   */
+  bool SetUartTarget(UartTarget target);
   bool InitSgm38121();
 
   bool InitScreen();

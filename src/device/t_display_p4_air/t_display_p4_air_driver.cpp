@@ -3,7 +3,7 @@
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
 
- * @LastEditTime: 2026-06-18 09:18:17
+ * @LastEditTime: 2026-06-18 14:03:08
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -304,6 +304,47 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
 
   if (!result) {
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigXl9535 failed\n");
+  }
+  return result;
+}
+
+bool TDisplayP4AirDriver::EnterEsp32c5DownloadMode() {
+  if (!status_.xl9535.init_flag) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+        "EnterEsp32c5DownloadMode failed\n");
+    return false;
+  }
+
+  bool result = true;
+
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 1);
+  tool_->DelayMs(10);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);
+  tool_->DelayMs(10);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 1);
+  tool_->DelayMs(10);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 1);
+
+  if (!result) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+        "EnterEsp32c5DownloadMode failed\n");
+  }
+  return result;
+}
+
+bool TDisplayP4AirDriver::SetUartTarget(UartTarget target) {
+  if (!status_.xl9535.init_flag) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "SetUartTarget failed\n");
+    return false;
+  }
+
+  bool result = true;
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32p4Esp32c5UartSwitch,
+      target == UartTarget::kEsp32c5 ? 1 : 0);
+
+  if (!result) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "SetUartTarget failed\n");
   }
   return result;
 }
