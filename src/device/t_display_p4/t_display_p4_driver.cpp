@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-05-25 15:29:55
+ * @LastEditTime: 2026-06-18 16:02:57
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -1322,12 +1322,12 @@ bool TDisplayP4Driver::ConfigEs8311() {
   cpp_bus_driver::Es8311::PowerStatus ps = {
       .contorl =
           {
-              .analog_circuits = true,                // 开启模拟电�?
-              .analog_bias_circuits = true,           // 开启模拟偏置电�?
-              .analog_adc_bias_circuits = true,       // 开启模拟ADC偏置电路
-              .analog_adc_reference_circuits = true,  // 开启模拟ADC参考电�?
-              .analog_dac_reference_circuit = true,   // 开启模拟DAC参考电�?
-              .internal_reference_circuits = false,   // 关闭内部参考电�?
+              .analog_circuits = true,
+              .analog_bias_circuits = true,
+              .analog_adc_bias_circuits = true,
+              .analog_adc_reference_circuits = true,
+              .analog_dac_reference_circuit = true,
+              .internal_reference_circuits = false,
           },
       .vmid = cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
   };
