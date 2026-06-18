@@ -3,7 +3,7 @@
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
 
- * @LastEditTime: 2026-06-18 14:03:08
+ * @LastEditTime: 2026-06-18 16:20:45
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -146,6 +146,14 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4AirDriver*>(arg);
+                     self->InitLr1121();
+                     vTaskDelete(NULL);
+                   },
+                   "InitLr1121Task", 4096, this, 3, NULL) == pdPASS);
+
+    result &= (xTaskCreate(
+                   [](void* arg) {
+                     auto self = static_cast<TDisplayP4AirDriver*>(arg);
                      self->InitEs8389();
                      self->ConfigEs8389();
                      vTaskDelete(NULL);
@@ -165,6 +173,7 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     result &= InitTouch();
     result &= InitScreenBacklight();
     result &= InitAw86224();
+    result &= InitLr1121();
     result &= InitEs8389();
     result &= ConfigEs8389();
     result &= InitNrf9151();
@@ -763,13 +772,29 @@ bool TDisplayP4AirDriver::InitLr1121() {
   bool result = true;
 
   int16_t ret = chip_.lr1121->begin(
-      2450.0, 406.25, 12, 7, RADIOLIB_LR11X0_LORA_SYNC_WORD_PRIVATE, 13, 8);
+      2450.0, 125.0, 12, 7, RADIOLIB_LR11X0_LORA_SYNC_WORD_PRIVATE, 13, 8);
   if (ret != RADIOLIB_ERR_NONE) {
     status_.lr1121.init_flag = false;
     LogMessage(LogLevel::kChip, __FILE__, __LINE__,
         "InitLr1121 failed (error code: %d)\n", ret);
     return false;
   }
+
+  const uint32_t rf_switch_dio_pins[] = {
+      RADIOLIB_LR11X0_DIO5, RADIOLIB_LR11X0_DIO6, RADIOLIB_NC, RADIOLIB_NC,
+      RADIOLIB_NC,
+  };
+  const Module::RfSwitchMode_t rf_switch_table[] = {
+      {LR11x0::MODE_STBY, {0, 0}},
+      {LR11x0::MODE_RX, {0, 1}},
+      {LR11x0::MODE_TX, {0, 0}},
+      {LR11x0::MODE_TX_HP, {1, 0}},
+      {LR11x0::MODE_TX_HF, {0, 0}},
+      {LR11x0::MODE_GNSS, {0, 0}},
+      {LR11x0::MODE_WIFI, {0, 0}},
+      END_OF_MODE_TABLE,
+  };
+  chip_.lr1121->setRfSwitchTable(rf_switch_dio_pins, rf_switch_table);
 
   status_.lr1121.init_flag = result;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitLr1121 success\n");
