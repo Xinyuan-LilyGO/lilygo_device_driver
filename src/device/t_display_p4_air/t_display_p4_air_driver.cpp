@@ -258,6 +258,7 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kSdPowerEn, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kNrf9151En, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kBhi260apRst, kOutput);
+  result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kAdl161Rst, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kLr1121PowerEn, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kUsbPhyPowerEn, kOutput);
   result &= chip_.xl9535->SetGpioMode(
@@ -265,29 +266,40 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kEsp32c5En, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kTouchRst, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kScreenRst, kOutput);
+  result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kEsp32c5Boot, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kLed1, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kNs4150En, kOutput);
 
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLed1, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, 1);
 
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Rst, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
   tool_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Rst, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
   tool_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Rst, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
   tool_->DelayMs(120);
 
   if (!result) {
@@ -700,13 +712,6 @@ bool TDisplayP4AirDriver::ConfigEs8389() {
 bool TDisplayP4AirDriver::InitLr1121() {
   bool result = true;
 
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 1);
-  tool_->DelayMs(100);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
-  tool_->DelayMs(100);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 1);
-  tool_->DelayMs(100);
-
   int16_t ret = chip_.lr1121->begin(
       2450.0, 406.25, 12, 7, RADIOLIB_LR11X0_LORA_SYNC_WORD_PRIVATE, 13, 8);
   if (ret != RADIOLIB_ERR_NONE) {
@@ -723,8 +728,6 @@ bool TDisplayP4AirDriver::InitLr1121() {
 
 bool TDisplayP4AirDriver::InitNrf9151(int baud_rate) {
   bool result = true;
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 1);
-  tool_->DelayMs(100);
   result &= bus_.nrf9151_uart_bus->Init(baud_rate);
 
   status_.nrf9151.init_flag = result;
@@ -795,11 +798,6 @@ bool TDisplayP4AirDriver::InitSpiffs(
 }
 
 bool TDisplayP4AirDriver::InitSdmmc(const char* base_path, int max_freq_khz) {
-  if (status_.xl9535.init_flag) {
-    chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
-    tool_->DelayMs(10);
-  }
-
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
       .format_if_mount_failed = false,
       .max_files = 5,
@@ -839,11 +837,6 @@ bool TDisplayP4AirDriver::InitSdmmc(const char* base_path, int max_freq_khz) {
 
 bool TDisplayP4AirDriver::InitSdspi(
     const char* base_path, spi_host_device_t host_id, int max_freq_khz) {
-  if (status_.xl9535.init_flag) {
-    chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
-    tool_->DelayMs(10);
-  }
-
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
       .format_if_mount_failed = false,
       .max_files = 5,
