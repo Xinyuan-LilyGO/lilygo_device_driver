@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-05-24 16:30:00
+ * @LastEditTime: 2026-06-18 16:01:52
  * @License: GPL 3.0
  */
 
@@ -256,8 +256,7 @@ class TDisplayP4AirDriver {
   bool InitEs8389();
   bool ConfigEs8389();
   bool InitLr1121();
-  bool InitNrf9151(
-      int baud_rate = t_display_p4_air::device::nrf9151::kDefaultBaudRate);
+  bool InitNrf9151();
 
   /**
    * @brief 挂载 SPIFFS 文件系统。
@@ -306,10 +305,4 @@ class TDisplayP4AirDriver {
   TDisplayP4AirDriver(const TDisplayP4AirDriver&) = delete;
   TDisplayP4AirDriver& operator=(const TDisplayP4AirDriver&) = delete;
 };
-
-bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf);
-bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
-bool InitSdspi(const char* base_path, spi_host_device_t host_id,
-    int max_freq_khz = SDMMC_FREQ_DEFAULT);
-
 }  // namespace lilygo_device_driver

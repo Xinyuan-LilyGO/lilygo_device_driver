@@ -152,6 +152,14 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
                    },
                    "InitConfigEs8389Task", 4096, this, 3, NULL) == pdPASS);
 
+    result &= (xTaskCreate(
+                   [](void* arg) {
+                     auto self = static_cast<TDisplayP4AirDriver*>(arg);
+                     self->InitNrf9151();
+                     vTaskDelete(NULL);
+                   },
+                   "InitNrf9151Task", 4096, this, 3, NULL) == pdPASS);
+
   } else {
     result &= InitScreen();
     result &= InitTouch();
@@ -159,6 +167,7 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     result &= InitAw86224();
     result &= InitEs8389();
     result &= ConfigEs8389();
+    result &= InitNrf9151();
   }
 
   return result;
@@ -767,9 +776,9 @@ bool TDisplayP4AirDriver::InitLr1121() {
   return result;
 }
 
-bool TDisplayP4AirDriver::InitNrf9151(int baud_rate) {
+bool TDisplayP4AirDriver::InitNrf9151() {
   bool result = true;
-  result &= bus_.nrf9151_uart_bus->Init(baud_rate);
+  result &= bus_.nrf9151_uart_bus->Init(device::nrf9151::kDefaultBaudRate);
 
   status_.nrf9151.init_flag = result;
   if (result) {
