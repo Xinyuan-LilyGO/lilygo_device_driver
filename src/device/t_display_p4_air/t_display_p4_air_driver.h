@@ -13,6 +13,8 @@
 
 #include "cpp_bus_driver_library.h"
 #include "esp32p4_driver.h"
+#include "esp_codec_dev.h"
+#include "esp_codec_dev_defaults.h"
 #include "radiolib_cpp_bus_driver_library.h"
 #include "t_display_p4_air_config.h"
 
@@ -95,6 +97,7 @@ class TDisplayP4AirDriver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> aw86224_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> hi8561_i2c_touch_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> lr1121_spi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareUart> nrf9151_uart_bus;
 
@@ -146,6 +149,10 @@ class TDisplayP4AirDriver {
 
     struct {
       bool init_flag = false;
+    } es8389;
+
+    struct {
+      bool init_flag = false;
     } lr1121;
 
     struct {
@@ -172,6 +179,12 @@ class TDisplayP4AirDriver {
   }
   const t_display_p4_air::device::CameraInfo& camera_info() const {
     return t_display_p4_air::device::kCameraInfo;
+  }
+  esp_codec_dev_handle_t es8389_input_codec_dev() const {
+    return es8389_input_codec_dev_;
+  }
+  esp_codec_dev_handle_t es8389_output_codec_dev() const {
+    return es8389_output_codec_dev_;
   }
   t_display_p4_air::device::DeviceInfo device_info() const {
     return {
@@ -225,6 +238,8 @@ class TDisplayP4AirDriver {
   bool InitHi8561Touch();
   bool InitHi8561Backlight();
   bool InitAw86224();
+  bool InitEs8389();
+  bool ConfigEs8389();
   bool InitLr1121();
   bool InitNrf9151(
       int baud_rate = t_display_p4_air::device::nrf9151::kDefaultBaudRate);
@@ -261,6 +276,13 @@ class TDisplayP4AirDriver {
   Chip chip_;
   Status status_;
   const t_display_p4_air::device::ScreenInfo* screen_info_ = nullptr;
+
+  const audio_codec_ctrl_if_t* es8389_ctrl_if_ = nullptr;
+  const audio_codec_data_if_t* es8389_data_if_ = nullptr;
+  const audio_codec_gpio_if_t* es8389_gpio_if_ = nullptr;
+  const audio_codec_if_t* es8389_codec_if_ = nullptr;
+  esp_codec_dev_handle_t es8389_input_codec_dev_ = nullptr;
+  esp_codec_dev_handle_t es8389_output_codec_dev_ = nullptr;
 
   TDisplayP4AirDriver() = default;
   ~TDisplayP4AirDriver() = default;

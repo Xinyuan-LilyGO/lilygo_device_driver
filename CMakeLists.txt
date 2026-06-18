@@ -27,7 +27,8 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR)
         )
     set(requires
             "cpp_bus_driver"
-            "radiolib_cpp_bus_driver")
+            "radiolib_cpp_bus_driver"
+            "esp_codec_dev")
 elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_SPE)
     set(
             src_dirs

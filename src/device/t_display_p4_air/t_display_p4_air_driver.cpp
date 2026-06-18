@@ -3,7 +3,7 @@
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
 
- * @LastEditTime: 2026-06-15 16:04:59
+ * @LastEditTime: 2026-06-18 09:18:17
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -36,18 +36,6 @@ constexpr ScreenInfo kHi8561ScreenInfo = {
 
 constexpr const ScreenInfo* kDefaultScreenInfo = &kHi8561ScreenInfo;
 
-cpp_bus_driver::HardwareMipi::ColorFormat ColorFormatFromBitsPerPixel(
-    int bits_per_pixel) {
-  switch (bits_per_pixel) {
-    case 16:
-      return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb565;
-    case 24:
-      return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb888;
-    default:
-      return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb565;
-  }
-}
-
 }  // namespace
 
 TDisplayP4AirDriver& TDisplayP4AirDriver::GetInstance() {
@@ -74,6 +62,13 @@ void TDisplayP4AirDriver::CreateDrivers() {
   bus_.aw86224_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
 
+  bus_.es8389_i2s_bus = std::make_shared<cpp_bus_driver::HardwareI2s>(
+      gpio::es8389::kAdcData, gpio::es8389::kDacData, gpio::es8389::kWsLrck,
+      gpio::es8389::kBclk, gpio::es8389::kMclk, i2s_port_t::I2S_NUM_0,
+      cpp_bus_driver::HardwareI2s::DataMode::kInputOutput,
+      cpp_bus_driver::HardwareI2s::I2sMode::kStd,
+      i2s_clock_src_t::I2S_CLK_SRC_DEFAULT);
+
   bus_.lr1121_spi_bus =
       std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::lr1121::kMosi,
           gpio::lr1121::kSclk, gpio::lr1121::kMiso, SPI2_HOST, 0);
@@ -95,14 +90,13 @@ void TDisplayP4AirDriver::CreateDrivers() {
   chip_.hi8561_backlight =
       std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBl);
 
-  bus_.lr1121_radiolib_hal =
-      new RadiolibCppBusDriverHal(bus_.lr1121_spi_bus, 10000000,
-          gpio::lr1121::kCs);
-  bus_.lr1121_module = new Module(bus_.lr1121_radiolib_hal,
-      static_cast<uint32_t>(RADIOLIB_NC),
-      static_cast<uint32_t>(gpio::lr1121::kInt),
-      static_cast<uint32_t>(gpio::lr1121::kRst),
-      static_cast<uint32_t>(gpio::lr1121::kBusy));
+  bus_.lr1121_radiolib_hal = new RadiolibCppBusDriverHal(
+      bus_.lr1121_spi_bus, 10000000, gpio::lr1121::kCs);
+  bus_.lr1121_module =
+      new Module(bus_.lr1121_radiolib_hal, static_cast<uint32_t>(RADIOLIB_NC),
+          static_cast<uint32_t>(gpio::lr1121::kInt),
+          static_cast<uint32_t>(gpio::lr1121::kRst),
+          static_cast<uint32_t>(gpio::lr1121::kBusy));
   chip_.lr1121 = new LR1121(bus_.lr1121_module);
 }
 
@@ -149,11 +143,22 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
                    },
                    "InitAw86224Task", 4096, this, 3, NULL) == pdPASS);
 
+    result &= (xTaskCreate(
+                   [](void* arg) {
+                     auto self = static_cast<TDisplayP4AirDriver*>(arg);
+                     self->InitEs8389();
+                     self->ConfigEs8389();
+                     vTaskDelete(NULL);
+                   },
+                   "InitConfigEs8389Task", 4096, this, 3, NULL) == pdPASS);
+
   } else {
     result &= InitScreen();
     result &= InitTouch();
     result &= InitScreenBacklight();
     result &= InitAw86224();
+    result &= InitEs8389();
+    result &= ConfigEs8389();
   }
 
   return result;
@@ -182,16 +187,11 @@ bool TDisplayP4AirDriver::SetSleep(SleepLevel level, bool enable) {
         result &= DeinitScreen();
 
         if (status_.xl9535.init_flag) {
-          result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kLr1121PowerEn, 0);
-          result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kSdPowerEn, 0);
-          result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kEsp32c5En, 0);
-          result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kNrf9151En, 0);
-          result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kNs4150En, 0);
+          result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
+          result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
+          result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);
+          result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
+          result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, 0);
         }
         result &= tool_->GpioWrite(gpio::power::kEnable3v3, 0);
       } else {
@@ -213,8 +213,8 @@ bool TDisplayP4AirDriver::SetSleep(SleepLevel level, bool enable) {
 bool TDisplayP4AirDriver::InitPower() {
   bool result = true;
 
-  result &= tool_->SetGpioMode(gpio::power::kEnable3v3,
-      cpp_bus_driver::Tool::GpioMode::kOutput);
+  result &= tool_->SetGpioMode(
+      gpio::power::kEnable3v3, cpp_bus_driver::Tool::GpioMode::kOutput);
   result &= tool_->GpioWrite(gpio::power::kEnable3v3, 1);
 
   result &= InitLdoPower(3, 2500);
@@ -270,10 +270,9 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
 
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 1);
-  result &= chip_.xl9535->GpioWrite(
-      gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLed1, 1);
@@ -367,9 +366,19 @@ bool TDisplayP4AirDriver::InitScreen() {
       screen.width, screen.height, screen.mipi_dsi_hsync, screen.mipi_dsi_hbp,
       screen.mipi_dsi_hfp, screen.mipi_dsi_vsync, screen.mipi_dsi_vbp,
       screen.mipi_dsi_vfp, screen.data_lane_num,
-      ColorFormatFromBitsPerPixel(screen.bits_per_pixel));
-  chip_.hi8561 =
-      std::make_unique<cpp_bus_driver::Hi8561>(bus_.screen_mipi_bus);
+      [](int bits_per_pixel) -> cpp_bus_driver::HardwareMipi::ColorFormat {
+        switch (bits_per_pixel) {
+          case 16:
+            return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb565;
+          case 24:
+            return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb888;
+          default:
+            LogMessage(
+                LogLevel::kInfo, __FILE__, __LINE__, "Value out of range\n");
+            return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb565;
+        }
+      }(screen.bits_per_pixel));
+  chip_.hi8561 = std::make_unique<cpp_bus_driver::Hi8561>(bus_.screen_mipi_bus);
 
   return InitHi8561();
 }
@@ -494,6 +503,200 @@ bool TDisplayP4AirDriver::InitAw86224() {
   return result;
 }
 
+bool TDisplayP4AirDriver::InitEs8389() {
+  if ((bus_.xl9535_i2c_bus == nullptr) || (bus_.es8389_i2s_bus == nullptr)) {
+    status_.es8389.init_flag = false;
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8389 failed\n");
+    return false;
+  }
+
+  i2c_master_bus_handle_t i2c_bus_handle = bus_.xl9535_i2c_bus->bus_handle();
+  if (i2c_bus_handle == nullptr) {
+    status_.es8389.init_flag = false;
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8389 failed\n");
+    return false;
+  }
+
+  audio_codec_i2c_cfg_t i2c_cfg = {
+      .port = static_cast<uint8_t>(I2C_NUM_1),
+      .addr = static_cast<uint8_t>(device::es8389::kI2cAddress << 1),
+      .bus_handle = i2c_bus_handle,
+  };
+  es8389_ctrl_if_ = audio_codec_new_i2c_ctrl(&i2c_cfg);
+
+  bool result = (es8389_ctrl_if_ != nullptr);
+  result &= bus_.es8389_i2s_bus->Init(
+      [](int value) -> i2s_mclk_multiple_t {
+        switch (value) {
+          case 128:
+            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_128;
+          case 192:
+            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_192;
+          case 256:
+            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_256;
+          case 384:
+            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_384;
+          case 512:
+            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_512;
+          case 576:
+            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_576;
+          case 768:
+            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_768;
+          case 1024:
+            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_1024;
+          case 1152:
+            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_1152;
+          default:
+            LogMessage(
+                LogLevel::kInfo, __FILE__, __LINE__, "Value out of range\n");
+            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_256;
+        }
+      }(device::es8389::kMclkMultiple),
+      device::es8389::kSampleRate,
+      [](int value) -> i2s_data_bit_width_t {
+        switch (value) {
+          case 8:
+            return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_8BIT;
+          case 16:
+            return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_16BIT;
+          case 24:
+            return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_24BIT;
+          case 32:
+            return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_32BIT;
+          default:
+            LogMessage(
+                LogLevel::kInfo, __FILE__, __LINE__, "Value out of range\n");
+            return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_16BIT;
+        }
+      }(device::es8389::kBitsPerSample));
+  if (!result) {
+    status_.es8389.init_flag = false;
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8389 failed\n");
+    return false;
+  }
+
+  audio_codec_i2s_cfg_t i2s_cfg = {
+      .port = static_cast<uint8_t>(bus_.es8389_i2s_bus->port()),
+      .rx_handle = bus_.es8389_i2s_bus->rx_handle(),
+      .tx_handle = bus_.es8389_i2s_bus->tx_handle(),
+      .clk_src = static_cast<int>(I2S_CLK_SRC_DEFAULT),
+  };
+  es8389_data_if_ = audio_codec_new_i2s_data(&i2s_cfg);
+  es8389_gpio_if_ = audio_codec_new_gpio();
+
+  es8389_codec_cfg_t codec_cfg = {
+      .ctrl_if = es8389_ctrl_if_,
+      .gpio_if = es8389_gpio_if_,
+      .codec_mode = ESP_CODEC_DEV_WORK_MODE_BOTH,
+      .pa_pin = -1,
+      .pa_reverted = false,
+      .master_mode = false,
+      .use_mclk = true,
+      .digital_mic = false,
+      .invert_mclk = false,
+      .invert_sclk = false,
+      .hw_gain =
+          {
+              .pa_voltage = 3.3f,
+              .codec_dac_voltage = 3.3f,
+              .pa_gain = 0.0f,
+          },
+      .no_dac_ref = false,
+      .mclk_div = device::es8389::kMclkMultiple,
+  };
+  es8389_codec_if_ = es8389_codec_new(&codec_cfg);
+
+  esp_codec_dev_cfg_t output_dev_cfg = {
+      .dev_type = ESP_CODEC_DEV_TYPE_OUT,
+      .codec_if = es8389_codec_if_,
+      .data_if = es8389_data_if_,
+  };
+  es8389_output_codec_dev_ = esp_codec_dev_new(&output_dev_cfg);
+
+  esp_codec_dev_cfg_t input_dev_cfg = {
+      .dev_type = ESP_CODEC_DEV_TYPE_IN,
+      .codec_if = es8389_codec_if_,
+      .data_if = es8389_data_if_,
+  };
+  es8389_input_codec_dev_ = esp_codec_dev_new(&input_dev_cfg);
+
+  result &= (es8389_data_if_ != nullptr) && (es8389_gpio_if_ != nullptr) &&
+            (es8389_codec_if_ != nullptr) &&
+            (es8389_input_codec_dev_ != nullptr) &&
+            (es8389_output_codec_dev_ != nullptr);
+  status_.es8389.init_flag = result;
+  if (result) {
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitEs8389 success\n");
+  } else {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8389 failed\n");
+  }
+  return result;
+}
+
+bool TDisplayP4AirDriver::ConfigEs8389() {
+  if (!status_.es8389.init_flag || (es8389_input_codec_dev_ == nullptr) ||
+      (es8389_output_codec_dev_ == nullptr)) {
+    status_.es8389.init_flag = false;
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigEs8389 failed\n");
+    return false;
+  }
+
+  esp_codec_dev_sample_info_t output_sample_info = {
+      .bits_per_sample = device::es8389::kBitsPerSample,
+      .channel = device::es8389::kChannel,
+      .channel_mask = ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0) |
+                      ESP_CODEC_DEV_MAKE_CHANNEL_MASK(1),
+      .sample_rate = device::es8389::kSampleRate,
+      .mclk_multiple = device::es8389::kMclkMultiple,
+  };
+
+  esp_codec_dev_sample_info_t input_sample_info = {
+      .bits_per_sample = device::es8389::kBitsPerSample,
+      .channel = device::es8389::kChannel,
+      .channel_mask = ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0) |
+                      ESP_CODEC_DEV_MAKE_CHANNEL_MASK(1),
+      .sample_rate = device::es8389::kSampleRate,
+      .mclk_multiple = device::es8389::kMclkMultiple,
+  };
+
+  bool result = true;
+  int ret = esp_codec_dev_open(es8389_output_codec_dev_, &output_sample_info);
+  if (ret != ESP_CODEC_DEV_OK) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+        "esp_codec_dev_open output failed (error code: %#X)\n", ret);
+    result = false;
+  }
+
+  ret = esp_codec_dev_open(es8389_input_codec_dev_, &input_sample_info);
+  if (ret != ESP_CODEC_DEV_OK) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+        "esp_codec_dev_open input failed (error code: %#X)\n", ret);
+    result = false;
+  }
+
+  ret = esp_codec_dev_set_out_vol(es8389_output_codec_dev_, 100);
+  if (ret != ESP_CODEC_DEV_OK) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+        "esp_codec_dev_set_out_vol failed (error code: %#X)\n", ret);
+    result = false;
+  }
+
+  ret = esp_codec_dev_set_in_gain(es8389_input_codec_dev_, 20.0f);
+  if (ret != ESP_CODEC_DEV_OK) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+        "esp_codec_dev_set_in_gain failed (error code: %#X)\n", ret);
+    result = false;
+  }
+
+  status_.es8389.init_flag = result;
+  if (result) {
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "ConfigEs8389 success\n");
+  } else {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigEs8389 failed\n");
+  }
+  return result;
+}
+
 bool TDisplayP4AirDriver::InitLr1121() {
   bool result = true;
 
@@ -504,8 +707,8 @@ bool TDisplayP4AirDriver::InitLr1121() {
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 1);
   tool_->DelayMs(100);
 
-  int16_t ret = chip_.lr1121->begin(2450.0, 406.25, 12, 7,
-      RADIOLIB_LR11X0_LORA_SYNC_WORD_PRIVATE, 13, 8);
+  int16_t ret = chip_.lr1121->begin(
+      2450.0, 406.25, 12, 7, RADIOLIB_LR11X0_LORA_SYNC_WORD_PRIVATE, 13, 8);
   if (ret != RADIOLIB_ERR_NONE) {
     status_.lr1121.init_flag = false;
     LogMessage(LogLevel::kChip, __FILE__, __LINE__,
@@ -520,18 +723,15 @@ bool TDisplayP4AirDriver::InitLr1121() {
 
 bool TDisplayP4AirDriver::InitNrf9151(int baud_rate) {
   bool result = true;
-  result &= chip_.xl9535->GpioWrite(
-      gpio::xl9535::kNrf9151En, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 1);
   tool_->DelayMs(100);
   result &= bus_.nrf9151_uart_bus->Init(baud_rate);
 
   status_.nrf9151.init_flag = result;
   if (result) {
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-        "InitNrf9151 success\n");
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitNrf9151 success\n");
   } else {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
-        "InitNrf9151 failed\n");
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitNrf9151 failed\n");
   }
   return result;
 }
@@ -594,11 +794,9 @@ bool TDisplayP4AirDriver::InitSpiffs(
   return true;
 }
 
-bool TDisplayP4AirDriver::InitSdmmc(
-    const char* base_path, int max_freq_khz) {
+bool TDisplayP4AirDriver::InitSdmmc(const char* base_path, int max_freq_khz) {
   if (status_.xl9535.init_flag) {
-    chip_.xl9535->GpioWrite(
-        gpio::xl9535::kSdPowerEn, 1);
+    chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
     tool_->DelayMs(10);
   }
 
@@ -639,11 +837,10 @@ bool TDisplayP4AirDriver::InitSdmmc(
   return true;
 }
 
-bool TDisplayP4AirDriver::InitSdspi(const char* base_path,
-    spi_host_device_t host_id, int max_freq_khz) {
+bool TDisplayP4AirDriver::InitSdspi(
+    const char* base_path, spi_host_device_t host_id, int max_freq_khz) {
   if (status_.xl9535.init_flag) {
-    chip_.xl9535->GpioWrite(
-        gpio::xl9535::kSdPowerEn, 1);
+    chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
     tool_->DelayMs(10);
   }
 
@@ -705,13 +902,11 @@ bool TDisplayP4AirDriver::InitSdspi(const char* base_path,
 }
 
 bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf) {
-  return TDisplayP4AirDriver::GetInstance().InitSpiffs(
-      base_path, spiffs_conf);
+  return TDisplayP4AirDriver::GetInstance().InitSpiffs(base_path, spiffs_conf);
 }
 
 bool InitSdmmc(const char* base_path, int max_freq_khz) {
-  return TDisplayP4AirDriver::GetInstance().InitSdmmc(
-      base_path, max_freq_khz);
+  return TDisplayP4AirDriver::GetInstance().InitSdmmc(base_path, max_freq_khz);
 }
 
 bool InitSdspi(

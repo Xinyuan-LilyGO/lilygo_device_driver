@@ -27,6 +27,12 @@ dependencies:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
 
+  espressif/esp_codec_dev:
+    version: "^1.5.10"
+    require: public
+    matches:
+      - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
+
   llgok/icm20948_we:
     version: "^1.0.0"
     require: public
