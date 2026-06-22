@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-06-18 16:02:57
+ * @LastEditTime: 2026-06-22 18:12:18
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -1032,13 +1032,13 @@ bool TDisplayP4Driver::ConfigXl9535() {
 
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kPowerEn3v3, 0);
-  tool_->DelayMs(100);
+  tool_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kPowerEn3v3, 1);
-  tool_->DelayMs(100);
+  tool_->DelayMs(500);
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kPowerEn3v3, 0);
-  tool_->DelayMs(200);
+  tool_->DelayMs(10);
 
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kScreenRst, 1);
