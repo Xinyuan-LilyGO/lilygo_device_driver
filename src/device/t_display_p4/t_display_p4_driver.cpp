@@ -1274,24 +1274,37 @@ bool TDisplayP4Driver::InitPcf8563() {
 bool TDisplayP4Driver::InitAw86224() {
   if (!chip_.aw86224->Init(500000)) {
     status_.aw86224.init_flag = false;
-    status_.aw86224.ram_waveform_selection =
-        cpp_bus_driver::Aw862xx::RamWaveformSelection();
+    status_.aw86224.ram_waveform_info =
+        cpp_bus_driver::Aw862xx::RamWaveformInfo();
     LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
     return false;
-  } else {
-    cpp_bus_driver::Aw862xx::RamWaveformSelection selection;
-    const bool result = chip_.aw86224->InitRamModeByF0(selection);
-
-    status_.aw86224.init_flag = result;
-    status_.aw86224.ram_waveform_selection =
-        result ? selection : cpp_bus_driver::Aw862xx::RamWaveformSelection();
-    if (result) {
-      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitAw86224 success\n");
-    } else {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
-    }
-    return result;
   }
+
+  const uint32_t detected_f0 = chip_.aw86224->GetF0Detection();
+  if (detected_f0 == 0 || detected_f0 == static_cast<uint32_t>(-1)) {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+        "Aw86224 F0 reference read failed\n");
+  } else {
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "Aw86224 F0 reference: %u.%uHz\n",
+        static_cast<unsigned int>(detected_f0 / 10),
+        static_cast<unsigned int>(detected_f0 % 10));
+  }
+
+  const bool result = chip_.aw86224->InitRamMode(
+      cpp_bus_driver::Aw862xx::RamWaveformLibrary::kRam12k041230_235);
+  status_.aw86224.init_flag = result;
+  status_.aw86224.ram_waveform_info =
+      cpp_bus_driver::Aw862xx::GetRamWaveformInfo(
+          cpp_bus_driver::Aw862xx::RamWaveformLibrary::kRam12k041230_235);
+  if (result) {
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "InitAw86224 success (RAM library: %s)\n",
+        status_.aw86224.ram_waveform_info.name);
+  } else {
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
+  }
+  return result;
 }
 
 bool TDisplayP4Driver::InitEs8311() {
