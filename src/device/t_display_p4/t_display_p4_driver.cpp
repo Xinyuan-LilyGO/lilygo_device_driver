@@ -776,7 +776,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.xl9535->GpioWrite(
               gpio::xl9535::kEsp32c6En, 0);
           result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kSdEn, 1);
+              gpio::xl9535::kSdPowerEn, 1);
           result &= chip_.xl9535->GpioWrite(
               gpio::xl9535::kPowerEn5v0, 0);
         }
@@ -785,7 +785,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.xl9535->GpioWrite(
               gpio::xl9535::kEsp32c6En, 1);
           result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kSdEn, 0);
+              gpio::xl9535::kSdPowerEn, 0);
           result &= chip_.xl9535->GpioWrite(
               gpio::xl9535::kPowerEn5v0, 1);
         }
@@ -924,7 +924,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.xl9535->GpioWrite(
               gpio::xl9535::kEthernetRst, 0);
           result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kSdEn, 1);
+              gpio::xl9535::kSdPowerEn, 1);
           result &= chip_.xl9535->GpioWrite(
               gpio::xl9535::kPowerEn5v0, 0);
           result &= chip_.xl9535->GpioWrite(
@@ -1002,7 +1002,7 @@ bool TDisplayP4Driver::ConfigXl9535() {
   result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kEsp32p4VccaPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kUsbPhyPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kPowerEn5v0, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
@@ -1014,7 +1014,7 @@ bool TDisplayP4Driver::ConfigXl9535() {
   result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kEthernetRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kSdEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kSdPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kSx1262Rst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
@@ -1025,7 +1025,7 @@ bool TDisplayP4Driver::ConfigXl9535() {
       gpio::xl9535::kSx1262Dio1, cpp_bus_driver::Xl95x5::Mode::kInput);
 
   result &= chip_.xl9535->GpioWrite(
-      gpio::xl9535::kEsp32p4VccaPowerEn, 0);
+      gpio::xl9535::kUsbPhyPowerEn, 0);
   // 默认使用RF1天线
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kSky13453Vctl, 1);
@@ -1053,7 +1053,7 @@ bool TDisplayP4Driver::ConfigXl9535() {
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kSx1262Rst, 1);
   result &= chip_.xl9535->GpioWrite(
-      gpio::xl9535::kSdEn, 0);
+      gpio::xl9535::kSdPowerEn, 0);
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kPowerEn5v0, 1);
   tool_->DelayMs(10);
@@ -1070,7 +1070,7 @@ bool TDisplayP4Driver::ConfigXl9535() {
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kSx1262Rst, 0);
   result &= chip_.xl9535->GpioWrite(
-      gpio::xl9535::kSdEn, 1);
+      gpio::xl9535::kSdPowerEn, 1);
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kPowerEn5v0, 0);
   tool_->DelayMs(10);
@@ -1087,7 +1087,7 @@ bool TDisplayP4Driver::ConfigXl9535() {
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kSx1262Rst, 1);
   result &= chip_.xl9535->GpioWrite(
-      gpio::xl9535::kSdEn, 0);
+      gpio::xl9535::kSdPowerEn, 0);
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kPowerEn5v0, 1);
   tool_->DelayMs(120);

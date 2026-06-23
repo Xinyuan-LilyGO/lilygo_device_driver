@@ -12,6 +12,12 @@
 
 namespace lilygo_device_driver::t_display_p4 {
 namespace gpio {
+namespace button {
+inline constexpr int kEsp32p4Boot = 35;
+inline constexpr int kKey1 = 49;
+inline constexpr int kPower = 11;
+}  // namespace button
+
 namespace i2c {
 inline constexpr int kPort1Sda = 7;
 inline constexpr int kPort1Scl = 8;
@@ -25,8 +31,6 @@ inline constexpr int kPort1Mosi = 3;
 inline constexpr int kPort1Miso = 4;
 }  // namespace spi
 
-inline constexpr int kChipBoot = 35;
-
 namespace xl9535 {
 inline constexpr int kSda = i2c::kPort1Sda;
 inline constexpr int kScl = i2c::kPort1Scl;
@@ -39,12 +43,12 @@ inline constexpr auto kTouchInt = cpp_bus_driver::Xl95x5::Pin::kIo4;
 inline constexpr auto kEthernetRst = cpp_bus_driver::Xl95x5::Pin::kIo5;
 inline constexpr auto kPowerEn5v0 = cpp_bus_driver::Xl95x5::Pin::kIo6;
 inline constexpr auto kIcm20948Int = cpp_bus_driver::Xl95x5::Pin::kIo7;
-inline constexpr auto kEsp32p4VccaPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo10;
+inline constexpr auto kUsbPhyPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo10;
 inline constexpr auto kGpsWakeUp = cpp_bus_driver::Xl95x5::Pin::kIo11;
 inline constexpr auto kRtcInt = cpp_bus_driver::Xl95x5::Pin::kIo12;
 inline constexpr auto kEsp32c6WakeUp = cpp_bus_driver::Xl95x5::Pin::kIo13;
 inline constexpr auto kEsp32c6En = cpp_bus_driver::Xl95x5::Pin::kIo14;
-inline constexpr auto kSdEn = cpp_bus_driver::Xl95x5::Pin::kIo15;
+inline constexpr auto kSdPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo15;
 inline constexpr auto kSx1262Rst = cpp_bus_driver::Xl95x5::Pin::kIo16;
 inline constexpr auto kSx1262Dio1 = cpp_bus_driver::Xl95x5::Pin::kIo17;
 }  // namespace xl9535
