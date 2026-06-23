@@ -1418,29 +1418,19 @@ bool TDisplayP4Driver::InitL76k() {
 }
 
 bool TDisplayP4Driver::InitIcm20948() {
-  if (!chip_.icm20948->init()) {
-    if (!chip_.icm20948->initMagnetometer()) {
-      status_.icm20948.init_flag = false;
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitIcm20948 failed\n");
-      return false;
-    } else {
-      chip_.icm20948->setAccRange(ICM20948_ACC_RANGE_2G);
-      chip_.icm20948->setAccDLPF(ICM20948_DLPF_6);
-      chip_.icm20948->setMagOpMode(AK09916_CONT_MODE_20HZ);
-
-      status_.icm20948.init_flag = true;
-      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitIcm20948 success\n");
-      return true;
-    }
-  } else {
-    chip_.icm20948->setAccRange(ICM20948_ACC_RANGE_2G);
-    chip_.icm20948->setAccDLPF(ICM20948_DLPF_6);
-    chip_.icm20948->setMagOpMode(AK09916_CONT_MODE_20HZ);
-
-    status_.icm20948.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitIcm20948 success\n");
-    return true;
+  if (!chip_.icm20948->init() || !chip_.icm20948->initMagnetometer()) {
+    status_.icm20948.init_flag = false;
+    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitIcm20948 failed\n");
+    return false;
   }
+
+  chip_.icm20948->setAccRange(ICM20948_ACC_RANGE_2G);
+  chip_.icm20948->setAccDLPF(ICM20948_DLPF_6);
+  chip_.icm20948->setMagOpMode(AK09916_CONT_MODE_20HZ);
+
+  status_.icm20948.init_flag = true;
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitIcm20948 success\n");
+  return true;
 }
 
 bool TDisplayP4Driver::InitSx1262() {
