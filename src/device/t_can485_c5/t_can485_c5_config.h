@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include <cstdint>
-
 namespace lilygo_device_driver::t_can485_c5 {
 namespace gpio {
 namespace can {
@@ -40,9 +38,9 @@ inline constexpr int kEsp32c5Boot = 28;
 }  // namespace button
 
 namespace led {
-inline constexpr int kRed = 24;
-inline constexpr int kGreen = 25;
-inline constexpr int kBlue = 26;
+inline constexpr int kNumber1 = 26;
+inline constexpr int kNumber2 = 24;
+inline constexpr int kNumber3 = 25;
 }  // namespace led
 
 namespace ws2812 {
@@ -53,7 +51,6 @@ inline constexpr int kData = 23;
 namespace device {
 namespace ws2812 {
 inline constexpr int kLedCount = 1;
-inline constexpr uint32_t kResolutionHz = 10000000;
 }  // namespace ws2812
 }  // namespace device
 }  // namespace lilygo_device_driver::t_can485_c5
