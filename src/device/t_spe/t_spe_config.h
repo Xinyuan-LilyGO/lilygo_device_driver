@@ -10,9 +10,7 @@
 
 namespace lilygo_device_driver::t_spe {
 namespace gpio {
-namespace general {
 inline constexpr int kGpio0_50mhzSwitch = 33;
-}  // namespace general
 
 namespace lan8671 {
 inline constexpr int kWakeUp = 13;

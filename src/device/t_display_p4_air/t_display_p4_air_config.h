@@ -76,7 +76,7 @@ inline constexpr auto kNs4150En = cpp_bus_driver::Xl95x5::Pin::kIo17;
 }  // namespace xl9535
 
 namespace hi8561 {
-inline constexpr int kScreenBl = 50;
+inline constexpr int kScreenBacklight = 50;
 inline constexpr int kTouchSda = i2c::kPort2Sda;
 inline constexpr int kTouchScl = i2c::kPort2Scl;
 inline constexpr int kTouchInt = 52;

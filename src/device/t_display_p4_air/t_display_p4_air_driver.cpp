@@ -88,7 +88,7 @@ void TDisplayP4AirDriver::CreateDrivers() {
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
       bus_.hi8561_i2c_touch_bus, device::hi8561::kTouchI2cAddress);
   chip_.hi8561_backlight =
-      std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBl);
+      std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBacklight);
 
   bus_.lr1121_radiolib_hal = new RadiolibCppBusDriverHal(
       bus_.lr1121_spi_bus, 10000000, gpio::lr1121::kCs);
