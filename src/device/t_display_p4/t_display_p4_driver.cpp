@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-06-22 18:12:18
+ * @LastEditTime: 2026-06-30 16:00:02
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -717,9 +717,6 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
               result &= chip_.rm69a10->SetScreenOff(true);
               result &= chip_.rm69a10->SetSleep(true);
             }
-            if (status_.gt9895.init_flag) {
-              result &= chip_.gt9895->SetSleep();
-            }
             break;
           default:
             break;
@@ -801,9 +798,6 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
             if (status_.rm69a10.init_flag) {
               result &= chip_.rm69a10->SetSleep(false);
               result &= chip_.rm69a10->SetScreenOff(false);
-            }
-            if (status_.gt9895.init_flag) {
-              result &= InitGt9895();
             }
             break;
           default:
