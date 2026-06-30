@@ -2,7 +2,7 @@
  * @Description: t_display_p4_config
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-05-17 23:40:51
+ * @LastEditTime: 2026-06-30 13:47:35
  */
 #pragma once
 
@@ -14,8 +14,6 @@ namespace lilygo_device_driver::t_display_p4 {
 namespace gpio {
 namespace button {
 inline constexpr int kEsp32p4Boot = 35;
-inline constexpr int kKey1 = 49;
-inline constexpr int kPower = 11;
 }  // namespace button
 
 namespace i2c {
