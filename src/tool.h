@@ -13,11 +13,10 @@ namespace lilygo_device_driver {
 static constexpr uint16_t kMaxLogBufferSize = 1024;
 
 enum class LogLevel {
-  kDebug,  // debug信息
-  kInfo,   // 普通信息
-
-  kBus,   // 总线错误
-  kChip,  // 芯片错误
+  kDebug,    // debug信息
+  kInfo,     // 普通信息
+  kWarning,  // 警告信息
+  kError,    // 错误信息
 };
 
 /**

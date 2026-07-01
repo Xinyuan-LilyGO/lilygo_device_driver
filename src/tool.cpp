@@ -21,10 +21,10 @@ const char* LogLevelName(LogLevel level) {
       return "Debug";
     case LogLevel::kInfo:
       return "Info";
-    case LogLevel::kBus:
-      return "Bus";
-    case LogLevel::kChip:
-      return "Chip";
+    case LogLevel::kWarning:
+      return "Warning";
+    case LogLevel::kError:
+      return "Error";
     default:
       return "Unknown";
   }
@@ -45,12 +45,12 @@ bool IsLogLevelEnabled(LogLevel level) {
     case LogLevel::kInfo:
       return true;
 #endif
-#if defined(LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEVICE)
-    case LogLevel::kBus:
+#if defined(LILYGO_DEVICE_DRIVER_LOG_LEVEL_WARNING)
+    case LogLevel::kWarning:
       return true;
 #endif
-#if defined(LILYGO_DEVICE_DRIVER_LOG_LEVEL_CHIP)
-    case LogLevel::kChip:
+#if defined(LILYGO_DEVICE_DRIVER_LOG_LEVEL_ERROR)
+    case LogLevel::kError:
       return true;
 #endif
     default:

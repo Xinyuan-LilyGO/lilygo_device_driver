@@ -243,7 +243,7 @@ bool TDisplayP4AirDriver::InitPower() {
 bool TDisplayP4AirDriver::InitAxp517() {
   if (!chip_.axp517->Init()) {
     status_.axp517.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAxp517 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAxp517 failed\n");
     return false;
   }
 
@@ -255,7 +255,7 @@ bool TDisplayP4AirDriver::InitAxp517() {
 bool TDisplayP4AirDriver::InitXl9535() {
   if (!chip_.xl9535->Init()) {
     status_.xl9535.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitXl9535 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitXl9535 failed\n");
     return false;
   }
 
@@ -266,7 +266,7 @@ bool TDisplayP4AirDriver::InitXl9535() {
 
 bool TDisplayP4AirDriver::ConfigXl9535() {
   if (!status_.xl9535.init_flag) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigXl9535 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
     return false;
   }
 
@@ -321,14 +321,14 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
   tool_->DelayMs(120);
 
   if (!result) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigXl9535 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
   }
   return result;
 }
 
 bool TDisplayP4AirDriver::EnterEsp32c5DownloadMode() {
   if (!status_.xl9535.init_flag) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "EnterEsp32c5DownloadMode failed\n");
     return false;
   }
@@ -345,7 +345,7 @@ bool TDisplayP4AirDriver::EnterEsp32c5DownloadMode() {
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 1);
 
   if (!result) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "EnterEsp32c5DownloadMode failed\n");
   }
   return result;
@@ -353,7 +353,7 @@ bool TDisplayP4AirDriver::EnterEsp32c5DownloadMode() {
 
 bool TDisplayP4AirDriver::SetUartTarget(UartTarget target) {
   if (!status_.xl9535.init_flag) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "SetUartTarget failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "SetUartTarget failed\n");
     return false;
   }
 
@@ -362,7 +362,7 @@ bool TDisplayP4AirDriver::SetUartTarget(UartTarget target) {
       target == UartTarget::kEsp32c5 ? 1 : 0);
 
   if (!result) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "SetUartTarget failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "SetUartTarget failed\n");
   }
   return result;
 }
@@ -370,7 +370,7 @@ bool TDisplayP4AirDriver::SetUartTarget(UartTarget target) {
 bool TDisplayP4AirDriver::InitSgm38121() {
   if (!chip_.sgm38121->Init()) {
     status_.sgm38121.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitSgm38121 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSgm38121 failed\n");
     return false;
   }
 
@@ -424,7 +424,7 @@ bool TDisplayP4AirDriver::InitSgm38121() {
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSgm38121 success\n");
   } else {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitSgm38121 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSgm38121 failed\n");
   }
   return result;
 }
@@ -445,7 +445,7 @@ bool TDisplayP4AirDriver::InitScreen() {
             return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb888;
           default:
             LogMessage(
-                LogLevel::kInfo, __FILE__, __LINE__, "Value out of range\n");
+                LogLevel::kWarning, __FILE__, __LINE__, "Value out of range\n");
             return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb565;
         }
       }(screen.bits_per_pixel));
@@ -493,7 +493,7 @@ bool TDisplayP4AirDriver::DeinitScreenBacklight() {
 bool TDisplayP4AirDriver::InitHi8561() {
   if (chip_.hi8561 == nullptr) {
     status_.hi8561.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitHi8561 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561 failed\n");
     return false;
   }
 
@@ -501,7 +501,7 @@ bool TDisplayP4AirDriver::InitHi8561() {
   if (!chip_.hi8561->Init(
           screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps)) {
     status_.hi8561.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitHi8561 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561 failed\n");
     return false;
   }
 
@@ -513,7 +513,7 @@ bool TDisplayP4AirDriver::InitHi8561() {
 bool TDisplayP4AirDriver::InitHi8561Touch() {
   if (!chip_.hi8561_touch->Init()) {
     status_.hi8561_touch.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitHi8561Touch failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
 
@@ -528,7 +528,7 @@ bool TDisplayP4AirDriver::InitHi8561Backlight() {
           ledc_mode_t::LEDC_LOW_SPEED_MODE)) {
     status_.hi8561_backlight.init_flag = false;
     LogMessage(
-        LogLevel::kChip, __FILE__, __LINE__, "InitHi8561Backlight failed\n");
+        LogLevel::kError, __FILE__, __LINE__, "InitHi8561Backlight failed\n");
     return false;
   }
 
@@ -543,13 +543,13 @@ bool TDisplayP4AirDriver::InitAw86224() {
     status_.aw86224.init_flag = false;
     status_.aw86224.ram_waveform_info =
         cpp_bus_driver::Aw862xx::RamWaveformInfo();
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAw86224 failed\n");
     return false;
   }
 
   const uint32_t detected_f0 = chip_.aw86224->GetF0Detection();
   if (detected_f0 == 0 || detected_f0 == static_cast<uint32_t>(-1)) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "Aw86224 F0 reference read failed\n");
   } else {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
@@ -569,7 +569,7 @@ bool TDisplayP4AirDriver::InitAw86224() {
         "InitAw86224 success (RAM library: %s)\n",
         status_.aw86224.ram_waveform_info.name);
   } else {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAw86224 failed\n");
   }
   return result;
 }
@@ -577,14 +577,14 @@ bool TDisplayP4AirDriver::InitAw86224() {
 bool TDisplayP4AirDriver::InitEs8389() {
   if ((bus_.xl9535_i2c_bus == nullptr) || (bus_.es8389_i2s_bus == nullptr)) {
     status_.es8389.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8389 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
     return false;
   }
 
   i2c_master_bus_handle_t i2c_bus_handle = bus_.xl9535_i2c_bus->bus_handle();
   if (i2c_bus_handle == nullptr) {
     status_.es8389.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8389 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
     return false;
   }
 
@@ -619,7 +619,7 @@ bool TDisplayP4AirDriver::InitEs8389() {
             return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_1152;
           default:
             LogMessage(
-                LogLevel::kInfo, __FILE__, __LINE__, "Value out of range\n");
+                LogLevel::kWarning, __FILE__, __LINE__, "Value out of range\n");
             return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_256;
         }
       }(device::es8389::kMclkMultiple),
@@ -636,13 +636,13 @@ bool TDisplayP4AirDriver::InitEs8389() {
             return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_32BIT;
           default:
             LogMessage(
-                LogLevel::kInfo, __FILE__, __LINE__, "Value out of range\n");
+                LogLevel::kWarning, __FILE__, __LINE__, "Value out of range\n");
             return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_16BIT;
         }
       }(device::es8389::kBitsPerSample));
   if (!result) {
     status_.es8389.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8389 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
     return false;
   }
 
@@ -699,7 +699,7 @@ bool TDisplayP4AirDriver::InitEs8389() {
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitEs8389 success\n");
   } else {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8389 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
   }
   return result;
 }
@@ -708,7 +708,7 @@ bool TDisplayP4AirDriver::ConfigEs8389() {
   if (!status_.es8389.init_flag || (es8389_input_codec_dev_ == nullptr) ||
       (es8389_output_codec_dev_ == nullptr)) {
     status_.es8389.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigEs8389 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8389 failed\n");
     return false;
   }
 
@@ -733,28 +733,28 @@ bool TDisplayP4AirDriver::ConfigEs8389() {
   bool result = true;
   int ret = esp_codec_dev_open(es8389_output_codec_dev_, &output_sample_info);
   if (ret != ESP_CODEC_DEV_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_codec_dev_open output failed (error code: %#X)\n", ret);
     result = false;
   }
 
   ret = esp_codec_dev_open(es8389_input_codec_dev_, &input_sample_info);
   if (ret != ESP_CODEC_DEV_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_codec_dev_open input failed (error code: %#X)\n", ret);
     result = false;
   }
 
   ret = esp_codec_dev_set_out_vol(es8389_output_codec_dev_, 100);
   if (ret != ESP_CODEC_DEV_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_codec_dev_set_out_vol failed (error code: %#X)\n", ret);
     result = false;
   }
 
   ret = esp_codec_dev_set_in_gain(es8389_input_codec_dev_, 20.0f);
   if (ret != ESP_CODEC_DEV_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_codec_dev_set_in_gain failed (error code: %#X)\n", ret);
     result = false;
   }
@@ -763,7 +763,7 @@ bool TDisplayP4AirDriver::ConfigEs8389() {
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "ConfigEs8389 success\n");
   } else {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigEs8389 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8389 failed\n");
   }
   return result;
 }
@@ -775,7 +775,7 @@ bool TDisplayP4AirDriver::InitLr1121() {
       2450.0, 125.0, 12, 7, RADIOLIB_LR11X0_LORA_SYNC_WORD_PRIVATE, 13, 8);
   if (ret != RADIOLIB_ERR_NONE) {
     status_.lr1121.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitLr1121 failed (error code: %d)\n", ret);
     return false;
   }
@@ -809,7 +809,7 @@ bool TDisplayP4AirDriver::InitNrf9151() {
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitNrf9151 success\n");
   } else {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitNrf9151 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitNrf9151 failed\n");
   }
   return result;
 }
@@ -826,13 +826,13 @@ bool TDisplayP4AirDriver::InitSpiffs(
   esp_err_t result = esp_vfs_spiffs_register(&conf);
   if (result != ESP_OK) {
     if (result == ESP_FAIL) {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+      LogMessage(LogLevel::kError, __FILE__, __LINE__,
           "Failed to mount or format filesystem (error code: %#X)\n", result);
     } else if (result == ESP_ERR_NOT_FOUND) {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+      LogMessage(LogLevel::kError, __FILE__, __LINE__,
           "Failed to find spiffs partition (error code: %#X)\n", result);
     } else {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+      LogMessage(LogLevel::kError, __FILE__, __LINE__,
           "Failed to initialize spiffs (error code: %#X)\n", result);
     }
     return false;
@@ -842,7 +842,7 @@ bool TDisplayP4AirDriver::InitSpiffs(
   size_t used = 0;
   result = esp_spiffs_info(conf.partition_label, &total, &used);
   if (result != ESP_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "Failed to get spiffs partition information (error code: %#X). "
         "formatting...\n",
         result);
@@ -854,12 +854,12 @@ bool TDisplayP4AirDriver::InitSpiffs(
       "Partition size: total: %zu bytes, used: %zu bytes\n", total, used);
 
   if (used > total) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "Number of used bytes cannot be larger than total performing "
         "esp_spiffs_check\n");
     result = esp_spiffs_check(conf.partition_label);
     if (result != ESP_OK) {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+      LogMessage(LogLevel::kError, __FILE__, __LINE__,
           "esp_spiffs_check failed (error code: %#X)\n", result);
       return false;
     }
@@ -899,7 +899,7 @@ bool TDisplayP4AirDriver::InitSdmmc(const char* base_path, int max_freq_khz) {
   esp_err_t result = esp_vfs_fat_sdmmc_mount(
       base_path, &host, &slot_config, &mount_config, &card);
   if (result != ESP_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_vfs_fat_sdmmc_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
     return false;
@@ -944,7 +944,7 @@ bool TDisplayP4AirDriver::InitSdspi(
   esp_err_t result =
       spi_bus_initialize(host_id, &bus_config, SDSPI_DEFAULT_DMA);
   if (result != ESP_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "spi_bus_initialize failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
     return false;
@@ -958,7 +958,7 @@ bool TDisplayP4AirDriver::InitSdspi(
   result = esp_vfs_fat_sdspi_mount(
       base_path, &host, &slot_config, &mount_config, &card);
   if (result != ESP_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_vfs_fat_sdspi_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
     return false;

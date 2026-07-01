@@ -149,7 +149,7 @@ driver.chip().sx1262;
 
 ## 日志配置
 
-`lilygo_device_driver` 提供可配置日志等级，用于控制调试信息、普通信息以及芯片/设备错误输出。
+`lilygo_device_driver` 提供可配置日志等级，用于控制调试信息、普通信息、警告信息和错误信息输出。
 
 在 ESP-IDF 工程中可以通过：
 

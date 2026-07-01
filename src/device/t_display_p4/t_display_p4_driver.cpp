@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-06-30 16:00:02
+ * @LastEditTime: 2026-07-01 14:05:22
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -254,7 +254,7 @@ bool TDisplayP4Driver::DetectScreenType() {
 bool TDisplayP4Driver::InitScreen() {
   if (!DetectScreenType()) {
     LogMessage(
-        LogLevel::kChip, __FILE__, __LINE__, "DetectScreenType failed\n");
+        LogLevel::kError, __FILE__, __LINE__, "DetectScreenType failed\n");
     return false;
   }
 
@@ -383,13 +383,13 @@ bool TDisplayP4Driver::InitKeyboard() {
 
   if (!InitXl9555()) {
     LogMessage(
-        LogLevel::kInfo, __FILE__, __LINE__, "Keyboard device not connected\n");
+        LogLevel::kError, __FILE__, __LINE__, "Keyboard device not connected\n");
     return false;
   }
 
   bool result = ConfigXl9555();
   if (!result) {
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "ConfigXl9555 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9555 failed\n");
     return false;
   }
 
@@ -408,7 +408,7 @@ bool TDisplayP4Driver::InitKeyboard() {
       cpp_bus_driver::Tool::GpioStatus::kPulldown);
 
   if (!result) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "Keyboard gpio failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "Keyboard gpio failed\n");
     return false;
   }
 
@@ -624,7 +624,7 @@ bool TDisplayP4Driver::SetKeyboardSleep(SleepLevel level, bool enable) {
         if (status_.cc1101.init_flag) {
           int16_t ret = chip_.cc1101->sleep();
           if (ret != RADIOLIB_ERR_NONE) {
-            LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+            LogMessage(LogLevel::kError, __FILE__, __LINE__,
                 "cc1101 sleep failed (error code: %d)\n", ret);
             result = false;
           }
@@ -632,7 +632,7 @@ bool TDisplayP4Driver::SetKeyboardSleep(SleepLevel level, bool enable) {
         if (status_.nrf24l01.init_flag) {
           int16_t ret = chip_.nrf24l01->sleep();
           if (ret != RADIOLIB_ERR_NONE) {
-            LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+            LogMessage(LogLevel::kError, __FILE__, __LINE__,
                 "nrf24l01 sleep failed (error code: %d)\n", ret);
             result = false;
           }
@@ -652,7 +652,7 @@ bool TDisplayP4Driver::SetKeyboardSleep(SleepLevel level, bool enable) {
         if (status_.cc1101.init_flag) {
           int16_t ret = chip_.cc1101->standby();
           if (ret != RADIOLIB_ERR_NONE) {
-            LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+            LogMessage(LogLevel::kError, __FILE__, __LINE__,
                 "cc1101 standby failed (error code: %d)\n", ret);
             result = false;
           }
@@ -660,7 +660,7 @@ bool TDisplayP4Driver::SetKeyboardSleep(SleepLevel level, bool enable) {
         if (status_.nrf24l01.init_flag) {
           int16_t ret = chip_.nrf24l01->standby();
           if (ret != RADIOLIB_ERR_NONE) {
-            LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+            LogMessage(LogLevel::kError, __FILE__, __LINE__,
                 "nrf24l01 standby failed (error code: %d)\n", ret);
             result = false;
           }
@@ -948,7 +948,7 @@ bool TDisplayP4Driver::InitPower() {
 bool TDisplayP4Driver::InitBq27220() {
   if (!chip_.bq27220->Init()) {
     status_.bq27220.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitBq27220 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBq27220 failed\n");
     return false;
   } else {
     cpp_bus_driver::Bq27220::CedvProfile battery_profile;
@@ -966,7 +966,7 @@ bool TDisplayP4Driver::InitBq27220() {
     if (result) {
       LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitBq27220 success\n");
     } else {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitBq27220 failed\n");
+      LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBq27220 failed\n");
     }
     return result;
   }
@@ -975,7 +975,7 @@ bool TDisplayP4Driver::InitBq27220() {
 bool TDisplayP4Driver::InitXl9535() {
   if (!chip_.xl9535->Init()) {
     status_.xl9535.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitXl9535 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitXl9535 failed\n");
     return false;
   } else {
     status_.xl9535.init_flag = true;
@@ -986,7 +986,7 @@ bool TDisplayP4Driver::InitXl9535() {
 
 bool TDisplayP4Driver::ConfigXl9535() {
   if (!status_.xl9535.init_flag) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigXl9535 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
     return false;
   }
 
@@ -1087,7 +1087,7 @@ bool TDisplayP4Driver::ConfigXl9535() {
   tool_->DelayMs(120);
 
   if (!result) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigXl9535 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
   }
   return result;
 }
@@ -1095,7 +1095,7 @@ bool TDisplayP4Driver::ConfigXl9535() {
 bool TDisplayP4Driver::InitSgm38121() {
   if (!chip_.sgm38121->Init()) {
     status_.sgm38121.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitSgm38121 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSgm38121 failed\n");
     return false;
   } else {
     bool result = true;
@@ -1148,7 +1148,7 @@ bool TDisplayP4Driver::InitSgm38121() {
     if (result) {
       LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSgm38121 success\n");
     } else {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitSgm38121 failed\n");
+      LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSgm38121 failed\n");
     }
     return result;
   }
@@ -1157,7 +1157,7 @@ bool TDisplayP4Driver::InitSgm38121() {
 bool TDisplayP4Driver::InitHi8561() {
   if (chip_.hi8561 == nullptr) {
     status_.hi8561.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitHi8561 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561 failed\n");
     return false;
   }
 
@@ -1165,7 +1165,7 @@ bool TDisplayP4Driver::InitHi8561() {
   if (!chip_.hi8561->Init(
           screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps)) {
     status_.hi8561.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitHi8561 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561 failed\n");
     return false;
   } else {
     status_.hi8561.init_flag = true;
@@ -1177,13 +1177,13 @@ bool TDisplayP4Driver::InitHi8561() {
 bool TDisplayP4Driver::InitHi8561Touch() {
   if (chip_.hi8561_touch == nullptr) {
     status_.hi8561_touch.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitHi8561Touch failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
 
   if (!chip_.hi8561_touch->Init()) {
     status_.hi8561_touch.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitHi8561Touch failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   } else {
     status_.hi8561_touch.init_flag = true;
@@ -1197,7 +1197,7 @@ bool TDisplayP4Driver::InitHi8561Backlight() {
   if (chip_.hi8561_backlight == nullptr) {
     status_.hi8561_backlight.init_flag = false;
     LogMessage(
-        LogLevel::kChip, __FILE__, __LINE__, "InitHi8561Backlight failed\n");
+        LogLevel::kError, __FILE__, __LINE__, "InitHi8561Backlight failed\n");
     return false;
   }
 
@@ -1205,7 +1205,7 @@ bool TDisplayP4Driver::InitHi8561Backlight() {
           ledc_timer_t::LEDC_TIMER_0, ledc_channel_t::LEDC_CHANNEL_0, 2000)) {
     status_.hi8561_backlight.init_flag = false;
     LogMessage(
-        LogLevel::kChip, __FILE__, __LINE__, "InitHi8561Backlight failed\n");
+        LogLevel::kError, __FILE__, __LINE__, "InitHi8561Backlight failed\n");
     return false;
   } else {
     status_.hi8561_backlight.init_flag = true;
@@ -1218,7 +1218,7 @@ bool TDisplayP4Driver::InitHi8561Backlight() {
 bool TDisplayP4Driver::InitRm69a10() {
   if (chip_.rm69a10 == nullptr) {
     status_.rm69a10.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitRm69a10 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitRm69a10 failed\n");
     return false;
   }
 
@@ -1226,7 +1226,7 @@ bool TDisplayP4Driver::InitRm69a10() {
   if (!chip_.rm69a10->Init(
           screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps)) {
     status_.rm69a10.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitRm69a10 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitRm69a10 failed\n");
     return false;
   } else {
     status_.rm69a10.init_flag = true;
@@ -1238,13 +1238,13 @@ bool TDisplayP4Driver::InitRm69a10() {
 bool TDisplayP4Driver::InitGt9895() {
   if (chip_.gt9895 == nullptr) {
     status_.gt9895.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitGt9895 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
     return false;
   }
 
   if (!chip_.gt9895->Init()) {
     status_.gt9895.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitGt9895 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
     return false;
   } else {
     status_.gt9895.init_flag = true;
@@ -1256,7 +1256,7 @@ bool TDisplayP4Driver::InitGt9895() {
 bool TDisplayP4Driver::InitPcf8563() {
   if (!chip_.pcf8563->Init()) {
     status_.pcf8563.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitPcf8563 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitPcf8563 failed\n");
     return false;
   } else {
     status_.pcf8563.init_flag = true;
@@ -1270,13 +1270,13 @@ bool TDisplayP4Driver::InitAw86224() {
     status_.aw86224.init_flag = false;
     status_.aw86224.ram_waveform_info =
         cpp_bus_driver::Aw862xx::RamWaveformInfo();
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAw86224 failed\n");
     return false;
   }
 
   const uint32_t detected_f0 = chip_.aw86224->GetF0Detection();
   if (detected_f0 == 0 || detected_f0 == static_cast<uint32_t>(-1)) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "Aw86224 F0 reference read failed\n");
   } else {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
@@ -1296,7 +1296,7 @@ bool TDisplayP4Driver::InitAw86224() {
         "InitAw86224 success (RAM library: %s)\n",
         status_.aw86224.ram_waveform_info.name);
   } else {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAw86224 failed\n");
   }
   return result;
 }
@@ -1304,13 +1304,13 @@ bool TDisplayP4Driver::InitAw86224() {
 bool TDisplayP4Driver::InitEs8311() {
   if (!chip_.es8311->Init()) {
     status_.es8311.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8311 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8311 failed\n");
     return false;
   } else {
     if (!chip_.es8311->Init(device::es8311::kMclkMultiple,
             device::es8311::kSampleRate, device::es8311::kBitsPerSample)) {
       status_.es8311.init_flag = false;
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8311 failed\n");
+      LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8311 failed\n");
       return false;
     } else {
       status_.es8311.init_flag = true;
@@ -1322,7 +1322,7 @@ bool TDisplayP4Driver::InitEs8311() {
 
 bool TDisplayP4Driver::ConfigEs8311() {
   if (!status_.es8311.init_flag) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigEs8311 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
     return false;
   }
 
@@ -1359,7 +1359,7 @@ bool TDisplayP4Driver::ConfigEs8311() {
   result &= chip_.es8311->SetDacVolume(191);
 
   if (!result) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigEs8311 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
   }
   return result;
 }
@@ -1368,12 +1368,12 @@ bool TDisplayP4Driver::InitL76k() {
   if (!chip_.l76k->Init()) {
     if (!bus_.l76k_uart_bus->SetBaudRate(115200)) {
       status_.l76k.init_flag = false;
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "SetBaudRate failed\n");
+      LogMessage(LogLevel::kError, __FILE__, __LINE__, "SetBaudRate failed\n");
       return false;
     }
     if (!chip_.l76k->Init()) {
       status_.l76k.init_flag = false;
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitL76k failed\n");
+      LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitL76k failed\n");
       return false;
     } else {
       bool result = true;
@@ -1387,7 +1387,7 @@ bool TDisplayP4Driver::InitL76k() {
       if (result) {
         LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitL76k success\n");
       } else {
-        LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitL76k failed\n");
+        LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitL76k failed\n");
       }
       return result;
     }
@@ -1405,7 +1405,7 @@ bool TDisplayP4Driver::InitL76k() {
     if (result) {
       LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitL76k success\n");
     } else {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitL76k failed\n");
+      LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitL76k failed\n");
     }
     return result;
   }
@@ -1414,7 +1414,7 @@ bool TDisplayP4Driver::InitL76k() {
 bool TDisplayP4Driver::InitIcm20948() {
   if (!chip_.icm20948->init() || !chip_.icm20948->initMagnetometer()) {
     status_.icm20948.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitIcm20948 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitIcm20948 failed\n");
     return false;
   }
 
@@ -1430,7 +1430,7 @@ bool TDisplayP4Driver::InitIcm20948() {
 bool TDisplayP4Driver::InitSx1262() {
   if (!chip_.sx1262->Init(10000000)) {
     status_.sx1262.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitSx1262 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSx1262 failed\n");
     return false;
   } else {
     status_.sx1262.init_flag = true;
@@ -1442,7 +1442,7 @@ bool TDisplayP4Driver::InitSx1262() {
 bool TDisplayP4Driver::InitXl9555() {
   if (!chip_.xl9555->Init()) {
     status_.xl9555.init_flag = false;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitXl9555 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitXl9555 failed\n");
     return false;
   } else {
     status_.xl9555.init_flag = true;
@@ -1453,7 +1453,7 @@ bool TDisplayP4Driver::InitXl9555() {
 
 bool TDisplayP4Driver::ConfigXl9555() {
   if (!status_.xl9555.init_flag) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigXl9555 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9555 failed\n");
     return false;
   }
 
@@ -1497,7 +1497,7 @@ bool TDisplayP4Driver::ConfigXl9555() {
   tool_->DelayMs(10);
 
   if (!result) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigXl9555 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9555 failed\n");
   }
   return result;
 }
@@ -1505,7 +1505,7 @@ bool TDisplayP4Driver::ConfigXl9555() {
 bool TDisplayP4Driver::InitTca8418() {
   if (!chip_.tca8418->Init()) {
     status_.tca8418.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitTca8418 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitTca8418 failed\n");
     return false;
   } else {
     bool result = true;
@@ -1521,7 +1521,7 @@ bool TDisplayP4Driver::InitTca8418() {
     if (result) {
       LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitTca8418 success\n");
     } else {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitTca8418 failed\n");
+      LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitTca8418 failed\n");
     }
     return result;
   }
@@ -1534,7 +1534,7 @@ bool TDisplayP4Driver::InitTca8418Backlight() {
           ledc_timer_bit_t ::LEDC_TIMER_5_BIT)) {
     status_.tca8418_backlight.init_flag = false;
     LogMessage(
-        LogLevel::kChip, __FILE__, __LINE__, "InitTca8418Backlight failed\n");
+        LogLevel::kError, __FILE__, __LINE__, "InitTca8418Backlight failed\n");
     return false;
   } else {
     status_.tca8418_backlight.init_flag = true;
@@ -1548,7 +1548,7 @@ bool TDisplayP4Driver::InitCc1101() {
   int16_t ret = chip_.cc1101->begin();
   if (ret != RADIOLIB_ERR_NONE) {
     status_.cc1101.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitCc1101 failed (error code: %d)\n", ret);
     return false;
   } else {
@@ -1561,7 +1561,7 @@ bool TDisplayP4Driver::InitCc1101() {
 bool TDisplayP4Driver::SetCc1101RfSwitch(Cc1101RfSwitch rf_switch) {
   if (!status_.xl9555.init_flag) {
     LogMessage(
-        LogLevel::kChip, __FILE__, __LINE__, "SetCc1101RfSwitch failed\n");
+        LogLevel::kError, __FILE__, __LINE__, "SetCc1101RfSwitch failed\n");
     return false;
   }
 
@@ -1599,7 +1599,7 @@ bool TDisplayP4Driver::SetCc1101RfSwitch(Cc1101RfSwitch rf_switch) {
 
   if (!result) {
     LogMessage(
-        LogLevel::kChip, __FILE__, __LINE__, "SetCc1101RfSwitch failed\n");
+        LogLevel::kError, __FILE__, __LINE__, "SetCc1101RfSwitch failed\n");
   }
   return result;
 }
@@ -1608,7 +1608,7 @@ bool TDisplayP4Driver::InitNrf24l01() {
   int16_t ret = chip_.nrf24l01->begin();
   if (ret != RADIOLIB_ERR_NONE) {
     status_.nrf24l01.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitNrf24l01 failed (error code: %d)\n", ret);
     return false;
   } else {
@@ -1630,13 +1630,13 @@ bool TDisplayP4Driver::InitSpiffs(
   esp_err_t result = esp_vfs_spiffs_register(&conf);
   if (result != ESP_OK) {
     if (result == ESP_FAIL) {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+      LogMessage(LogLevel::kError, __FILE__, __LINE__,
           "Failed to mount or format filesystem (error code: %#X)\n", result);
     } else if (result == ESP_ERR_NOT_FOUND) {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+      LogMessage(LogLevel::kError, __FILE__, __LINE__,
           "Failed to find spiffs partition (error code: %#X)\n", result);
     } else {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+      LogMessage(LogLevel::kError, __FILE__, __LINE__,
           "Failed to initialize spiffs (error code: %#X)\n", result);
     }
     return false;
@@ -1645,7 +1645,7 @@ bool TDisplayP4Driver::InitSpiffs(
   size_t total = 0, used = 0;
   result = esp_spiffs_info(conf.partition_label, &total, &used);
   if (result != ESP_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "Failed to get spiffs partition information (error code: %#X). "
         "formatting...\n",
         result);
@@ -1657,17 +1657,17 @@ bool TDisplayP4Driver::InitSpiffs(
       "Partition size: total: %d bytes, used: %d bytes\n", total, used);
 
   if (used > total) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "Number of used bytes cannot be larger than total performing "
         "esp_spiffs_check\n");
     result = esp_spiffs_check(conf.partition_label);
     if (result != ESP_OK) {
-      LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+      LogMessage(LogLevel::kError, __FILE__, __LINE__,
           "esp_spiffs_check failed (error code: %#X)\n", result);
       return false;
     } else {
       LogMessage(
-          LogLevel::kChip, __FILE__, __LINE__, "esp_spiffs_check success\n");
+          LogLevel::kError, __FILE__, __LINE__, "esp_spiffs_check success\n");
     }
   }
 
@@ -1702,7 +1702,7 @@ bool TDisplayP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
   esp_err_t result = esp_vfs_fat_sdmmc_mount(
       base_path, &host, &slot_config, &mount_config, &card);
   if (result != ESP_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_vfs_fat_sdmmc_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
     return false;
@@ -1748,7 +1748,7 @@ bool TDisplayP4Driver::InitSdspi(
   esp_err_t result =
       spi_bus_initialize(host_id, &bus_config, SDSPI_DEFAULT_DMA);
   if (result != ESP_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "spi_bus_initialize failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
     return false;
@@ -1762,7 +1762,7 @@ bool TDisplayP4Driver::InitSdspi(
   result = esp_vfs_fat_sdspi_mount(
       base_path, &host, &slot_config, &mount_config, &card);
   if (result != ESP_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_vfs_fat_sdspi_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
     return false;

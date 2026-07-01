@@ -22,6 +22,8 @@ menu "lilygo_device_driver configuration"
                 bool "Debug"
             config LILYGO_DEVICE_DRIVER_LOG_LEVEL_INFO
                 bool "Info"
+            config LILYGO_DEVICE_DRIVER_LOG_LEVEL_WARNING
+                bool "Warning"
             config LILYGO_DEVICE_DRIVER_LOG_LEVEL_ERROR
                 bool "Error"
             config LILYGO_DEVICE_DRIVER_LOG_LEVEL_NONE

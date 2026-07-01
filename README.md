@@ -149,7 +149,7 @@ driver.chip().sx1262;
 
 ## Log Configuration
 
-`lilygo_device_driver` provides selectable log levels for debug information, normal information, and chip/device errors.
+`lilygo_device_driver` provides selectable log levels for debug information, normal information, warning messages, and error messages.
 
 In ESP-IDF projects, run:
 

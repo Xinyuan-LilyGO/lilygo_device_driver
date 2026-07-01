@@ -277,7 +277,7 @@ bool TGlassesP4Driver::InitPower() {
 bool TGlassesP4Driver::InitSy6970() {
   if (!chip_.sy6970->Init()) {
     status_.sy6970.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitSy6970 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSy6970 failed\n");
     return false;
   }
 
@@ -289,7 +289,7 @@ bool TGlassesP4Driver::InitSy6970() {
 bool TGlassesP4Driver::InitBq27220() {
   if (!chip_.bq27220->Init()) {
     status_.bq27220.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitBq27220 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBq27220 failed\n");
     return false;
   }
 
@@ -308,7 +308,7 @@ bool TGlassesP4Driver::InitBq27220() {
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitBq27220 success\n");
   } else {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitBq27220 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBq27220 failed\n");
   }
   return result;
 }
@@ -316,7 +316,7 @@ bool TGlassesP4Driver::InitBq27220() {
 bool TGlassesP4Driver::InitSgm38121() {
   if (!chip_.sgm38121->Init()) {
     status_.sgm38121.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitSgm38121 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSgm38121 failed\n");
     return false;
   }
 
@@ -370,7 +370,7 @@ bool TGlassesP4Driver::InitSgm38121() {
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSgm38121 success\n");
   } else {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitSgm38121 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSgm38121 failed\n");
   }
   return result;
 }
@@ -393,7 +393,7 @@ bool TGlassesP4Driver::InitScreen() {
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitScreen success\n");
   } else {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitScreen failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitScreen failed\n");
   }
   return result;
 }
@@ -417,7 +417,7 @@ bool TGlassesP4Driver::DeinitScreen() {
 bool TGlassesP4Driver::InitS023msafjf10111e1() {
   if (!chip_.s023msafjf10111e1->Init()) {
     status_.s023msafjf10111e1.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitS023msafjf10111e1 failed\n");
     return false;
   }
@@ -432,7 +432,7 @@ bool TGlassesP4Driver::InitS023msafjf10111e1() {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
         "InitS023msafjf10111e1 success\n");
   } else {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitS023msafjf10111e1 failed\n");
   }
   return result;
@@ -443,7 +443,7 @@ bool TGlassesP4Driver::InitAw86224() {
     status_.aw86224.init_flag = false;
     status_.aw86224.ram_waveform_selection =
         cpp_bus_driver::Aw862xx::RamWaveformSelection();
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAw86224 failed\n");
     return false;
   }
 
@@ -456,7 +456,7 @@ bool TGlassesP4Driver::InitAw86224() {
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitAw86224 success\n");
   } else {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitAw86224 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAw86224 failed\n");
   }
   return result;
 }
@@ -464,14 +464,14 @@ bool TGlassesP4Driver::InitAw86224() {
 bool TGlassesP4Driver::InitEs8311() {
   if (!chip_.es8311->Init()) {
     status_.es8311.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8311 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8311 failed\n");
     return false;
   }
 
   if (!chip_.es8311->Init(device::es8311::kMclkMultiple,
           device::es8311::kSampleRate, device::es8311::kBitsPerSample)) {
     status_.es8311.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitEs8311 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8311 failed\n");
     return false;
   }
 
@@ -482,7 +482,7 @@ bool TGlassesP4Driver::InitEs8311() {
 
 bool TGlassesP4Driver::ConfigEs8311() {
   if (!status_.es8311.init_flag) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigEs8311 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
     return false;
   }
 
@@ -520,7 +520,7 @@ bool TGlassesP4Driver::ConfigEs8311() {
   result &= chip_.es8311->SetDacVolume(191);
 
   if (!result) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "ConfigEs8311 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
   }
   return result;
 }
@@ -528,7 +528,7 @@ bool TGlassesP4Driver::ConfigEs8311() {
 bool TGlassesP4Driver::InitSx1262() {
   if (!chip_.sx1262->Init(10000000)) {
     status_.sx1262.init_flag = false;
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__, "InitSx1262 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSx1262 failed\n");
     return false;
   }
 
@@ -565,7 +565,7 @@ bool TGlassesP4Driver::InitSdmmc(
   esp_err_t result = esp_vfs_fat_sdmmc_mount(
       base_path, &host, &slot_config, &mount_config, &card);
   if (result != ESP_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_vfs_fat_sdmmc_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
     return false;
@@ -610,7 +610,7 @@ bool TGlassesP4Driver::InitSdspi(
   esp_err_t result =
       spi_bus_initialize(host_id, &bus_config, SDSPI_DEFAULT_DMA);
   if (result != ESP_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "spi_bus_initialize failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
     return false;
@@ -624,7 +624,7 @@ bool TGlassesP4Driver::InitSdspi(
   result = esp_vfs_fat_sdspi_mount(
       base_path, &host, &slot_config, &mount_config, &card);
   if (result != ESP_OK) {
-    LogMessage(LogLevel::kChip, __FILE__, __LINE__,
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_vfs_fat_sdspi_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
     return false;
