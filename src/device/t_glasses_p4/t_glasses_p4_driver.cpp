@@ -223,7 +223,7 @@ bool TGlassesP4Driver::SetSleep(SleepLevel level, bool enable) {
   bool result = true;
 
   switch (level) {
-    case SleepLevel::kChipSleep:
+    case SleepLevel::kLight:
       if (enable) {
         if (status_.s023msafjf10111e1.init_flag) {
           result &= chip_.s023msafjf10111e1->SetBrightness(0);
@@ -243,7 +243,7 @@ bool TGlassesP4Driver::SetSleep(SleepLevel level, bool enable) {
         }
       }
       break;
-    case SleepLevel::kPowerOff:
+    case SleepLevel::kDeep:
       if (enable) {
         result &= DeinitScreen();
         result &= tool_->GpioWrite(gpio::power::kEn5v0, false);

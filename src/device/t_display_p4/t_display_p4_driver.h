@@ -98,8 +98,8 @@ class TDisplayP4Driver {
  public:
   enum class InitMode { kAsync, kSync };
   enum class SleepLevel {
-    kChipSleep,
-    kPowerOff,
+    kLight,
+    kDeep,
   };
 
   enum class Cc1101RfSwitch {

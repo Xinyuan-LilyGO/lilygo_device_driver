@@ -86,8 +86,8 @@ class TDisplayP4AirDriver {
  public:
   enum class InitMode { kAsync, kSync };
   enum class SleepLevel {
-    kChipSleep,
-    kPowerOff,
+    kLight,
+    kDeep,
   };
   enum class UartTarget {
     kEsp32p4,

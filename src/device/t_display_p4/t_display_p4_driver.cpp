@@ -619,7 +619,7 @@ bool TDisplayP4Driver::SetKeyboardSleep(SleepLevel level, bool enable) {
   bool result = true;
 
   switch (level) {
-    case SleepLevel::kChipSleep:
+    case SleepLevel::kLight:
       if (enable) {
         if (status_.cc1101.init_flag) {
           int16_t ret = chip_.cc1101->sleep();
@@ -667,7 +667,7 @@ bool TDisplayP4Driver::SetKeyboardSleep(SleepLevel level, bool enable) {
         }
       }
       break;
-    case SleepLevel::kPowerOff:
+    case SleepLevel::kDeep:
       if (enable) {
         result &= DeinitKeyboard();
       } else {
@@ -699,7 +699,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
   bool result = true;
 
   switch (level) {
-    case SleepLevel::kChipSleep:
+    case SleepLevel::kLight:
       if (enable) {
         switch (screen_type()) {
           case device::ScreenType::kHi8561:
@@ -771,16 +771,12 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
 
         if (status_.xl9535.init_flag) {
           result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kEsp32c6En, 0);
-          result &= chip_.xl9535->GpioWrite(
               gpio::xl9535::kSdPowerEn, 1);
           result &= chip_.xl9535->GpioWrite(
               gpio::xl9535::kPowerEn5v0, 0);
         }
       } else {
         if (status_.xl9535.init_flag) {
-          result &= chip_.xl9535->GpioWrite(
-              gpio::xl9535::kEsp32c6En, 1);
           result &= chip_.xl9535->GpioWrite(
               gpio::xl9535::kSdPowerEn, 0);
           result &= chip_.xl9535->GpioWrite(
@@ -851,7 +847,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
         result &= SetKeyboardSleep(level, enable);
       }
       break;
-    case SleepLevel::kPowerOff:
+    case SleepLevel::kDeep:
       if (enable) {
         if (status_.icm20948.init_flag) {
           chip_.icm20948->sleep(true);

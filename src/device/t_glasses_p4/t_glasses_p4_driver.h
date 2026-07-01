@@ -98,8 +98,8 @@ class TGlassesP4Driver {
  public:
   enum class InitMode { kAsync, kSync };
   enum class SleepLevel {
-    kChipSleep,
-    kPowerOff,
+    kLight,
+    kDeep,
   };
 
   struct Bus {

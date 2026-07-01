@@ -186,7 +186,7 @@ bool TDisplayP4AirDriver::SetSleep(SleepLevel level, bool enable) {
   bool result = true;
 
   switch (level) {
-    case SleepLevel::kChipSleep:
+    case SleepLevel::kLight:
       if (enable) {
         if (status_.hi8561.init_flag) {
           result &= chip_.hi8561->SetScreenOff(true);
@@ -198,7 +198,7 @@ bool TDisplayP4AirDriver::SetSleep(SleepLevel level, bool enable) {
       }
       break;
 
-    case SleepLevel::kPowerOff:
+    case SleepLevel::kDeep:
       if (enable) {
         result &= DeinitScreenBacklight();
         result &= DeinitTouch();
