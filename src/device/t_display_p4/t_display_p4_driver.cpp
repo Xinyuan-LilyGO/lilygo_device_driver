@@ -2,7 +2,7 @@
  * @Description: None
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-07-01 14:05:22
+ * @LastEditTime: 2026-07-08 09:36:56
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -470,16 +470,18 @@ bool TDisplayP4Driver::DeinitKeyboard() {
 bool TDisplayP4Driver::InitDrivers(InitMode mode) {
   bool result = true;
 
-  InitXl9535();
-  InitPower();
+  result &= InitXl9535();
+  result &= InitPower();
   result &= ConfigXl9535();
 
-  InitSgm38121();
+  result &= InitSgm38121();
 
   result &= bus_.icm20948_i2c_bus->set_bus_handle(
       bus_.sgm38121_i2c_bus->bus_handle());
   result &=
       bus_.icm20948_i2c_bus->begin(gpio::icm20948::kSda, gpio::icm20948::kScl);
+
+  result &= InitBq27220();
 
   if (mode == InitMode::kAsync) {
     result &= (xTaskCreate(
@@ -500,14 +502,6 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
                      vTaskDelete(NULL);
                    },
                    "InitKeyboardTask", 4096, this, 3, NULL) == pdPASS);
-
-    result &= (xTaskCreate(
-                   [](void* arg) {
-                     auto self = static_cast<TDisplayP4Driver*>(arg);
-                     self->InitBq27220();
-                     vTaskDelete(NULL);
-                   },
-                   "InitBq27220Task", 4096, this, 3, NULL) == pdPASS);
 
     result &= (xTaskCreate(
                    [](void* arg) {
@@ -566,50 +560,24 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
                    },
                    "InitSdmmcTask", 4096, this, 3, NULL) == pdPASS);
   } else {
-    if (InitScreen()) {
-      InitTouch();
-      InitScreenBacklight();
+    const bool screen_result = InitScreen();
+    result &= screen_result;
+    if (screen_result) {
+      result &= InitTouch();
+      result &= InitScreenBacklight();
     }
 
     InitKeyboard();
 
-    InitBq27220();
-    InitPcf8563();
-    InitAw86224();
-    InitEs8311();
+    result &= InitPcf8563();
+    result &= InitAw86224();
+    result &= InitEs8311();
     result &= ConfigEs8311();
-    InitL76k();
-    InitIcm20948();
-    InitSx1262();
+    result &= InitL76k();
+    result &= InitIcm20948();
+    result &= InitSx1262();
 
     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
-
-    result &= status_.xl9535.init_flag;
-    result &= status_.sgm38121.init_flag;
-
-    switch (screen_type()) {
-      case device::ScreenType::kHi8561:
-        result &= status_.hi8561.init_flag;
-        result &= status_.hi8561_touch.init_flag;
-        break;
-      case device::ScreenType::kRm69a10:
-        result &= status_.rm69a10.init_flag;
-        result &= status_.gt9895.init_flag;
-        break;
-      default:
-        result = false;
-        break;
-    }
-
-    result &= status_.bq27220.init_flag;
-    result &= status_.pcf8563.init_flag;
-    result &= status_.aw86224.init_flag;
-    result &= status_.es8311.init_flag;
-    result &= status_.l76k.init_flag;
-    result &= status_.icm20948.init_flag;
-    result &= status_.sx1262.init_flag;
-
-    result &= status_.sd_card.init_flag;
   }
 
   return result;
