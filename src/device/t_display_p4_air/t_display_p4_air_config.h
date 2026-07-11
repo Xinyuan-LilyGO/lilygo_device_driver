@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-06-17 10:55:00
+ * @LastEditTime: 2026-07-11 09:53:30
  * @License: GPL 3.0
  */
 
@@ -83,8 +83,8 @@ inline constexpr int kTouchInt = 52;
 }  // namespace hi8561
 
 namespace axp517 {
-inline constexpr int kSda = i2c::kPort2Sda;
-inline constexpr int kScl = i2c::kPort2Scl;
+inline constexpr int kSda = i2c::kPort1Sda;
+inline constexpr int kScl = i2c::kPort1Scl;
 }  // namespace axp517
 
 namespace aw86224 {
@@ -162,10 +162,10 @@ inline constexpr int kSdioD3 = sdio2::kD3;
 }  // namespace esp32c5
 
 namespace nrf9151 {
-inline constexpr int kUartRx = 23;
-inline constexpr int kUartTx = 22;
-inline constexpr int kUartRts = 20;
-inline constexpr int kUartCts = 21;
+inline constexpr int kUartRx = 22;
+inline constexpr int kUartTx = 23;
+inline constexpr int kUartRts = 21;
+inline constexpr int kUartCts = 20;
 }  // namespace nrf9151
 }  // namespace gpio
 

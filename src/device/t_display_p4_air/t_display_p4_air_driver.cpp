@@ -2,8 +2,7 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
-
- * @LastEditTime: 2026-06-18 16:20:45
+ * @LastEditTime: 2026-07-11 09:56:00
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -50,15 +49,15 @@ const device::ScreenInfo& TDisplayP4AirDriver::screen_info() const {
 void TDisplayP4AirDriver::CreateDrivers() {
   tool_ = std::make_unique<cpp_bus_driver::Tool>();
 
-  bus_.axp517_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::i2c::kPort2Sda, gpio::i2c::kPort2Scl, I2C_NUM_0);
+  bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
+      gpio::sgm38121::kSda, gpio::sgm38121::kScl, I2C_NUM_0);
   bus_.xl9535_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
-      gpio::i2c::kPort1Sda, gpio::i2c::kPort1Scl, I2C_NUM_1);
+      gpio::xl9535::kSda, gpio::xl9535::kScl, I2C_NUM_1);
 
-  bus_.sgm38121_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.axp517_i2c_bus);
+  bus_.axp517_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
   bus_.hi8561_i2c_touch_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.axp517_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
   bus_.aw86224_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
 
