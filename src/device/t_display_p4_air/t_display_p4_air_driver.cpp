@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_driver
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-07-11 09:56:00
+ * @LastEditTime: 2026-07-11 14:54:38
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -88,6 +88,8 @@ void TDisplayP4AirDriver::CreateDrivers() {
       bus_.hi8561_i2c_touch_bus, device::hi8561::kTouchI2cAddress);
   chip_.hi8561_backlight =
       std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBacklight);
+  chip_.nrf9151 =
+      std::make_unique<cpp_bus_driver::Nrf9151>(bus_.nrf9151_uart_bus);
 
   bus_.lr1121_radiolib_hal = new RadiolibCppBusDriverHal(
       bus_.lr1121_spi_bus, 10000000, gpio::lr1121::kCs);
@@ -801,8 +803,38 @@ bool TDisplayP4AirDriver::InitLr1121() {
 }
 
 bool TDisplayP4AirDriver::InitNrf9151() {
-  bool result = true;
-  result &= bus_.nrf9151_uart_bus->Init(device::nrf9151::kDefaultBaudRate);
+  bool result = chip_.nrf9151->Init(device::nrf9151::kDefaultBaudRate,
+      device::nrf9151::kDefaultCommandTimeoutMs);
+
+  if (result) {
+    cpp_bus_driver::Nrf9151::SerialModemVersion serial_modem_version;
+    if (chip_.nrf9151->GetSerialModemVersion(&serial_modem_version,
+            device::nrf9151::kDefaultCommandTimeoutMs)) {
+      LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+          "Nrf9151 Serial Modem version: %s, NCS version: %s\n",
+          serial_modem_version.application.c_str(),
+          serial_modem_version.ncs.c_str());
+      if (!serial_modem_version.customer.empty()) {
+        LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+            "Nrf9151 customer version: %s\n",
+            serial_modem_version.customer.c_str());
+      }
+    } else {
+      LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
+          "Get Nrf9151 Serial Modem version failed\n");
+    }
+
+    std::string modem_firmware_version;
+    if (chip_.nrf9151->GetModemFirmwareVersion(&modem_firmware_version,
+            device::nrf9151::kDefaultCommandTimeoutMs)) {
+      LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+          "Nrf9151 modem firmware version: %s\n",
+          modem_firmware_version.c_str());
+    } else {
+      LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
+          "Get Nrf9151 modem firmware version failed\n");
+    }
+  }
 
   status_.nrf9151.init_flag = result;
   if (result) {

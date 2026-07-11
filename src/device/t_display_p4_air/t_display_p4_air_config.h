@@ -2,7 +2,7 @@
  * @Description: t_display_p4_air_config
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-07-11 09:53:30
+ * @LastEditTime: 2026-07-11 14:47:34
  * @License: GPL 3.0
  */
 
@@ -298,6 +298,7 @@ inline constexpr const char* kBasePath = "/sdcard";
 
 namespace nrf9151 {
 inline constexpr int kDefaultBaudRate = 115200;
+inline constexpr uint32_t kDefaultCommandTimeoutMs = 500;
 }  // namespace nrf9151
 }  // namespace device
 }  // namespace lilygo_device_driver::t_display_p4_air

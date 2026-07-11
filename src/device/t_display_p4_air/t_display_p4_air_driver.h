@@ -117,6 +117,7 @@ class TDisplayP4AirDriver {
     std::unique_ptr<cpp_bus_driver::Hi8561> hi8561;
     std::unique_ptr<cpp_bus_driver::Hi8561Touch> hi8561_touch;
     std::unique_ptr<cpp_bus_driver::Pwm> hi8561_backlight;
+    std::unique_ptr<cpp_bus_driver::Nrf9151> nrf9151;
 
     LR1121* lr1121 = nullptr;
   };
