@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 
 #include "ICM20948_WE.h"
 #include "cpp_bus_driver_library.h"
@@ -364,6 +365,18 @@ class TDisplayP4Driver {
   bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
   /**
+   * @brief 检查已挂载 SD 卡是否仍可响应 SDMMC 命令。
+   * @return SD 卡已挂载且可访问时返回 true，否则返回 false。
+   */
+  bool IsSdmmcReady() const;
+
+  /**
+   * @brief 卸载 SD 卡文件系统并释放 SDMMC 主机资源。
+   * @return 卸载成功或当前未挂载时返回 true，否则返回 false。
+   */
+  bool DeinitSdmmc();
+
+  /**
    * @brief 通过 SDSPI 主机挂载 SD 卡。
    * @param base_path SD 卡挂载路径。
    * @param host_id SD 卡使用的 SPI 主机。
@@ -371,13 +384,15 @@ class TDisplayP4Driver {
    * @return SD 卡挂载成功时返回 true，否则返回 false。
    */
   bool InitSdspi(const char* base_path, spi_host_device_t host_id,
-      int max_freq_khz = SDMMC_FREQ_DEFAULT);
+                 int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
  private:
   std::unique_ptr<cpp_bus_driver::Tool> tool_;
   Bus bus_;
   Chip chip_;
   Status status_;
+  sdmmc_card_t* sd_card_ = nullptr;
+  std::string sd_card_base_path_;
   const t_display_p4::device::ScreenInfo* screen_info_ = nullptr;
   bool keyboard_connected_ = false;
 

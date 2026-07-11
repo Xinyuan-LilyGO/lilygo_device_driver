@@ -1640,11 +1640,18 @@ bool TDisplayP4Driver::InitSpiffs(
 }
 
 bool TDisplayP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
+  if (base_path == nullptr || base_path[0] == '\0') {
+    return false;
+  }
+  if (sd_card_ != nullptr && !DeinitSdmmc()) {
+    return false;
+  }
+
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
       .format_if_mount_failed = false,
       .max_files = 5,
       .allocation_unit_size = 16 * 1024,
-      .disk_status_check_enable = false,
+      .disk_status_check_enable = true,
       .use_one_fat = false,
   };
 
@@ -1663,18 +1670,47 @@ bool TDisplayP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
   slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
   sdmmc_card_t* card = nullptr;
-  esp_err_t result = esp_vfs_fat_sdmmc_mount(
-      base_path, &host, &slot_config, &mount_config, &card);
+  esp_err_t result = esp_vfs_fat_sdmmc_mount(base_path, &host, &slot_config,
+                                             &mount_config, &card);
   if (result != ESP_OK) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "esp_vfs_fat_sdmmc_mount failed (error code: %#X)\n", result);
+               "esp_vfs_fat_sdmmc_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
     return false;
   }
 
   sdmmc_card_print_info(stdout, card);
 
+  sd_card_ = card;
+  sd_card_base_path_ = base_path;
   status_.sd_card.init_flag = true;
+  return true;
+}
+
+bool TDisplayP4Driver::IsSdmmcReady() const {
+  return status_.sd_card.init_flag && sd_card_ != nullptr &&
+         sdmmc_get_status(sd_card_) == ESP_OK;
+}
+
+bool TDisplayP4Driver::DeinitSdmmc() {
+  if (sd_card_ == nullptr) {
+    status_.sd_card.init_flag = false;
+    sd_card_base_path_.clear();
+    return true;
+  }
+
+  const esp_err_t result =
+      esp_vfs_fat_sdcard_unmount(sd_card_base_path_.c_str(), sd_card_);
+  if (result != ESP_OK) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+               "esp_vfs_fat_sdcard_unmount failed (error code: %#X)\n", result);
+    status_.sd_card.init_flag = false;
+    return false;
+  }
+
+  sd_card_ = nullptr;
+  sd_card_base_path_.clear();
+  status_.sd_card.init_flag = false;
   return true;
 }
 
