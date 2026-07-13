@@ -11,8 +11,6 @@ if(CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4)
             "./src/"
             "./src/chip/esp32p4/"
             "./src/device/t_glasses_p4/"
-            "./src/camera/ov2710/"
-            "./src/camera/sc2336/"
     )
     list(APPEND requires
             "cpp_bus_driver")
@@ -22,8 +20,6 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR)
             "./src/"
             "./src/chip/esp32p4/"
             "./src/device/t_display_p4_air/"
-            "./src/camera/ov2710/"
-            "./src/camera/sc2336/"
         )
     set(requires
             "cpp_bus_driver"
@@ -47,8 +43,6 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
             "./src/"
             "./src/chip/esp32p4/"
             "./src/device/t_display_p4/"
-            "./src/camera/ov2710/"
-            "./src/camera/sc2336/"
         )
     list(APPEND requires
             "cpp_bus_driver"
