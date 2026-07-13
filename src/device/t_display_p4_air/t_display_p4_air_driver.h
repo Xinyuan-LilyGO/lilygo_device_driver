@@ -200,6 +200,78 @@ class TDisplayP4AirDriver {
   }
 
   /**
+   * @brief 判断 AXP517 电源芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsAxp517Ready() const;
+
+  /**
+   * @brief 判断 XL9535 IO 扩展芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsXl9535Ready() const;
+
+  /**
+   * @brief 判断 SGM38121 电源芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsSgm38121Ready() const;
+
+  /**
+   * @brief 判断 AW86224 振动芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsAw86224Ready() const;
+
+  /**
+   * @brief 判断 HI8561 屏幕芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsHi8561Ready() const;
+
+  /**
+   * @brief 判断 HI8561 触摸芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsHi8561TouchReady() const;
+
+  /**
+   * @brief 判断 HI8561 背光驱动是否已经初始化完成。
+   * @return 背光驱动可用返回 true，否则返回 false。
+   */
+  bool IsHi8561BacklightReady() const;
+
+  /**
+   * @brief 判断 ES8389 音频编解码器是否已经初始化完成。
+   * @return 音频编解码器可用返回 true，否则返回 false。
+   */
+  bool IsEs8389Ready() const;
+
+  /**
+   * @brief 判断 LR1121 射频芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsLr1121Ready() const;
+
+  /**
+   * @brief 判断 NRF9151 通信模块是否已经初始化完成。
+   * @return 模块可用返回 true，否则返回 false。
+   */
+  bool IsNrf9151Ready() const;
+
+  /**
+   * @brief 判断当前屏幕及其背光总线是否已经可用。
+   * @return 屏幕可用返回 true，否则返回 false。
+   */
+  bool IsScreenReady() const;
+
+  /**
+   * @brief 判断当前屏幕对应的触摸芯片是否已经可用。
+   * @return 触摸芯片可用返回 true，否则返回 false。
+   */
+  bool IsTouchReady() const;
+
+  /**
    * @brief 创建设备驱动指针。
    */
   void CreateDrivers();
@@ -276,6 +348,12 @@ class TDisplayP4AirDriver {
   bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
   /**
+   * @brief 检查已挂载 SD 卡是否仍可响应 SDMMC 命令。
+   * @return SD 卡已挂载且可访问时返回 true，否则返回 false。
+   */
+  bool IsSdmmcReady() const;
+
+  /**
    * @brief 通过 SDSPI 主机挂载 SD 卡。
    * @param base_path SD 卡挂载路径。
    * @param host_id SD 卡使用的 SPI 主机。
@@ -290,6 +368,7 @@ class TDisplayP4AirDriver {
   Bus bus_;
   Chip chip_;
   Status status_;
+  sdmmc_card_t* sd_card_ = nullptr;
   const t_display_p4_air::device::ScreenInfo* screen_info_ = nullptr;
 
   const audio_codec_ctrl_if_t* es8389_ctrl_if_ = nullptr;

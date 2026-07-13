@@ -40,7 +40,7 @@ driver.Init();
 
 auto& es8311 = driver.chip().es8311;
 auto& es8311_i2c = driver.bus().es8311_i2c_bus;
-bool es8311_ready = driver.status().es8311.init_flag;
+bool es8311_ready = driver.IsEs8311Ready();
 ```
 
 ### 独立的板级配置文件
@@ -103,7 +103,7 @@ extern "C" void app_main(void) {
     return;
   }
 
-  if (driver.status().pcf8563.init_flag) {
+  if (driver.IsPcf8563Ready()) {
     auto& rtc = driver.chip().pcf8563;
     // 在这里使用 rtc
   }

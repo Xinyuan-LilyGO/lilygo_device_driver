@@ -7,6 +7,8 @@
  */
 #include "t_display_p4_air_driver.h"
 
+#include "sdmmc_cmd.h"
+
 namespace lilygo_device_driver {
 namespace gpio = t_display_p4_air::gpio;
 namespace device = t_display_p4_air::device;
@@ -44,6 +46,58 @@ TDisplayP4AirDriver& TDisplayP4AirDriver::GetInstance() {
 
 const device::ScreenInfo& TDisplayP4AirDriver::screen_info() const {
   return *(screen_info_ == nullptr ? kDefaultScreenInfo : screen_info_);
+}
+
+bool TDisplayP4AirDriver::IsAxp517Ready() const {
+  return status_.axp517.init_flag && chip_.axp517 != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsXl9535Ready() const {
+  return status_.xl9535.init_flag && chip_.xl9535 != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsSgm38121Ready() const {
+  return status_.sgm38121.init_flag && chip_.sgm38121 != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsAw86224Ready() const {
+  return status_.aw86224.init_flag && chip_.aw86224 != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsHi8561Ready() const {
+  return status_.hi8561.init_flag && chip_.hi8561 != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsHi8561TouchReady() const {
+  return status_.hi8561_touch.init_flag && chip_.hi8561_touch != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsHi8561BacklightReady() const {
+  return status_.hi8561_backlight.init_flag &&
+         chip_.hi8561_backlight != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsEs8389Ready() const {
+  return status_.es8389.init_flag && es8389_input_codec_dev_ != nullptr &&
+         es8389_output_codec_dev_ != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsLr1121Ready() const {
+  return status_.lr1121.init_flag && chip_.lr1121 != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsNrf9151Ready() const {
+  return status_.nrf9151.init_flag && chip_.nrf9151 != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsScreenReady() const {
+  return bus_.screen_mipi_bus != nullptr &&
+         bus_.screen_mipi_bus->device_handle() != nullptr &&
+         IsHi8561Ready() && IsHi8561BacklightReady();
+}
+
+bool TDisplayP4AirDriver::IsTouchReady() const {
+  return IsHi8561TouchReady();
 }
 
 void TDisplayP4AirDriver::CreateDrivers() {
@@ -933,12 +987,19 @@ bool TDisplayP4AirDriver::InitSdmmc(const char* base_path, int max_freq_khz) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_vfs_fat_sdmmc_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
+    sd_card_ = nullptr;
     return false;
   }
 
   sdmmc_card_print_info(stdout, card);
+  sd_card_ = card;
   status_.sd_card.init_flag = true;
   return true;
+}
+
+bool TDisplayP4AirDriver::IsSdmmcReady() const {
+  return status_.sd_card.init_flag && sd_card_ != nullptr &&
+         sdmmc_get_status(sd_card_) == ESP_OK;
 }
 
 bool TDisplayP4AirDriver::InitSdspi(
@@ -978,6 +1039,7 @@ bool TDisplayP4AirDriver::InitSdspi(
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "spi_bus_initialize failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
+    sd_card_ = nullptr;
     return false;
   }
 
@@ -992,10 +1054,12 @@ bool TDisplayP4AirDriver::InitSdspi(
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_vfs_fat_sdspi_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
+    sd_card_ = nullptr;
     return false;
   }
 
   sdmmc_card_print_info(stdout, card);
+  sd_card_ = card;
   status_.sd_card.init_flag = true;
   return true;
 }

@@ -271,6 +271,138 @@ class TDisplayP4Driver {
   }
 
   /**
+   * @brief 判断 XL9535 IO 扩展芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsXl9535Ready() const;
+
+  /**
+   * @brief 判断 SGM38121 电源芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsSgm38121Ready() const;
+
+  /**
+   * @brief 判断 HI8561 屏幕芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsHi8561Ready() const;
+
+  /**
+   * @brief 判断 HI8561 触摸芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsHi8561TouchReady() const;
+
+  /**
+   * @brief 判断 HI8561 背光驱动是否已经初始化完成。
+   * @return 背光驱动可用返回 true，否则返回 false。
+   */
+  bool IsHi8561BacklightReady() const;
+
+  /**
+   * @brief 判断 RM69A10 屏幕芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsRm69a10Ready() const;
+
+  /**
+   * @brief 判断 GT9895 触摸芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsGt9895Ready() const;
+
+  /**
+   * @brief 判断 BQ27220 电量计是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsBq27220Ready() const;
+
+  /**
+   * @brief 判断 PCF8563 RTC 芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsPcf8563Ready() const;
+
+  /**
+   * @brief 判断 AW86224 振动芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsAw86224Ready() const;
+
+  /**
+   * @brief 判断 ES8311 音频芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsEs8311Ready() const;
+
+  /**
+   * @brief 判断 L76K GPS 模块是否已经初始化完成。
+   * @return 模块可用返回 true，否则返回 false。
+   */
+  bool IsL76kReady() const;
+
+  /**
+   * @brief 判断 ICM20948 IMU 芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsIcm20948Ready() const;
+
+  /**
+   * @brief 判断 SX1262 射频芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsSx1262Ready() const;
+
+  /**
+   * @brief 判断 XL9555 键盘 IO 扩展芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsXl9555Ready() const;
+
+  /**
+   * @brief 判断 TCA8418 键盘芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsTca8418Ready() const;
+
+  /**
+   * @brief 判断 TCA8418 键盘背光驱动是否已经初始化完成。
+   * @return 背光驱动可用返回 true，否则返回 false。
+   */
+  bool IsTca8418BacklightReady() const;
+
+  /**
+   * @brief 判断 CC1101 射频芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsCc1101Ready() const;
+
+  /**
+   * @brief 判断 NRF24L01 射频芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsNrf24l01Ready() const;
+
+  /**
+   * @brief 判断当前屏幕及其背光总线是否已经可用。
+   * @return 屏幕可用返回 true，否则返回 false。
+   */
+  bool IsScreenReady() const;
+
+  /**
+   * @brief 判断当前屏幕对应的触摸芯片是否已经可用。
+   * @return 触摸芯片可用返回 true，否则返回 false。
+   */
+  bool IsTouchReady() const;
+
+  /**
+   * @brief 判断 GPS 模块是否已经可用。
+   * @return GPS 模块可用返回 true，否则返回 false。
+   */
+  bool IsGpsReady() const;
+
+  /**
    * @brief 判断外接键盘设备是否已经探测成功。
    * @return 已检测到键盘返回 true，否则返回 false。
    */

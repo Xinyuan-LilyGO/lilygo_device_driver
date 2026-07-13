@@ -80,6 +80,41 @@ device::ScreenType TGlassesP4Driver::screen_type() const {
   return screen_info().type;
 }
 
+bool TGlassesP4Driver::IsSy6970Ready() const {
+  return status_.sy6970.init_flag && chip_.sy6970 != nullptr;
+}
+
+bool TGlassesP4Driver::IsBq27220Ready() const {
+  return status_.bq27220.init_flag && chip_.bq27220 != nullptr;
+}
+
+bool TGlassesP4Driver::IsSgm38121Ready() const {
+  return status_.sgm38121.init_flag && chip_.sgm38121 != nullptr;
+}
+
+bool TGlassesP4Driver::IsS023msafjf10111e1Ready() const {
+  return status_.s023msafjf10111e1.init_flag &&
+         chip_.s023msafjf10111e1 != nullptr;
+}
+
+bool TGlassesP4Driver::IsAw86224Ready() const {
+  return status_.aw86224.init_flag && chip_.aw86224 != nullptr;
+}
+
+bool TGlassesP4Driver::IsEs8311Ready() const {
+  return status_.es8311.init_flag && chip_.es8311 != nullptr;
+}
+
+bool TGlassesP4Driver::IsSx1262Ready() const {
+  return status_.sx1262.init_flag && chip_.sx1262 != nullptr;
+}
+
+bool TGlassesP4Driver::IsScreenReady() const {
+  return bus_.screen_mipi_bus != nullptr &&
+         bus_.screen_mipi_bus->device_handle() != nullptr &&
+         IsS023msafjf10111e1Ready();
+}
+
 void TGlassesP4Driver::CreateDrivers() {
   tool_ = std::make_unique<cpp_bus_driver::Tool>();
   screen_info_ = kDefaultScreenInfo;
@@ -568,12 +603,19 @@ bool TGlassesP4Driver::InitSdmmc(
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_vfs_fat_sdmmc_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
+    sd_card_ = nullptr;
     return false;
   }
 
   sdmmc_card_print_info(stdout, card);
+  sd_card_ = card;
   status_.sd_card.init_flag = true;
   return true;
+}
+
+bool TGlassesP4Driver::IsSdmmcReady() const {
+  return status_.sd_card.init_flag && sd_card_ != nullptr &&
+         sdmmc_get_status(sd_card_) == ESP_OK;
 }
 
 bool TGlassesP4Driver::InitSdspi(
@@ -613,6 +655,7 @@ bool TGlassesP4Driver::InitSdspi(
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "spi_bus_initialize failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
+    sd_card_ = nullptr;
     return false;
   }
 
@@ -627,10 +670,12 @@ bool TGlassesP4Driver::InitSdspi(
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_vfs_fat_sdspi_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
+    sd_card_ = nullptr;
     return false;
   }
 
   sdmmc_card_print_info(stdout, card);
+  sd_card_ = card;
   status_.sd_card.init_flag = true;
   return true;
 }

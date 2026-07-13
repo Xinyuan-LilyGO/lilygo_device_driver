@@ -186,6 +186,54 @@ class TGlassesP4Driver {
   }
 
   /**
+   * @brief 判断 SY6970 充电芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsSy6970Ready() const;
+
+  /**
+   * @brief 判断 BQ27220 电量计是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsBq27220Ready() const;
+
+  /**
+   * @brief 判断 SGM38121 电源芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsSgm38121Ready() const;
+
+  /**
+   * @brief 判断 S023MSAFJF10111E1 屏幕芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsS023msafjf10111e1Ready() const;
+
+  /**
+   * @brief 判断 AW86224 振动芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsAw86224Ready() const;
+
+  /**
+   * @brief 判断 ES8311 音频芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsEs8311Ready() const;
+
+  /**
+   * @brief 判断 SX1262 射频芯片是否已经初始化完成。
+   * @return 芯片可用返回 true，否则返回 false。
+   */
+  bool IsSx1262Ready() const;
+
+  /**
+   * @brief 判断当前屏幕及其显示总线是否已经可用。
+   * @return 屏幕可用返回 true，否则返回 false。
+   */
+  bool IsScreenReady() const;
+
+  /**
    * @brief 创建设备驱动指针。
    */
   void CreateDrivers();
@@ -235,6 +283,12 @@ class TGlassesP4Driver {
   bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
   /**
+   * @brief 检查已挂载 SD 卡是否仍可响应 SDMMC 命令。
+   * @return SD 卡已挂载且可访问时返回 true，否则返回 false。
+   */
+  bool IsSdmmcReady() const;
+
+  /**
    * @brief 通过 SDSPI 主机挂载 SD 卡。
    * @param base_path SD 卡挂载路径。
    * @param host_id SD 卡使用的 SPI 主机。
@@ -249,6 +303,7 @@ class TGlassesP4Driver {
   Bus bus_;
   Chip chip_;
   Status status_;
+  sdmmc_card_t* sd_card_ = nullptr;
   const t_glasses_p4::device::ScreenInfo* screen_info_ = nullptr;
 
   TGlassesP4Driver() = default;

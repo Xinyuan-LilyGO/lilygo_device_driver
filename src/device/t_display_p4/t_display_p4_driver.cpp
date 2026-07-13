@@ -118,6 +118,113 @@ device::ScreenType TDisplayP4Driver::screen_type() const {
   return screen_info().type;
 }
 
+bool TDisplayP4Driver::IsXl9535Ready() const {
+  return status_.xl9535.init_flag && chip_.xl9535 != nullptr;
+}
+
+bool TDisplayP4Driver::IsSgm38121Ready() const {
+  return status_.sgm38121.init_flag && chip_.sgm38121 != nullptr;
+}
+
+bool TDisplayP4Driver::IsHi8561Ready() const {
+  return status_.hi8561.init_flag && chip_.hi8561 != nullptr;
+}
+
+bool TDisplayP4Driver::IsHi8561TouchReady() const {
+  return status_.hi8561_touch.init_flag && chip_.hi8561_touch != nullptr;
+}
+
+bool TDisplayP4Driver::IsHi8561BacklightReady() const {
+  return status_.hi8561_backlight.init_flag &&
+         chip_.hi8561_backlight != nullptr;
+}
+
+bool TDisplayP4Driver::IsRm69a10Ready() const {
+  return status_.rm69a10.init_flag && chip_.rm69a10 != nullptr;
+}
+
+bool TDisplayP4Driver::IsGt9895Ready() const {
+  return status_.gt9895.init_flag && chip_.gt9895 != nullptr;
+}
+
+bool TDisplayP4Driver::IsBq27220Ready() const {
+  return status_.bq27220.init_flag && chip_.bq27220 != nullptr;
+}
+
+bool TDisplayP4Driver::IsPcf8563Ready() const {
+  return status_.pcf8563.init_flag && chip_.pcf8563 != nullptr;
+}
+
+bool TDisplayP4Driver::IsAw86224Ready() const {
+  return status_.aw86224.init_flag && chip_.aw86224 != nullptr;
+}
+
+bool TDisplayP4Driver::IsEs8311Ready() const {
+  return status_.es8311.init_flag && chip_.es8311 != nullptr;
+}
+
+bool TDisplayP4Driver::IsL76kReady() const {
+  return status_.l76k.init_flag && chip_.l76k != nullptr;
+}
+
+bool TDisplayP4Driver::IsIcm20948Ready() const {
+  return status_.icm20948.init_flag && chip_.icm20948 != nullptr;
+}
+
+bool TDisplayP4Driver::IsSx1262Ready() const {
+  return status_.sx1262.init_flag && chip_.sx1262 != nullptr;
+}
+
+bool TDisplayP4Driver::IsXl9555Ready() const {
+  return status_.xl9555.init_flag && chip_.xl9555 != nullptr;
+}
+
+bool TDisplayP4Driver::IsTca8418Ready() const {
+  return status_.tca8418.init_flag && chip_.tca8418 != nullptr;
+}
+
+bool TDisplayP4Driver::IsTca8418BacklightReady() const {
+  return status_.tca8418_backlight.init_flag &&
+         chip_.tca8418_backlight != nullptr;
+}
+
+bool TDisplayP4Driver::IsCc1101Ready() const {
+  return status_.cc1101.init_flag && chip_.cc1101 != nullptr;
+}
+
+bool TDisplayP4Driver::IsNrf24l01Ready() const {
+  return status_.nrf24l01.init_flag && chip_.nrf24l01 != nullptr;
+}
+
+bool TDisplayP4Driver::IsScreenReady() const {
+  if (bus_.screen_mipi_bus == nullptr ||
+      bus_.screen_mipi_bus->device_handle() == nullptr) {
+    return false;
+  }
+
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return IsHi8561Ready() && IsHi8561BacklightReady();
+    case device::ScreenType::kRm69a10:
+      return IsRm69a10Ready();
+    default:
+      return false;
+  }
+}
+
+bool TDisplayP4Driver::IsTouchReady() const {
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return IsHi8561TouchReady();
+    case device::ScreenType::kRm69a10:
+      return IsGt9895Ready();
+    default:
+      return false;
+  }
+}
+
+bool TDisplayP4Driver::IsGpsReady() const { return IsL76kReady(); }
+
 void TDisplayP4Driver::CreateDrivers() {
   tool_ = std::make_unique<cpp_bus_driver::Tool>();
 
@@ -1676,6 +1783,8 @@ bool TDisplayP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
                "esp_vfs_fat_sdmmc_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
+    sd_card_ = nullptr;
+    sd_card_base_path_.clear();
     return false;
   }
 
@@ -1751,6 +1860,8 @@ bool TDisplayP4Driver::InitSdspi(
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "spi_bus_initialize failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
+    sd_card_ = nullptr;
+    sd_card_base_path_.clear();
     return false;
   }
 
@@ -1765,10 +1876,14 @@ bool TDisplayP4Driver::InitSdspi(
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "esp_vfs_fat_sdspi_mount failed (error code: %#X)\n", result);
     status_.sd_card.init_flag = false;
+    sd_card_ = nullptr;
+    sd_card_base_path_.clear();
     return false;
   }
 
   sdmmc_card_print_info(stdout, card);
+  sd_card_ = card;
+  sd_card_base_path_ = base_path;
   status_.sd_card.init_flag = true;
   return true;
 }
