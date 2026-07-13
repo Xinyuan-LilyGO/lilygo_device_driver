@@ -1,5 +1,5 @@
 /*
- * @Description: None
+ * @Description: 设备驱动库日志工具实现
  * @Author: LILYGO_L
  * @Date: 2025-12-19 10:50:16
  * @LastEditTime: 2026-04-16 15:43:18

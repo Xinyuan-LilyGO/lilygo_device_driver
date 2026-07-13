@@ -1,5 +1,5 @@
 /*
- * @Description: t_display_p4_keyboard_config
+ * @Description: T-Display-P4 外接键盘硬件配置
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
  * @LastEditTime: 2026-05-18 18:29:34
@@ -95,7 +95,7 @@ inline constexpr uint8_t kI2cAddress = 0x34;
 inline constexpr int kKeypadScanWidth = 10;
 inline constexpr int kKeypadScanHeight = 7;
 
-// TCA8418 key map.
+// TCA8418 键值映射表。
 constexpr const std::string kMap[] = {"F1", "F2", "F3", "F4", "F5", "F6", "F7",
     "F8", "F9", "F10", "Esc", "Esc", "1", "2", "3", "4", "5", "6", "7", "8",
     "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "Caps", "a", "s", "d",

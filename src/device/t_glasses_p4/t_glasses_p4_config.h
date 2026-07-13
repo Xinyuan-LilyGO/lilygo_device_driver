@@ -1,5 +1,5 @@
 /*
- * @Description: t_glasses_p4_config
+ * @Description: T-Glasses-P4 板级硬件配置
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
  * @LastEditTime: 2026-05-17 23:48:21

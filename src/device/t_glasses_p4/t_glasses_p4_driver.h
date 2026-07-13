@@ -1,5 +1,5 @@
 /*
- * @Description: t_glasses_p4_driver
+ * @Description: T-Glasses-P4 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:58:49
  * @LastEditTime: 2026-05-24 17:00:00
@@ -20,8 +20,9 @@
 namespace lilygo_device_driver {
 namespace t_glasses_p4::device {
 
+// 支持的屏幕类型。
 enum class ScreenType {
-  kS023msafjf10111e1,
+  kS023msafjf10111e1,  // S023MSAFJF10111E1 屏幕。
 };
 
 // 屏幕型号、分辨率和 MIPI 参数信息
@@ -94,14 +95,19 @@ struct DeviceInfo {
 
 }  // namespace t_glasses_p4::device
 
+// T-Glasses-P4 板级总线、芯片和存储设备驱动。
 class TGlassesP4Driver {
  public:
+  // 驱动初始化任务的执行模式。
   enum class InitMode { kAsync, kSync };
+
+  // 板级设备休眠等级。
   enum class SleepLevel {
     kLight,
     kDeep,
   };
 
+  // 板级通信总线对象集合。
   struct Bus {
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> sy6970_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> bq27220_i2c_bus;
@@ -114,6 +120,7 @@ class TGlassesP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
   };
 
+  // 板级芯片驱动对象集合。
   struct Chip {
     std::unique_ptr<cpp_bus_driver::Sy6970> sy6970;
     std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
@@ -124,6 +131,7 @@ class TGlassesP4Driver {
     std::unique_ptr<cpp_bus_driver::S023msafjf10111e1> s023msafjf10111e1;
   };
 
+  // 板级芯片和存储设备初始化状态集合。
   struct Status {
     struct {
       bool init_flag = false;
@@ -159,23 +167,70 @@ class TGlassesP4Driver {
     } sd_card;
   };
 
+  /**
+   * @brief 获取 T-Glasses-P4 驱动单例。
+   * @return 驱动单例引用。
+   */
   static TGlassesP4Driver& GetInstance();
 
+  /**
+   * @brief 获取板级总线对象集合。
+   * @return 只读总线对象集合。
+   */
   const Bus& bus() const { return bus_; }
+
+  /**
+   * @brief 获取板级芯片驱动对象集合。
+   * @return 只读芯片驱动对象集合。
+   */
   const Chip& chip() const { return chip_; }
+
+  /**
+   * @brief 获取板级驱动初始化状态集合。
+   * @return 只读初始化状态集合。
+   */
   const Status& status() const { return status_; }
 
+  /**
+   * @brief 获取设备型号信息。
+   * @return 设备型号信息引用。
+   */
   const t_glasses_p4::device::DeviceModelInfo& device_model_info() const {
     return t_glasses_p4::device::kDeviceModelInfo;
   }
+
+  /**
+   * @brief 获取当前屏幕类型。
+   * @return 当前屏幕类型。
+   */
   t_glasses_p4::device::ScreenType screen_type() const;
+
+  /**
+   * @brief 获取当前屏幕的参数信息。
+   * @return 当前屏幕参数信息引用。
+   */
   const t_glasses_p4::device::ScreenInfo& screen_info() const;
+
+  /**
+   * @brief 获取摄像头参数信息。
+   * @return 摄像头参数信息引用。
+   */
   const t_glasses_p4::device::CameraInfo& camera_info() const {
     return t_glasses_p4::device::kCameraInfo;
   }
+
+  /**
+   * @brief 获取电池参数信息。
+   * @return 电池参数信息引用。
+   */
   const t_glasses_p4::device::BatteryInfo& battery_info() const {
     return t_glasses_p4::device::kBatteryInfo;
   }
+
+  /**
+   * @brief 获取聚合后的设备参数信息。
+   * @return 聚合设备参数信息。
+   */
   t_glasses_p4::device::DeviceInfo device_info() const {
     return {
         .model = device_model_info(),
@@ -260,18 +315,70 @@ class TGlassesP4Driver {
    */
   bool SetSleep(SleepLevel level, bool enable);
 
+  /**
+   * @brief 初始化板级 LDO 电源通道。
+   * @return 所有电源通道初始化成功时返回 true，否则返回 false。
+   */
   bool InitPower();
+
+  /**
+   * @brief 初始化 SY6970 充电管理芯片。
+   * @return 初始化成功时返回 true，否则返回 false。
+   */
   bool InitSy6970();
+
+  /**
+   * @brief 初始化 BQ27220 电量计并应用电池参数。
+   * @return 初始化和配置成功时返回 true，否则返回 false。
+   */
   bool InitBq27220();
+
+  /**
+   * @brief 初始化并配置 SGM38121 板级电源芯片。
+   * @return 初始化和配置成功时返回 true，否则返回 false。
+   */
   bool InitSgm38121();
 
+  /**
+   * @brief 初始化板载屏幕驱动。
+   * @return 屏幕初始化成功时返回 true，否则返回 false。
+   */
   bool InitScreen();
+
+  /**
+   * @brief 释放屏幕驱动并清除屏幕状态。
+   * @return 屏幕释放成功时返回 true，否则返回 false。
+   */
   bool DeinitScreen();
+
+  /**
+   * @brief 初始化 S023MSAFJF10111E1 显示芯片。
+   * @return 初始化成功时返回 true，否则返回 false。
+   */
   bool InitS023msafjf10111e1();
 
+  /**
+   * @brief 初始化 AW86224 振动芯片并加载波形库。
+   * @return 初始化和波形加载成功时返回 true，否则返回 false。
+   */
   bool InitAw86224();
+
+  /**
+   * @brief 初始化 ES8311 音频编解码芯片。
+   * @return 初始化成功时返回 true，否则返回 false。
+   */
   bool InitEs8311();
+
+  /**
+   * @brief 配置 ES8311 的电源、输入和音量参数。
+   * @return 配置成功时返回 true，否则返回 false。
+   */
   bool ConfigEs8311();
+
+  /**
+   * @brief 初始化 SX1262 射频芯片。
+   * @return 初始化成功时返回 true，否则返回 false。
+   */
   bool InitSx1262();
 
   /**
@@ -314,7 +421,21 @@ class TGlassesP4Driver {
   TGlassesP4Driver& operator=(const TGlassesP4Driver&) = delete;
 };
 
+/**
+ * @brief 使用 T-Glasses-P4 驱动单例挂载 SDMMC 存储卡。
+ * @param base_path SD 卡挂载路径。
+ * @param max_freq_khz SDMMC 总线最大频率，单位为 kHz。
+ * @return SD 卡挂载成功时返回 true，否则返回 false。
+ */
 bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
+
+/**
+ * @brief 使用 T-Glasses-P4 驱动单例挂载 SDSPI 存储卡。
+ * @param base_path SD 卡挂载路径。
+ * @param host_id SD 卡使用的 SPI 主机。
+ * @param max_freq_khz SDSPI 总线最大频率，单位为 kHz。
+ * @return SD 卡挂载成功时返回 true，否则返回 false。
+ */
 bool InitSdspi(const char* base_path, spi_host_device_t host_id,
     int max_freq_khz = SDMMC_FREQ_DEFAULT);
 

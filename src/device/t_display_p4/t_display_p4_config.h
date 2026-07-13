@@ -1,5 +1,5 @@
 /*
- * @Description: t_display_p4_config
+ * @Description: T-Display-P4 板级硬件配置
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
  * @LastEditTime: 2026-06-30 13:47:35

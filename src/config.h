@@ -1,5 +1,5 @@
 /*
- * @Description: None
+ * @Description: 设备驱动库框架与日志配置入口
  * @Author: LILYGO_L
  * @Date: 2025-12-19 10:52:38
  * @LastEditTime: 2026-04-16 15:36:43

@@ -1,5 +1,5 @@
 /*
- * @Description: None
+ * @Description: 设备驱动库日志工具接口
  * @Author: LILYGO_L
  * @Date: 2025-12-19 10:50:07
  * @LastEditTime: 2026-04-16 15:42:32
@@ -12,8 +12,9 @@
 namespace lilygo_device_driver {
 static constexpr uint16_t kMaxLogBufferSize = 1024;
 
+// 日志输出等级。
 enum class LogLevel {
-  kDebug,    // debug信息
+  kDebug,    // 调试信息
   kInfo,     // 普通信息
   kWarning,  // 警告信息
   kError,    // 错误信息

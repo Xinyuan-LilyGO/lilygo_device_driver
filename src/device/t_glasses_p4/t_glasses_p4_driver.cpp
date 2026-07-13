@@ -1,5 +1,5 @@
 /*
- * @Description: t_glasses_p4_driver
+ * @Description: T-Glasses-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:58:49
  * @LastEditTime: 2026-05-25 00:21:02

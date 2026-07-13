@@ -1,5 +1,5 @@
 /*
- * @Description: esp32p4_driver
+ * @Description: ESP32-P4 片上外设驱动实现
  * @Author: LILYGO_L
  * @Date: 2025-12-18 17:59:32
  * @LastEditTime: 2026-04-23 17:52:12

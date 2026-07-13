@@ -1,5 +1,5 @@
 /*
- * @Description: None
+ * @Description: T-Display-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
  * @LastEditTime: 2026-07-08 09:36:56
@@ -900,7 +900,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.l76k->Sleep(false);
         }
         if (status_.sx1262.init_flag) {
-          // 唤醒
+          // 唤醒设备。
           result &= chip_.sx1262->Wakeup();
         }
         if (status_.sgm38121.init_flag) {
@@ -1089,7 +1089,7 @@ bool TDisplayP4Driver::ConfigXl9535() {
 
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kUsbPhyPowerEn, 0);
-  // 默认使用RF1天线
+  // 默认使用 RF1 天线。
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kSky13453Vctl, 1);
 
@@ -1545,7 +1545,7 @@ bool TDisplayP4Driver::ConfigXl9555() {
           cpp_bus_driver::Xl95x5::Mode::kOutput);
 
   result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1,
-      1);  // 关闭led
+      1);  // 关闭指示灯
   result &= chip_.xl9555->GpioWrite(
       keyboard_gpio::xl9555::kLed2, 1);
   result &= chip_.xl9555->GpioWrite(

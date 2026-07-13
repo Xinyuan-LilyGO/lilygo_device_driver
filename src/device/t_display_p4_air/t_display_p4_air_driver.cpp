@@ -1,5 +1,5 @@
 /*
- * @Description: t_display_p4_air_driver
+ * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
  * @LastEditTime: 2026-07-11 14:54:38

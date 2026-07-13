@@ -1,5 +1,5 @@
 /*
- * @Description: t_can485_c5_config
+ * @Description: T-CAN485-C5 板级硬件配置
  * @Author: LILYGO_L
  * @Date: 2026-06-12 12:00:00
  * @LastEditTime: 2026-06-12 17:56:48
