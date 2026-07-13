@@ -266,12 +266,6 @@ class TDisplayP4AirDriver {
   bool IsScreenReady() const;
 
   /**
-   * @brief 判断当前屏幕对应的触摸芯片是否已经可用。
-   * @return 触摸芯片可用返回 true，否则返回 false。
-   */
-  bool IsTouchReady() const;
-
-  /**
    * @brief 创建设备驱动指针。
    */
   void CreateDrivers();

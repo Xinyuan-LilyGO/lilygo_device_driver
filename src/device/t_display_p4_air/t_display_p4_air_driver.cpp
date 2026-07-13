@@ -96,10 +96,6 @@ bool TDisplayP4AirDriver::IsScreenReady() const {
          IsHi8561Ready() && IsHi8561BacklightReady();
 }
 
-bool TDisplayP4AirDriver::IsTouchReady() const {
-  return IsHi8561TouchReady();
-}
-
 void TDisplayP4AirDriver::CreateDrivers() {
   tool_ = std::make_unique<cpp_bus_driver::Tool>();
 

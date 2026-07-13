@@ -223,8 +223,6 @@ bool TDisplayP4Driver::IsTouchReady() const {
   }
 }
 
-bool TDisplayP4Driver::IsGpsReady() const { return IsL76kReady(); }
-
 void TDisplayP4Driver::CreateDrivers() {
   tool_ = std::make_unique<cpp_bus_driver::Tool>();
 

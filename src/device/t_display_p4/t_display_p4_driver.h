@@ -397,12 +397,6 @@ class TDisplayP4Driver {
   bool IsTouchReady() const;
 
   /**
-   * @brief 判断 GPS 模块是否已经可用。
-   * @return GPS 模块可用返回 true，否则返回 false。
-   */
-  bool IsGpsReady() const;
-
-  /**
    * @brief 判断外接键盘设备是否已经探测成功。
    * @return 已检测到键盘返回 true，否则返回 false。
    */
