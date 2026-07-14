@@ -21,11 +21,10 @@
 namespace lilygo_device_driver {
 namespace t_display_p4::device {
 
-// 支持的屏幕类型。
 enum class ScreenType {
-  kUnknown,   // 未识别屏幕。
-  kHi8561,    // HI8561 屏幕。
-  kRm69a10,   // RM69A10 屏幕。
+  kUnknown,
+  kHi8561,
+  kRm69a10,
 };
 
 // 屏幕型号、分辨率和 MIPI 参数信息
@@ -96,26 +95,20 @@ struct DeviceInfo {
 
 }  // namespace t_display_p4::device
 
-// T-Display-P4 板级总线、芯片和存储设备驱动。
 class TDisplayP4Driver {
  public:
-  // 驱动初始化任务的执行模式。
   enum class InitMode { kAsync, kSync };
-
-  // 板级设备休眠等级。
   enum class SleepLevel {
     kLight,
     kDeep,
   };
 
-  // CC1101 外部射频开关通路。
   enum class Cc1101RfSwitch {
     k315Mhz,
     k434Mhz,
     k868_915Mhz,
   };
 
-  // 板级通信总线和 RadioLib 适配对象集合。
   struct Bus {
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> bq27220_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> xl9535_i2c_bus;
@@ -144,7 +137,6 @@ class TDisplayP4Driver {
     Module* nrf24l01_module = nullptr;
   };
 
-  // 板级芯片驱动对象集合。
   struct Chip {
     std::unique_ptr<cpp_bus_driver::Xl95x5> xl9535;
     std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
@@ -169,7 +161,6 @@ class TDisplayP4Driver {
     nRF24* nrf24l01 = nullptr;
   };
 
-  // 板级芯片和存储设备初始化状态集合。
   struct Status {
     struct {
       bool init_flag = false;
@@ -253,70 +244,23 @@ class TDisplayP4Driver {
     } sd_card;
   };
 
-  /**
-   * @brief 获取 T-Display-P4 驱动单例。
-   * @return 驱动单例引用。
-   */
   static TDisplayP4Driver& GetInstance();
 
-  /**
-   * @brief 获取板级总线对象集合。
-   * @return 只读总线对象集合。
-   */
   const Bus& bus() const { return bus_; }
-
-  /**
-   * @brief 获取板级芯片驱动对象集合。
-   * @return 只读芯片驱动对象集合。
-   */
   const Chip& chip() const { return chip_; }
-
-  /**
-   * @brief 获取板级驱动初始化状态集合。
-   * @return 只读初始化状态集合。
-   */
   const Status& status() const { return status_; }
 
-  /**
-   * @brief 获取设备型号信息。
-   * @return 设备型号信息引用。
-   */
   const t_display_p4::device::DeviceModelInfo& device_model_info() const {
     return t_display_p4::device::kDeviceModelInfo;
   }
-
-  /**
-   * @brief 获取当前识别到的屏幕类型。
-   * @return 当前屏幕类型。
-   */
   t_display_p4::device::ScreenType screen_type() const;
-
-  /**
-   * @brief 获取当前屏幕的参数信息。
-   * @return 当前屏幕参数信息引用。
-   */
   const t_display_p4::device::ScreenInfo& screen_info() const;
-
-  /**
-   * @brief 获取摄像头参数信息。
-   * @return 摄像头参数信息引用。
-   */
   const t_display_p4::device::CameraInfo& camera_info() const {
     return t_display_p4::device::kCameraInfo;
   }
-
-  /**
-   * @brief 获取电池参数信息。
-   * @return 电池参数信息引用。
-   */
   const t_display_p4::device::BatteryInfo& battery_info() const {
     return t_display_p4::device::kBatteryInfo;
   }
-
-  /**
-   * @brief 获取聚合后的设备参数信息。
-   * @return 聚合设备参数信息。
-   */
   t_display_p4::device::DeviceInfo device_info() const {
     return {
         .model = device_model_info(),
@@ -326,141 +270,29 @@ class TDisplayP4Driver {
     };
   }
 
-  /**
-   * @brief 判断 XL9535 IO 扩展芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsXl9535Ready() const;
-
-  /**
-   * @brief 判断 SGM38121 电源芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsSgm38121Ready() const;
-
-  /**
-   * @brief 判断 HI8561 屏幕芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsHi8561Ready() const;
-
-  /**
-   * @brief 判断 HI8561 触摸芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsHi8561TouchReady() const;
-
-  /**
-   * @brief 判断 HI8561 背光驱动是否已经初始化完成。
-   * @return 背光驱动可用返回 true，否则返回 false。
-   */
   bool IsHi8561BacklightReady() const;
-
-  /**
-   * @brief 判断 RM69A10 屏幕芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsRm69a10Ready() const;
-
-  /**
-   * @brief 判断 GT9895 触摸芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsGt9895Ready() const;
-
-  /**
-   * @brief 判断 BQ27220 电量计是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsBq27220Ready() const;
-
-  /**
-   * @brief 判断 PCF8563 RTC 芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsPcf8563Ready() const;
-
-  /**
-   * @brief 判断 AW86224 振动芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsAw86224Ready() const;
-
-  /**
-   * @brief 判断 ES8311 音频芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsEs8311Ready() const;
-
-  /**
-   * @brief 判断 L76K GPS 模块是否已经初始化完成。
-   * @return 模块可用返回 true，否则返回 false。
-   */
   bool IsL76kReady() const;
-
-  /**
-   * @brief 判断 ICM20948 IMU 芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsIcm20948Ready() const;
-
-  /**
-   * @brief 判断 SX1262 射频芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsSx1262Ready() const;
-
-  /**
-   * @brief 判断 XL9555 键盘 IO 扩展芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsXl9555Ready() const;
-
-  /**
-   * @brief 判断 TCA8418 键盘芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsTca8418Ready() const;
-
-  /**
-   * @brief 判断 TCA8418 键盘背光驱动是否已经初始化完成。
-   * @return 背光驱动可用返回 true，否则返回 false。
-   */
   bool IsTca8418BacklightReady() const;
-
-  /**
-   * @brief 判断 CC1101 射频芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsCc1101Ready() const;
-
-  /**
-   * @brief 判断 NRF24L01 射频芯片是否已经初始化完成。
-   * @return 芯片可用返回 true，否则返回 false。
-   */
   bool IsNrf24l01Ready() const;
-
-  /**
-   * @brief 判断当前屏幕及其背光总线是否已经可用。
-   * @return 屏幕可用返回 true，否则返回 false。
-   */
   bool IsScreenReady() const;
-
-  /**
-   * @brief 判断当前屏幕对应的触摸芯片是否已经可用。
-   * @return 触摸芯片可用返回 true，否则返回 false。
-   */
   bool IsTouchReady() const;
-
-  /**
-   * @brief 判断外接键盘设备是否已经探测成功。
-   * @return 已检测到键盘返回 true，否则返回 false。
-   */
   bool keyboard_connected() const { return keyboard_connected_; }
 
-  /**
-   * @brief 创建设备驱动指针。
-   */
   void CreateDrivers();
 
   /**
@@ -485,190 +317,42 @@ class TDisplayP4Driver {
    */
   bool SetSleep(SleepLevel level, bool enable);
 
-  /**
-   * @brief 初始化板级 LDO 电源通道。
-   * @return 所有电源通道初始化成功时返回 true，否则返回 false。
-   */
   bool InitPower();
 
-  /**
-   * @brief 初始化 BQ27220 电量计并应用电池参数。
-   * @return 初始化和配置成功时返回 true，否则返回 false。
-   */
   bool InitBq27220();
-
-  /**
-   * @brief 初始化 XL9535 IO 扩展芯片。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitXl9535();
-
-  /**
-   * @brief 配置 XL9535 的板级 IO 功能和默认电平。
-   * @return 配置成功时返回 true，否则返回 false。
-   */
   bool ConfigXl9535();
-
-  /**
-   * @brief 初始化并配置 SGM38121 摄像头电源芯片。
-   * @return 初始化和配置成功时返回 true，否则返回 false。
-   */
   bool InitSgm38121();
 
-  /**
-   * @brief 根据当前屏幕类型初始化显示芯片。
-   * @return 屏幕初始化成功时返回 true，否则返回 false。
-   */
   bool InitScreen();
-
-  /**
-   * @brief 释放当前屏幕驱动并清除屏幕状态。
-   * @return 屏幕释放成功时返回 true，否则返回 false。
-   */
   bool DeinitScreen();
-
-  /**
-   * @brief 根据当前屏幕类型初始化触摸芯片。
-   * @return 触摸芯片初始化成功时返回 true，否则返回 false。
-   */
   bool InitTouch();
-
-  /**
-   * @brief 释放当前触摸驱动并清除触摸状态。
-   * @return 触摸驱动释放成功时返回 true，否则返回 false。
-   */
   bool DeinitTouch();
-
-  /**
-   * @brief 初始化当前屏幕使用的背光驱动。
-   * @return 背光驱动初始化成功时返回 true，否则返回 false。
-   */
   bool InitScreenBacklight();
-
-  /**
-   * @brief 释放当前屏幕背光驱动并清除背光状态。
-   * @return 背光驱动释放成功时返回 true，否则返回 false。
-   */
   bool DeinitScreenBacklight();
 
-  /**
-   * @brief 初始化 HI8561 显示芯片。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitHi8561();
-
-  /**
-   * @brief 初始化 HI8561 配套触摸芯片。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitHi8561Touch();
-
-  /**
-   * @brief 初始化 HI8561 配套背光驱动。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitHi8561Backlight();
-
-  /**
-   * @brief 初始化 RM69A10 显示芯片。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitRm69a10();
-
-  /**
-   * @brief 初始化 GT9895 触摸芯片。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitGt9895();
 
-  /**
-   * @brief 初始化 PCF8563 RTC 芯片。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitPcf8563();
-
-  /**
-   * @brief 初始化 AW86224 振动芯片并加载波形库。
-   * @return 初始化和波形加载成功时返回 true，否则返回 false。
-   */
   bool InitAw86224();
-
-  /**
-   * @brief 初始化 ES8311 音频编解码芯片。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitEs8311();
-
-  /**
-   * @brief 配置 ES8311 的电源、输入和音量参数。
-   * @return 配置成功时返回 true，否则返回 false。
-   */
   bool ConfigEs8311();
-
-  /**
-   * @brief 初始化 L76K GPS 模块及其串口通信。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitL76k();
-
-  /**
-   * @brief 初始化 ICM20948 IMU 和磁力计。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitIcm20948();
-
-  /**
-   * @brief 初始化 SX1262 射频芯片。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitSx1262();
 
-  /**
-   * @brief 初始化外接键盘上的 XL9555 IO 扩展芯片。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitXl9555();
-
-  /**
-   * @brief 配置 XL9555 的键盘、射频和指示灯 IO。
-   * @return 配置成功时返回 true，否则返回 false。
-   */
   bool ConfigXl9555();
-
-  /**
-   * @brief 初始化 TCA8418 键盘扫描芯片。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitTca8418();
-
-  /**
-   * @brief 初始化 TCA8418 键盘背光驱动。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitTca8418Backlight();
-
-  /**
-   * @brief 初始化 CC1101 射频芯片。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitCc1101();
-
-  /**
-   * @brief 初始化 NRF24L01 射频芯片。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
   bool InitNrf24l01();
 
-  /**
-   * @brief 探测并初始化外接键盘及其附属芯片。
-   * @return 键盘初始化成功时返回 true，否则返回 false。
-   */
   bool InitKeyboard();
-
-  /**
-   * @brief 释放外接键盘及其附属芯片驱动。
-   * @return 键盘释放成功时返回 true，否则返回 false。
-   */
   bool DeinitKeyboard();
 
   /**
