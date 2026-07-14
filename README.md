@@ -1,6 +1,6 @@
 <h1 align="center">lilygo_device_driver</h1>
 
-## **English** | [中文](./README_CN.md)
+## **English** | [Chinese](./README_CN.md)
 
 [![Release](https://img.shields.io/github/v/release/Xinyuan-LilyGO/lilygo_device_driver?style=flat-square)](https://github.com/Xinyuan-LilyGO/lilygo_device_driver/releases)
 [![License](https://img.shields.io/github/license/Xinyuan-LilyGO/lilygo_device_driver?style=flat-square)](./LICENSE)
