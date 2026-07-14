@@ -229,10 +229,10 @@ inline constexpr uint8_t kI2cAddress = 0x68;
 namespace screen {
 inline constexpr int kRotationDirection = 0;
 
-#if defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB565)
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_SCREEN_PIXEL_FORMAT_RGB565)
 inline constexpr int kBitsPerPixel = 16;
 inline constexpr const char* kPixelFormat = "rgb565";
-#elif defined(CONFIG_SCREEN_PIXEL_FORMAT_RGB888)
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_SCREEN_PIXEL_FORMAT_RGB888)
 inline constexpr int kBitsPerPixel = 24;
 inline constexpr const char* kPixelFormat = "rgb888";
 #else
@@ -248,13 +248,13 @@ enum class CameraType {
 };
 
 namespace camera {
-#if defined(CONFIG_CAMERA_TYPE_SC2336)
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
 inline constexpr CameraType kType = CameraType::kSc2336;
 inline constexpr const char* kName = "sc2336";
-#elif defined(CONFIG_CAMERA_TYPE_OV2710)
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
 inline constexpr CameraType kType = CameraType::kOv2710;
 inline constexpr const char* kName = "ov2710";
-#elif defined(CONFIG_CAMERA_TYPE_OV5645)
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
 inline constexpr CameraType kType = CameraType::kOv5645;
 inline constexpr const char* kName = "ov5645";
 #else
@@ -262,10 +262,10 @@ inline constexpr CameraType kType = CameraType::kUnknown;
 inline constexpr const char* kName = "unknown";
 #endif
 
-#if defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB565)
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB565)
 inline constexpr int kBitsPerPixel = 16;
 inline constexpr const char* kPixelFormat = "rgb565";
-#elif defined(CONFIG_CAMERA_PIXEL_FORMAT_RGB888)
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB888)
 inline constexpr int kBitsPerPixel = 24;
 inline constexpr const char* kPixelFormat = "rgb888";
 #else

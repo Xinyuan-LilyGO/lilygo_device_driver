@@ -1,33 +1,63 @@
 menu "lilygo_device_driver configuration"
-
     choice
         prompt "Select the device to build"
         default LILYGO_DEVICE_DRIVER_T_GLASSES_P4
-            config LILYGO_DEVICE_DRIVER_T_GLASSES_P4
-                bool "T-Glasses-P4"
-            config LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR
-                bool "T-Display-P4-Air"
-            config LILYGO_DEVICE_DRIVER_T_SPE
-                bool "T-Spe"
-            config LILYGO_DEVICE_DRIVER_T_CAN485_C5
-                bool "T-CAN485-C5"
-            config LILYGO_DEVICE_DRIVER_T_DISPLAY_P4
-                bool "T-Display-P4"
+        config LILYGO_DEVICE_DRIVER_T_GLASSES_P4
+            bool "T-Glasses-P4"
+        config LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR
+            bool "T-Display-P4-Air"
+        config LILYGO_DEVICE_DRIVER_T_SPE
+            bool "T-Spe"
+        config LILYGO_DEVICE_DRIVER_T_CAN485_C5
+            bool "T-CAN485-C5"
+        config LILYGO_DEVICE_DRIVER_T_DISPLAY_P4
+            bool "T-Display-P4"
     endchoice
 
     choice
         prompt "Select log level"
         default LILYGO_DEVICE_DRIVER_LOG_LEVEL_INFO
-            config LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEBUG
-                bool "Debug"
-            config LILYGO_DEVICE_DRIVER_LOG_LEVEL_INFO
-                bool "Info"
-            config LILYGO_DEVICE_DRIVER_LOG_LEVEL_WARNING
-                bool "Warning"
-            config LILYGO_DEVICE_DRIVER_LOG_LEVEL_ERROR
-                bool "Error"
-            config LILYGO_DEVICE_DRIVER_LOG_LEVEL_NONE
-                bool "None"
+        config LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEBUG
+            bool "Debug"
+        config LILYGO_DEVICE_DRIVER_LOG_LEVEL_INFO
+            bool "Info"
+        config LILYGO_DEVICE_DRIVER_LOG_LEVEL_WARNING
+            bool "Warning"
+        config LILYGO_DEVICE_DRIVER_LOG_LEVEL_ERROR
+            bool "Error"
+        config LILYGO_DEVICE_DRIVER_LOG_LEVEL_NONE
+            bool "None"
     endchoice
+
+    if LILYGO_DEVICE_DRIVER_T_GLASSES_P4 || LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR || LILYGO_DEVICE_DRIVER_T_DISPLAY_P4
+    choice LILYGO_DEVICE_DRIVER_CAMERA_TYPE
+        prompt "Select the camera type"
+        default LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710
+        config LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336
+            bool "SC2336"
+        config LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710
+            bool "OV2710"
+        config LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645
+            bool "OV5645"
+    endchoice
+
+    choice LILYGO_DEVICE_DRIVER_SCREEN_PIXEL_FORMAT
+        prompt "Select the screen color format"
+        default LILYGO_DEVICE_DRIVER_SCREEN_PIXEL_FORMAT_RGB565
+        config LILYGO_DEVICE_DRIVER_SCREEN_PIXEL_FORMAT_RGB565
+            bool "RGB565"
+        config LILYGO_DEVICE_DRIVER_SCREEN_PIXEL_FORMAT_RGB888
+            bool "RGB888"
+    endchoice
+
+    choice LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT
+        prompt "Select the camera color format"
+        default LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB565
+        config LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB565
+            bool "RGB565"
+        config LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB888
+            bool "RGB888"
+    endchoice
+    endif
 
 endmenu

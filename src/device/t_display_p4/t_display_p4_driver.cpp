@@ -1168,7 +1168,7 @@ bool TDisplayP4Driver::InitSgm38121() {
     return false;
   } else {
     bool result = true;
-#if defined(CONFIG_CAMERA_TYPE_SC2336)
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
     result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
     result &= chip_.sgm38121->SetOutputVoltage(
@@ -1179,7 +1179,7 @@ bool TDisplayP4Driver::InitSgm38121() {
     result &= chip_.sgm38121->SetChannelStatus(
         cpp_bus_driver::Sgm38121::Channel::kAvdd2,
         cpp_bus_driver::Sgm38121::Status::kOn);
-#elif defined(CONFIG_CAMERA_TYPE_OV2710)
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
     result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
     result &= chip_.sgm38121->SetOutputVoltage(
@@ -1195,7 +1195,7 @@ bool TDisplayP4Driver::InitSgm38121() {
     result &= chip_.sgm38121->SetChannelStatus(
         cpp_bus_driver::Sgm38121::Channel::kAvdd2,
         cpp_bus_driver::Sgm38121::Status::kOn);
-#elif defined(CONFIG_CAMERA_TYPE_OV5645)
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
     result &= chip_.sgm38121->SetOutputVoltage(
         cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
     result &= chip_.sgm38121->SetOutputVoltage(
