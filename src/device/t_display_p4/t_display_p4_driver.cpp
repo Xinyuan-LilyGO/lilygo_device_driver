@@ -295,9 +295,12 @@ void TDisplayP4Driver::CreateDrivers() {
             static_cast<uint8_t>(value));
       });
 
-  chip_.sx1262 = std::make_unique<cpp_bus_driver::Sx126x>(bus_.sx1262_spi_bus,
-      cpp_bus_driver::Sx126x::ChipType::kSx1262, gpio::sx1262::kBusy,
-      gpio::sx1262::kCs);
+  chip_.sx1262 = std::make_unique<usp_cpp_bus_driver::Sx126x>(
+      bus_.sx1262_spi_bus, gpio::sx1262::kBusy, gpio::sx1262::kCs,
+      [this](bool level) {
+        return chip_.xl9535->GpioWrite(gpio::xl9535::kSx1262Rst,
+            static_cast<uint8_t>(level));
+      });
 
   bus_.xl9555_i2c_bus = std::make_shared<cpp_bus_driver::SoftwareI2c>(
       keyboard_gpio::xl9555::kSda, keyboard_gpio::xl9555::kScl);
@@ -821,10 +824,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.l76k->Sleep(true);
         }
         if (status_.sx1262.init_flag) {
-          result &= chip_.sx1262->SetStandby(
-              cpp_bus_driver::Sx126x::StdbyConfig::kStdbyRc);
-          result &= chip_.sx1262->SetSleep(
-              cpp_bus_driver::Sx126x::SleepMode::kWarmStart);
+          result &= chip_.sx1262->SetSleep();
         }
         if (status_.sgm38121.init_flag) {
           result &= chip_.sgm38121->SetChannelStatus(
@@ -931,10 +931,7 @@ bool TDisplayP4Driver::SetSleep(SleepLevel level, bool enable) {
         }
 
         if (status_.sx1262.init_flag) {
-          result &= chip_.sx1262->SetStandby(
-              cpp_bus_driver::Sx126x::StdbyConfig::kStdbyRc);
-          result &= chip_.sx1262->SetSleep(
-              cpp_bus_driver::Sx126x::SleepMode::kWarmStart);
+          result &= chip_.sx1262->SetSleep();
         }
 
         if (status_.aw86224.init_flag) {

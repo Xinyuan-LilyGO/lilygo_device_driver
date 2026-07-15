@@ -15,6 +15,7 @@
 #include "driver/sdmmc_host.h"
 #include "driver/spi_common.h"
 #include "esp32p4_driver.h"
+#include "sx126x/sx126x_driver.h"
 #include "t_glasses_p4_config.h"
 
 namespace lilygo_device_driver {
@@ -120,7 +121,7 @@ class TGlassesP4Driver {
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
     std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
     std::unique_ptr<cpp_bus_driver::Es8311> es8311;
-    std::unique_ptr<cpp_bus_driver::Sx126x> sx1262;
+    std::unique_ptr<usp_cpp_bus_driver::Sx126x> sx1262;
     std::unique_ptr<cpp_bus_driver::S023msafjf10111e1> s023msafjf10111e1;
   };
 

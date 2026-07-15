@@ -13,7 +13,8 @@ if(CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4)
             "./src/device/t_glasses_p4/"
     )
     list(APPEND requires
-            "cpp_bus_driver")
+            "cpp_bus_driver"
+            "usp_cpp_bus_driver")
 elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR)
     set(
             src_dirs
@@ -46,6 +47,7 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
         )
     list(APPEND requires
             "cpp_bus_driver"
+            "usp_cpp_bus_driver"
             "arduino_cpp_bus_driver"
             "ICM20948_WE"
             "radiolib_cpp_bus_driver")

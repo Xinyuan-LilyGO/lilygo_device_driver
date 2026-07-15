@@ -154,9 +154,11 @@ void TGlassesP4Driver::CreateDrivers() {
   chip_.es8311 = std::make_unique<cpp_bus_driver::Es8311>(
       bus_.es8311_i2c_bus, bus_.es8311_i2s_bus,
       device::es8311::kI2cAddress);
-  chip_.sx1262 = std::make_unique<cpp_bus_driver::Sx126x>(
-      bus_.sx1262_spi_bus, cpp_bus_driver::Sx126x::ChipType::kSx1262,
-      gpio::sx1262::kBusy, gpio::sx1262::kCs, gpio::sx1262::kRst);
+  chip_.sx1262 = std::make_unique<usp_cpp_bus_driver::Sx126x>(
+      bus_.sx1262_spi_bus, gpio::sx1262::kBusy, gpio::sx1262::kCs,
+      [this](bool level) {
+        return tool_->GpioWrite(gpio::sx1262::kRst, level);
+      });
   chip_.s023msafjf10111e1 =
       std::make_unique<cpp_bus_driver::S023msafjf10111e1>(
           bus_.screen_i2c_bus, device::s023msafjf10111e1::kI2cAddress,
@@ -264,10 +266,7 @@ bool TGlassesP4Driver::SetSleep(SleepLevel level, bool enable) {
           result &= chip_.s023msafjf10111e1->SetBrightness(0);
         }
         if (status_.sx1262.init_flag) {
-          result &= chip_.sx1262->SetStandby(
-              cpp_bus_driver::Sx126x::StdbyConfig::kStdbyRc);
-          result &= chip_.sx1262->SetSleep(
-              cpp_bus_driver::Sx126x::SleepMode::kWarmStart);
+          result &= chip_.sx1262->SetSleep();
         }
       } else {
         if (status_.s023msafjf10111e1.init_flag) {
@@ -561,7 +560,10 @@ bool TGlassesP4Driver::ConfigEs8311() {
 }
 
 bool TGlassesP4Driver::InitSx1262() {
-  if (!chip_.sx1262->Init(10000000)) {
+  if (!tool_->SetGpioMode(gpio::sx1262::kRst,
+          cpp_bus_driver::Tool::GpioMode::kOutput,
+          cpp_bus_driver::Tool::GpioStatus::kPullup) ||
+      !chip_.sx1262->Init(10000000)) {
     status_.sx1262.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSx1262 failed\n");
     return false;

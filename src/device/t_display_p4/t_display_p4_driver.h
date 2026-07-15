@@ -16,6 +16,7 @@
 #include "cpp_bus_driver_library.h"
 #include "esp32p4_driver.h"
 #include "radiolib_cpp_bus_driver_library.h"
+#include "sx126x/sx126x_driver.h"
 #include "t_display_p4_keyboard_config.h"
 
 namespace lilygo_device_driver {
@@ -146,7 +147,7 @@ class TDisplayP4Driver {
     std::unique_ptr<cpp_bus_driver::Es8311> es8311;
     std::unique_ptr<cpp_bus_driver::L76k> l76k;
     std::unique_ptr<ICM20948_WE> icm20948;
-    std::unique_ptr<cpp_bus_driver::Sx126x> sx1262;
+    std::unique_ptr<usp_cpp_bus_driver::Sx126x> sx1262;
     std::unique_ptr<cpp_bus_driver::Hi8561> hi8561;
     std::unique_ptr<cpp_bus_driver::Hi8561Touch> hi8561_touch;
     std::unique_ptr<cpp_bus_driver::Pwm> hi8561_backlight;
