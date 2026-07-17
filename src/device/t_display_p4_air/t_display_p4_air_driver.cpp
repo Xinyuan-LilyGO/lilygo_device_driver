@@ -64,6 +64,11 @@ bool TDisplayP4AirDriver::IsAw86224Ready() const {
   return status_.aw86224.init_flag && chip_.aw86224 != nullptr;
 }
 
+bool TDisplayP4AirDriver::IsSt25r3916Ready() const {
+  return status_.st25r3916.init_flag && chip_.st25r3916 != nullptr &&
+         chip_.st25r3916->initialized();
+}
+
 bool TDisplayP4AirDriver::IsHi8561Ready() const {
   return status_.hi8561.init_flag && chip_.hi8561 != nullptr;
 }
@@ -110,6 +115,8 @@ void TDisplayP4AirDriver::CreateDrivers() {
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
   bus_.aw86224_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
+  bus_.st25r3916_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
 
   bus_.es8389_i2s_bus = std::make_shared<cpp_bus_driver::HardwareI2s>(
       gpio::es8389::kAdcData, gpio::es8389::kDacData, gpio::es8389::kWsLrck,
@@ -134,6 +141,10 @@ void TDisplayP4AirDriver::CreateDrivers() {
       bus_.sgm38121_i2c_bus, device::sgm38121::kI2cAddress);
   chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
       bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
+  chip_.st25r3916 =
+      std::make_unique<stsw_st25rfal002_cpp_bus_driver::St25r3916>(
+          bus_.st25r3916_i2c_bus, gpio::st25r3916::kInt,
+          device::st25r3916::kI2cAddress);
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
       bus_.hi8561_i2c_touch_bus, device::hi8561::kTouchI2cAddress);
   chip_.hi8561_backlight =
@@ -173,6 +184,7 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
   result &= InitXl9535();
   result &= ConfigXl9535();
   result &= InitSgm38121();
+  result &= InitSt25r3916();
 
   if (mode == InitMode::kAsync) {
     result &= (xTaskCreate(
@@ -623,6 +635,37 @@ bool TDisplayP4AirDriver::InitAw86224() {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAw86224 failed\n");
   }
   return result;
+}
+
+bool TDisplayP4AirDriver::InitSt25r3916() {
+  if (chip_.st25r3916 == nullptr || bus_.st25r3916_i2c_bus == nullptr) {
+    status_.st25r3916.init_flag = false;
+    status_.st25r3916.result = RFAL_ERR_INVALID_HANDLE;
+    status_.st25r3916.platform_error =
+        stsw_st25rfal002_cpp_bus_driver::PlatformError::kInvalidConfiguration;
+    LogMessage(
+        LogLevel::kError, __FILE__, __LINE__, "InitSt25r3916 failed\n");
+    return false;
+  }
+
+  status_.st25r3916.result = chip_.st25r3916->Init();
+  status_.st25r3916.platform_error = chip_.st25r3916->platform_error();
+  status_.st25r3916.init_flag =
+      status_.st25r3916.result == RFAL_ERR_NONE &&
+      status_.st25r3916.platform_error ==
+          stsw_st25rfal002_cpp_bus_driver::PlatformError::kNone &&
+      chip_.st25r3916->initialized();
+
+  if (!status_.st25r3916.init_flag) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitSt25r3916 failed (RFAL: %u, platform: %u)\n",
+        static_cast<unsigned int>(status_.st25r3916.result),
+        static_cast<unsigned int>(status_.st25r3916.platform_error));
+    return false;
+  }
+
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSt25r3916 success\n");
+  return true;
 }
 
 bool TDisplayP4AirDriver::InitEs8389() {

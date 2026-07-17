@@ -16,6 +16,7 @@
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
 #include "radiolib_cpp_bus_driver_library.h"
+#include "stsw_st25rfal002_cpp_bus_driver_library.h"
 #include "t_display_p4_air_config.h"
 
 namespace lilygo_device_driver {
@@ -99,6 +100,7 @@ class TDisplayP4AirDriver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> xl9535_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> sgm38121_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> aw86224_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c1> st25r3916_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> hi8561_i2c_touch_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
@@ -114,6 +116,7 @@ class TDisplayP4AirDriver {
     std::unique_ptr<cpp_bus_driver::Xl95x5> xl9535;
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
     std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
+    std::unique_ptr<stsw_st25rfal002_cpp_bus_driver::St25r3916> st25r3916;
     std::unique_ptr<cpp_bus_driver::Hi8561> hi8561;
     std::unique_ptr<cpp_bus_driver::Hi8561Touch> hi8561_touch;
     std::unique_ptr<cpp_bus_driver::Pwm> hi8561_backlight;
@@ -139,6 +142,13 @@ class TDisplayP4AirDriver {
       bool init_flag = false;
       cpp_bus_driver::Aw862xx::RamWaveformInfo ram_waveform_info;
     } aw86224;
+
+    struct {
+      bool init_flag = false;
+      ReturnCode result = RFAL_ERR_NONE;
+      stsw_st25rfal002_cpp_bus_driver::PlatformError platform_error =
+          stsw_st25rfal002_cpp_bus_driver::PlatformError::kNone;
+    } st25r3916;
 
     struct {
       bool init_flag = false;
@@ -203,6 +213,7 @@ class TDisplayP4AirDriver {
   bool IsXl9535Ready() const;
   bool IsSgm38121Ready() const;
   bool IsAw86224Ready() const;
+  bool IsSt25r3916Ready() const;
   bool IsHi8561Ready() const;
   bool IsHi8561TouchReady() const;
   bool IsHi8561BacklightReady() const;
@@ -265,6 +276,7 @@ class TDisplayP4AirDriver {
   bool InitHi8561Touch();
   bool InitHi8561Backlight();
   bool InitAw86224();
+  bool InitSt25r3916();
   bool InitEs8389();
   bool ConfigEs8389();
   bool InitLr1121();
