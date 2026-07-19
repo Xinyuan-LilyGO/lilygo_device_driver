@@ -116,7 +116,7 @@ class TDisplayP4AirDriver {
     std::unique_ptr<cpp_bus_driver::Xl95x5> xl9535;
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
     std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
-    std::unique_ptr<stsw_st25rfal002_cpp_bus_driver::St25r3916> st25r3916;
+    std::unique_ptr<stsw_st25rfal002_cpp_bus_driver::St25r3916x> st25r3916;
     std::unique_ptr<cpp_bus_driver::Hi8561> hi8561;
     std::unique_ptr<cpp_bus_driver::Hi8561Touch> hi8561_touch;
     std::unique_ptr<cpp_bus_driver::Pwm> hi8561_backlight;

@@ -142,7 +142,7 @@ void TDisplayP4AirDriver::CreateDrivers() {
   chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
       bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
   chip_.st25r3916 =
-      std::make_unique<stsw_st25rfal002_cpp_bus_driver::St25r3916>(
+      std::make_unique<stsw_st25rfal002_cpp_bus_driver::St25r3916x>(
           bus_.st25r3916_i2c_bus, gpio::st25r3916::kInt,
           device::st25r3916::kI2cAddress);
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
