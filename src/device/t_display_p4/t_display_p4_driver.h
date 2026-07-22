@@ -99,9 +99,35 @@ struct DeviceInfo {
 class TDisplayP4Driver {
  public:
   enum class InitMode { kAsync, kSync };
-  enum class SleepLevel {
-    kLight,
-    kDeep,
+
+  enum class PowerState {
+    kActive,
+    kSleep,
+    kOff,
+  };
+
+  // SX1262 使用暖启动睡眠，唤醒后保留射频配置。
+  enum class Sx1262PowerState {
+    kStandby,  // 可立即收发。
+    kSleep,    // 保留配置的低功耗状态。
+  };
+
+  enum class Cc1101PowerState {
+    kStandby,
+    kSleep,
+  };
+
+  enum class Nrf24l01PowerState {
+    kStandby,
+    kSleep,
+  };
+
+  // ES8311 按实际音频路径分别供电，避免仅用启用/禁用表达不清。
+  enum class Es8311PowerState {
+    kSleep,     // 关闭 ADC、DAC 和模拟偏置。
+    kPlayback,  // 仅打开 DAC 和耳机驱动。
+    kCapture,   // 仅打开 PGA 和 ADC。
+    kDuplex,    // 同时打开采集与播放路径。
   };
 
   enum class Cc1101RfSwitch {
@@ -206,6 +232,10 @@ class TDisplayP4Driver {
 
     struct {
       bool init_flag = false;
+      // 表示 power_state 是否记录了最后一次成功应用的硬件状态。
+      bool power_state_valid = false;
+      // 缓存最后一次成功应用的电源状态，避免重复配置硬件。
+      Es8311PowerState power_state = Es8311PowerState::kSleep;
     } es8311;
 
     struct {
@@ -311,12 +341,24 @@ class TDisplayP4Driver {
   bool Init(InitMode mode = InitMode::kSync);
 
   /**
-   * @brief 开启或关闭指定板级休眠等级。
-   * @param level 要控制的休眠等级。
-   * @param enable 是否开启该休眠等级。
-   * @return 休眠状态设置成功时返回 true，否则返回 false。
+   * @brief 设置整板运行、休眠或关断状态
+   * @param state 目标电源状态
+   * @return 状态切换成功返回 true，否则返回 false
    */
-  bool SetSleep(SleepLevel level, bool enable);
+  bool SetPowerState(PowerState state);
+
+  bool SetScreenSleep(bool sleep);
+  bool SetCameraPowerEnabled(bool enabled);
+  bool SetEsp32c6PowerEnabled(bool enabled);
+  bool SetEthernetPowerEnabled(bool enabled);
+  bool SetNs4150PowerEnabled(bool enabled);
+  bool SetAw86224Standby();
+  bool SetEs8311PowerState(Es8311PowerState state);
+  bool SetL76kSleep(bool sleep);
+  bool SetIcm20948Sleep(bool sleep);
+  bool SetSx1262PowerState(Sx1262PowerState state);
+  bool SetCc1101PowerState(Cc1101PowerState state);
+  bool SetNrf24l01PowerState(Nrf24l01PowerState state);
 
   bool InitPower();
 
@@ -417,13 +459,7 @@ class TDisplayP4Driver {
    */
   bool DetectScreenType();
 
-  /**
-   * @brief 设置键盘扩展设备睡眠状态。
-   * @param level 睡眠等级。
-   * @param enable 是否开启该睡眠等级。
-   * @return 设置成功返回 true，否则返回 false。
-   */
-  bool SetKeyboardSleep(SleepLevel level, bool enable);
+  bool SetKeyboardPowerState(PowerState state);
 
   TDisplayP4Driver() = default;
   ~TDisplayP4Driver() = default;

@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-06-18 16:01:52
+ * @LastEditTime: 2026-07-22 14:41:57
  * @License: GPL 3.0
  */
 
@@ -86,9 +86,18 @@ struct DeviceInfo {
 class TDisplayP4AirDriver {
  public:
   enum class InitMode { kAsync, kSync };
-  enum class SleepLevel {
-    kLight,
-    kDeep,
+  enum class PowerState {
+    kActive,
+    kSleep,
+    kOff,
+  };
+  enum class Lr1121PowerState {
+    kStandby,
+    kSleep,
+  };
+  enum class Es8389PowerState {
+    kActive,
+    kSleep,
   };
   enum class UartTarget {
     kEsp32p4,
@@ -164,6 +173,10 @@ class TDisplayP4AirDriver {
 
     struct {
       bool init_flag = false;
+      // 表示 power_state 是否记录了最后一次成功应用的硬件状态。
+      bool power_state_valid = false;
+      // 缓存最后一次成功应用的电源状态，避免重复配置硬件。
+      Es8389PowerState power_state = Es8389PowerState::kSleep;
     } es8389;
 
     struct {
@@ -239,12 +252,19 @@ class TDisplayP4AirDriver {
   bool Init(InitMode mode = InitMode::kSync);
 
   /**
-   * @brief 开启或关闭指定板级休眠等级。
-   * @param level 要控制的休眠等级。
-   * @param enable 是否开启该休眠等级。
-   * @return 休眠状态设置成功时返回 true，否则返回 false。
+   * @brief 设置整板运行、休眠或关断状态
+   * @param state 目标电源状态
+   * @return 状态切换成功返回 true，否则返回 false
    */
-  bool SetSleep(SleepLevel level, bool enable);
+  bool SetPowerState(PowerState state);
+
+  bool SetScreenSleep(bool sleep);
+  bool SetCameraPowerEnabled(bool enabled);
+  bool SetNs4150Enabled(bool enabled);
+  bool SetAw86224Standby();
+  bool SetEs8389PowerState(Es8389PowerState state);
+  bool SetLr1121PowerState(Lr1121PowerState state);
+  bool SetNrf9151PowerEnabled(bool enabled);
 
   bool InitPower();
   bool InitAxp517();

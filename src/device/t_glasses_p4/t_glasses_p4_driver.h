@@ -98,9 +98,22 @@ struct DeviceInfo {
 class TGlassesP4Driver {
  public:
   enum class InitMode { kAsync, kSync };
-  enum class SleepLevel {
-    kLight,
-    kDeep,
+  enum class PowerState {
+    kActive,
+    kSleep,
+    kOff,
+  };
+
+  enum class Es8311PowerState {
+    kSleep,     // 关闭 ADC、DAC 和模拟偏置。
+    kPlayback,  // 仅开启播放路径。
+    kCapture,   // 仅开启采集路径。
+    kDuplex,    // 同时开启采集和播放路径。
+  };
+
+  enum class Sx1262PowerState {
+    kStandby,
+    kSleep,
   };
 
   struct Bus {
@@ -149,6 +162,10 @@ class TGlassesP4Driver {
 
     struct {
       bool init_flag = false;
+      // 表示 power_state 是否记录了最后一次成功应用的硬件状态。
+      bool power_state_valid = false;
+      // 缓存最后一次成功应用的电源状态，避免重复配置硬件。
+      Es8311PowerState power_state = Es8311PowerState::kSleep;
     } es8311;
 
     struct {
@@ -212,12 +229,17 @@ class TGlassesP4Driver {
   bool Init(InitMode mode = InitMode::kSync);
 
   /**
-   * @brief 开启或关闭指定板级休眠等级。
-   * @param level 要控制的休眠等级。
-   * @param enable 是否开启该休眠等级。
-   * @return 休眠状态设置成功时返回 true，否则返回 false。
+   * @brief 设置整板运行、休眠或关断状态
+   * @param state 目标电源状态
+   * @return 状态切换成功返回 true，否则返回 false
    */
-  bool SetSleep(SleepLevel level, bool enable);
+  bool SetPowerState(PowerState state);
+
+  bool SetScreenSleep(bool sleep);
+  bool SetCameraPowerEnabled(bool enabled);
+  bool SetAw86224Standby();
+  bool SetEs8311PowerState(Es8311PowerState state);
+  bool SetSx1262PowerState(Sx1262PowerState state);
 
   bool InitPower();
   bool InitSy6970();

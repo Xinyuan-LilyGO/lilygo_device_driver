@@ -171,6 +171,7 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
   InitSy6970();
   result &= InitPower();
   InitSgm38121();
+  result &= SetCameraPowerEnabled(false);
 
   if (mode == InitMode::kAsync) {
     result &= (xTaskCreate(
@@ -192,7 +193,9 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TGlassesP4Driver*>(arg);
-                     self->InitAw86224();
+                     if (self->InitAw86224()) {
+                       self->SetAw86224Standby();
+                     }
                      vTaskDelete(nullptr);
                    },
                    "InitAw86224Task", 4096, this, 3, nullptr) == pdPASS);
@@ -200,8 +203,10 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TGlassesP4Driver*>(arg);
-                     self->InitEs8311();
-                     self->ConfigEs8311();
+                     if (self->InitEs8311() && self->ConfigEs8311()) {
+                       self->SetEs8311PowerState(
+                           Es8311PowerState::kSleep);
+                     }
                      vTaskDelete(nullptr);
                    },
                    "InitEs8311Task", 4096, this, 3, nullptr) == pdPASS);
@@ -209,7 +214,10 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TGlassesP4Driver*>(arg);
-                     self->InitSx1262();
+                     if (self->InitSx1262()) {
+                       self->SetSx1262PowerState(
+                           Sx1262PowerState::kSleep);
+                     }
                      vTaskDelete(nullptr);
                    },
                    "InitSx1262Task", 4096, this, 3, nullptr) == pdPASS);
@@ -224,10 +232,11 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
   } else {
     result &= InitScreen();
     InitBq27220();
-    InitAw86224();
-    InitEs8311();
-    result &= ConfigEs8311();
-    InitSx1262();
+    result &= InitAw86224() && SetAw86224Standby();
+    result &= InitEs8311() && ConfigEs8311() &&
+              SetEs8311PowerState(Es8311PowerState::kSleep);
+    result &= InitSx1262() &&
+              SetSx1262PowerState(Sx1262PowerState::kSleep);
 
     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
 
@@ -256,42 +265,133 @@ bool TGlassesP4Driver::Init(InitMode mode) {
   return result;
 }
 
-bool TGlassesP4Driver::SetSleep(SleepLevel level, bool enable) {
+bool TGlassesP4Driver::SetPowerState(PowerState state) {
   bool result = true;
 
-  switch (level) {
-    case SleepLevel::kLight:
-      if (enable) {
-        if (status_.s023msafjf10111e1.init_flag) {
-          result &= chip_.s023msafjf10111e1->SetBrightness(0);
-        }
-        if (status_.sx1262.init_flag) {
-          result &= chip_.sx1262->SetSleep();
-        }
-      } else {
-        if (status_.s023msafjf10111e1.init_flag) {
-          result &= chip_.s023msafjf10111e1->SetBrightness(0);
-        }
-        if (status_.sx1262.init_flag) {
-          result &= chip_.sx1262->Wakeup();
-        }
-      }
+  switch (state) {
+    case PowerState::kActive:
+      result &= SetScreenSleep(false);
       break;
-    case SleepLevel::kDeep:
-      if (enable) {
-        result &= DeinitScreen();
-        result &= tool_->GpioWrite(gpio::power::kEn5v0, false);
-        result &= tool_->GpioWrite(gpio::power::kEn3v3, false);
-      } else {
-        result &= InitPower();
-        result &= InitScreen();
+    case PowerState::kSleep:
+      result &= SetScreenSleep(true);
+      break;
+    case PowerState::kOff:
+      result &= SetAw86224Standby();
+      result &= SetEs8311PowerState(Es8311PowerState::kSleep);
+      result &= SetSx1262PowerState(Sx1262PowerState::kSleep);
+      result &= SetCameraPowerEnabled(false);
+      if (IsSdmmcReady()) {
+        result &= DeinitSdmmc();
       }
+      result &= DeinitScreen();
+      result &= tool_->GpioWrite(gpio::power::kEn5v0, false);
+      result &= tool_->GpioWrite(gpio::power::kEn3v3, false);
       break;
     default:
-      break;
+      return false;
   }
 
   return result;
+}
+
+bool TGlassesP4Driver::SetScreenSleep(bool sleep) {
+  if (sleep) {
+    return DeinitScreen();
+  }
+  if (IsScreenReady()) {
+    return true;
+  }
+  return InitScreen();
+}
+
+bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
+  if (!status_.sgm38121.init_flag) {
+    return !enabled;
+  }
+  const auto status = enabled ? cpp_bus_driver::Sgm38121::Status::kOn
+                              : cpp_bus_driver::Sgm38121::Status::kOff;
+  bool result = true;
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1, status);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1, status);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1, status);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
+#endif
+  if (result && enabled) {
+    tool_->DelayMs(10);
+  }
+  return result;
+}
+
+bool TGlassesP4Driver::SetAw86224Standby() {
+  return !status_.aw86224.init_flag ||
+         chip_.aw86224->StopRamPlaybackWaveform();
+}
+
+bool TGlassesP4Driver::SetEs8311PowerState(Es8311PowerState state) {
+  if (!status_.es8311.init_flag) {
+    return state == Es8311PowerState::kSleep;
+  }
+  if (status_.es8311.power_state_valid &&
+      status_.es8311.power_state == state) {
+    return true;
+  }
+  status_.es8311.power_state_valid = false;
+
+  const bool playback_enabled = state == Es8311PowerState::kPlayback ||
+                                state == Es8311PowerState::kDuplex;
+  const bool capture_enabled = state == Es8311PowerState::kCapture ||
+                               state == Es8311PowerState::kDuplex;
+  const bool sleep = state == Es8311PowerState::kSleep;
+  cpp_bus_driver::Es8311::PowerStatus power_status = {
+      .contorl =
+          {
+              .analog_circuits = !sleep,
+              .analog_bias_circuits = !sleep,
+              .analog_adc_bias_circuits = capture_enabled,
+              .analog_adc_reference_circuits = capture_enabled,
+              .analog_dac_reference_circuit = playback_enabled,
+              .internal_reference_circuits = false,
+          },
+      .vmid = sleep
+                  ? cpp_bus_driver::Es8311::Vmid::kPowerDown
+                  : cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
+  };
+
+  bool result = true;
+  if (sleep) {
+    result &= chip_.es8311->SetOutputToHpDrive(false);
+    result &= chip_.es8311->SetPgaPower(false);
+    result &= chip_.es8311->SetAdcPower(false);
+    result &= chip_.es8311->SetDacPower(false);
+    result &= chip_.es8311->SetPowerStatus(power_status);
+  } else {
+    result &= chip_.es8311->SetPowerStatus(power_status);
+    result &= chip_.es8311->SetPgaPower(capture_enabled);
+    result &= chip_.es8311->SetAdcPower(capture_enabled);
+    result &= chip_.es8311->SetDacPower(playback_enabled);
+    result &= chip_.es8311->SetOutputToHpDrive(playback_enabled);
+  }
+  if (result) {
+    status_.es8311.power_state = state;
+    status_.es8311.power_state_valid = true;
+  }
+  return result;
+}
+
+bool TGlassesP4Driver::SetSx1262PowerState(Sx1262PowerState state) {
+  if (!status_.sx1262.init_flag) {
+    return state == Sx1262PowerState::kSleep;
+  }
+  return state == Sx1262PowerState::kSleep ? chip_.sx1262->SetSleep()
+                                           : chip_.sx1262->Wakeup();
 }
 
 bool TGlassesP4Driver::InitPower() {
@@ -496,6 +596,7 @@ bool TGlassesP4Driver::InitAw86224() {
 }
 
 bool TGlassesP4Driver::InitEs8311() {
+  status_.es8311.power_state_valid = false;
   if (!chip_.es8311->Init()) {
     status_.es8311.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8311 failed\n");
@@ -555,6 +656,9 @@ bool TGlassesP4Driver::ConfigEs8311() {
 
   if (!result) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
+  } else {
+    status_.es8311.power_state = Es8311PowerState::kDuplex;
+    status_.es8311.power_state_valid = true;
   }
   return result;
 }
