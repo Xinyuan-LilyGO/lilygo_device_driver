@@ -842,6 +842,18 @@ bool TDisplayP4Driver::SetNs4150PowerEnabled(bool enabled) {
   return result;
 }
 
+bool TDisplayP4Driver::SetUsbHostPowerEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  const bool result = chip_.xl9535->GpioWrite(
+      gpio::xl9535::kUsbPhyPowerEn, enabled ? 1 : 0);
+  if (result && enabled) {
+    tool_->DelayMs(20);
+  }
+  return result;
+}
+
 bool TDisplayP4Driver::SetAw86224Standby() {
   return !IsAw86224Ready() || chip_.aw86224->StopRamPlaybackWaveform();
 }
@@ -1028,6 +1040,7 @@ bool TDisplayP4Driver::SetPowerState(PowerState state) {
   result &= SetL76kSleep(true);
   result &= SetSx1262PowerState(Sx1262PowerState::kSleep);
   result &= SetCameraPowerEnabled(false);
+  result &= SetUsbHostPowerEnabled(false);
 
   if (IsSdmmcReady()) {
     result &= DeinitSdmmc();
