@@ -583,7 +583,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
   result &= ConfigXl9535();
   result &= SetEsp32c6PowerEnabled(false);
   result &= SetEthernetPowerEnabled(false);
-  result &= SetNs4150PowerEnabled(false);
+  result &= SetAudioPowerEnabled(false);
 
   result &= InitSgm38121();
   result &= SetCameraPowerEnabled(false);
@@ -830,12 +830,12 @@ bool TDisplayP4Driver::SetEthernetPowerEnabled(bool enabled) {
   return result;
 }
 
-bool TDisplayP4Driver::SetNs4150PowerEnabled(bool enabled) {
+bool TDisplayP4Driver::SetAudioPowerEnabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
   const bool result = chip_.xl9535->GpioWrite(
-      gpio::xl9535::kNs4150PowerEn, enabled ? 1 : 0);
+      gpio::xl9535::kAudioPowerEn, enabled ? 1 : 0);
   if (result && enabled) {
     tool_->DelayMs(10);
   }
@@ -880,7 +880,9 @@ bool TDisplayP4Driver::SetEs8311PowerState(Es8311PowerState state) {
       state == Es8311PowerState::kCapture ||
       state == Es8311PowerState::kDuplex;
   const bool sleep = state == Es8311PowerState::kSleep;
-  if (playback_enabled && !SetNs4150PowerEnabled(true)) {
+  // 该开关控制共享的 OUT_5V 音频电源域。除 NS4150 外，RT9080 也从
+  // OUT_5V 生成 ES8311 模拟 ADC 使用的 AD_3V3，因此仅采集时同样要开启。
+  if (!sleep && !SetAudioPowerEnabled(true)) {
     return false;
   }
   cpp_bus_driver::Es8311::PowerStatus power_status = {
@@ -912,10 +914,10 @@ bool TDisplayP4Driver::SetEs8311PowerState(Es8311PowerState state) {
     result &= chip_.es8311->SetDacPower(playback_enabled);
     result &= chip_.es8311->SetOutputToHpDrive(playback_enabled);
   }
-  if (!playback_enabled) {
-    result &= SetNs4150PowerEnabled(false);
+  if (sleep) {
+    result &= SetAudioPowerEnabled(false);
   } else if (!result) {
-    SetNs4150PowerEnabled(false);
+    SetAudioPowerEnabled(false);
   }
   if (result) {
     status_.es8311.power_state = state;
@@ -1092,7 +1094,7 @@ bool TDisplayP4Driver::SetPowerState(PowerState state) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEthernetRst, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150PowerEn, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 1);
     result &= chip_.xl9535->Deinit();
     status_.xl9535.init_flag = false;
@@ -1160,7 +1162,7 @@ bool TDisplayP4Driver::ConfigXl9535() {
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEthernetRst, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150PowerEn, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kGpsWakeUp, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, 0);
@@ -1180,7 +1182,7 @@ bool TDisplayP4Driver::ConfigXl9535() {
   result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kUsbPhyPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kNs4150PowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kAudioPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kPowerEn3v3, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(

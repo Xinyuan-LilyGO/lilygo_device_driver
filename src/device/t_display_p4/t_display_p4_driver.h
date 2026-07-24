@@ -351,7 +351,7 @@ class TDisplayP4Driver {
   bool SetCameraPowerEnabled(bool enabled);
   bool SetEsp32c6PowerEnabled(bool enabled);
   bool SetEthernetPowerEnabled(bool enabled);
-  bool SetNs4150PowerEnabled(bool enabled);
+  bool SetAudioPowerEnabled(bool enabled);
   bool SetUsbHostPowerEnabled(bool enabled);
   bool SetAw86224Standby();
   bool SetEs8311PowerState(Es8311PowerState state);
