@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-07-22 14:41:57
+ * @LastEditTime: 2026-07-27 14:15:09
  * @License: GPL 3.0
  */
 
@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 
 #include "cpp_bus_driver_library.h"
 #include "esp32p4_driver.h"
@@ -319,6 +320,12 @@ class TDisplayP4AirDriver {
   bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
   /**
+   * @brief 卸载 SD 卡文件系统并释放 SDMMC 主机资源。
+   * @return 卸载成功或当前未挂载时返回 true，否则返回 false。
+   */
+  bool DeinitSdmmc();
+
+  /**
    * @brief 检查已挂载 SD 卡是否仍可响应 SDMMC 命令。
    * @return SD 卡已挂载且可访问时返回 true，否则返回 false。
    */
@@ -340,6 +347,7 @@ class TDisplayP4AirDriver {
   Chip chip_;
   Status status_;
   sdmmc_card_t* sd_card_ = nullptr;
+  std::string sd_card_base_path_;
   const t_display_p4_air::device::ScreenInfo* screen_info_ = nullptr;
 
   const audio_codec_ctrl_if_t* es8389_ctrl_if_ = nullptr;
