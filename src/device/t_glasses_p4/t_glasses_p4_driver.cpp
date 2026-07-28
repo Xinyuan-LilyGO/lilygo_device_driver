@@ -316,7 +316,8 @@ bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, status);
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
-#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710) || \
+    defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, status);
   result &= chip_.sgm38121->SetChannelStatus(
@@ -460,12 +461,6 @@ bool TGlassesP4Driver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
-      cpp_bus_driver::Sgm38121::Status::kOn);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
-      cpp_bus_driver::Sgm38121::Status::kOn);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
@@ -473,15 +468,6 @@ bool TGlassesP4Driver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3300);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
-      cpp_bus_driver::Sgm38121::Status::kOn);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
-      cpp_bus_driver::Sgm38121::Status::kOn);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
-      cpp_bus_driver::Sgm38121::Status::kOn);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
@@ -489,15 +475,6 @@ bool TGlassesP4Driver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
-      cpp_bus_driver::Sgm38121::Status::kOn);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
-      cpp_bus_driver::Sgm38121::Status::kOn);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
-      cpp_bus_driver::Sgm38121::Status::kOn);
 #endif
 
   status_.sgm38121.init_flag = result;
