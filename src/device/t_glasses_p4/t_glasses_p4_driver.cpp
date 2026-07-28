@@ -2,7 +2,7 @@
  * @Description: T-Glasses-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:58:49
- * @LastEditTime: 2026-05-25 00:21:02
+ * @LastEditTime: 2026-07-28 09:11:38
  * @License: GPL 3.0
  */
 #include "t_glasses_p4_driver.h"
@@ -472,7 +472,7 @@ bool TGlassesP4Driver::InitSgm38121() {
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3000);
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3300);
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1,
       cpp_bus_driver::Sgm38121::Status::kOn);
