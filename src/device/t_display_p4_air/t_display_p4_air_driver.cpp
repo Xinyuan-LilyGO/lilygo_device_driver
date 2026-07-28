@@ -66,6 +66,10 @@ bool TDisplayP4AirDriver::IsBhi260apReady() const {
          chip_.bhi260ap->initialized() && chip_.bhi260ap->firmware_running();
 }
 
+bool TDisplayP4AirDriver::IsQmc6310nReady() const {
+  return status_.qmc6310n.init_flag && chip_.qmc6310n != nullptr;
+}
+
 bool TDisplayP4AirDriver::IsAw86224Ready() const {
   return status_.aw86224.init_flag && chip_.aw86224 != nullptr;
 }
@@ -122,6 +126,8 @@ void TDisplayP4AirDriver::CreateDrivers() {
   bus_.bhi260ap_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c1>(
           bus_.sgm38121_i2c_bus);
+  bus_.qmc6310n_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
   bus_.aw86224_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
   bus_.st25r3916_i2c_bus =
@@ -159,6 +165,7 @@ void TDisplayP4AirDriver::CreateDrivers() {
   chip_.bhi260ap =
       std::make_unique<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy>(
           bus_.bhi260ap_i2c_bus, device::bhi260ap::kI2cAddress);
+  chip_.qmc6310n = std::make_unique<SensorQMC6310>();
   chip_.hi8561_backlight =
       std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBacklight);
   chip_.nrf9151 =
@@ -686,6 +693,29 @@ bool TDisplayP4AirDriver::InitBhi260ap() {
         "InitBhi260ap failed (error code: %d)\n",
         static_cast<int>(chip_.bhi260ap->last_error()));
   }
+  return result;
+}
+
+bool TDisplayP4AirDriver::InitQmc6310n() {
+  if (chip_.qmc6310n == nullptr || bus_.qmc6310n_i2c_bus == nullptr ||
+      !bus_.qmc6310n_i2c_bus->InitBus()) {
+    status_.qmc6310n.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitQmc6310n failed\n");
+    return false;
+  }
+
+  bool result = chip_.qmc6310n->begin(
+      bus_.qmc6310n_i2c_bus->bus_handle(), device::qmc6310n::kI2cAddress);
+  if (result) {
+    chip_.qmc6310n->setOffset(0, 0, 0);
+    result = chip_.qmc6310n->configMagnetometer(
+        OperationMode::CONTINUOUS_MEASUREMENT, MagFullScaleRange::FS_8G,
+        200.0f, MagOverSampleRatio::OSR_1, MagDownSampleRatio::DSR_1);
+  }
+  status_.qmc6310n.init_flag = result;
+
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitQmc6310n success\n" : "InitQmc6310n failed\n");
   return result;
 }
 

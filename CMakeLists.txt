@@ -24,10 +24,11 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR)
         )
     list(APPEND requires
             "cpp_bus_driver"
-            "bhi2xy_sensorapi_cpp_bus_driver"
             "radiolib_cpp_bus_driver"
+            "sensorlib"
             "stsw-st25rfal002_cpp_bus_driver"
-            "esp_codec_dev")
+            "esp_codec_dev"
+            "bhi2xy_sensorapi_cpp_bus_driver")
 elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_SPE)
     set(
             src_dirs
