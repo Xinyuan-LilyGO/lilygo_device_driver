@@ -98,7 +98,8 @@ bool TDisplayP4AirDriver::IsEs8389Ready() const {
 }
 
 bool TDisplayP4AirDriver::IsLr1121Ready() const {
-  return status_.lr1121.init_flag && chip_.lr1121 != nullptr;
+  return status_.lr1121.init_flag && chip_.lr1121 != nullptr &&
+         chip_.lr1121->initialized();
 }
 
 bool TDisplayP4AirDriver::IsNrf9151Ready() const {
@@ -170,15 +171,23 @@ void TDisplayP4AirDriver::CreateDrivers() {
       std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBacklight);
   chip_.nrf9151 =
       std::make_unique<cpp_bus_driver::Nrf9151>(bus_.nrf9151_uart_bus);
-
-  bus_.lr1121_radiolib_hal = new RadiolibCppBusDriverHal(
-      bus_.lr1121_spi_bus, 10000000, gpio::lr1121::kCs);
-  bus_.lr1121_module =
-      new Module(bus_.lr1121_radiolib_hal, static_cast<uint32_t>(RADIOLIB_NC),
-          static_cast<uint32_t>(gpio::lr1121::kInt),
-          static_cast<uint32_t>(gpio::lr1121::kRst),
-          static_cast<uint32_t>(gpio::lr1121::kBusy));
-  chip_.lr1121 = new LR1121(bus_.lr1121_module);
+  chip_.lr1121 = std::make_unique<usp_cpp_bus_driver::Lr11xx>(
+      bus_.lr1121_spi_bus, gpio::lr1121::kBusy, gpio::lr1121::kCs,
+      [this](bool released) {
+        return tool_ != nullptr &&
+               tool_->GpioWrite(gpio::lr1121::kRst, released);
+      },
+      [this]() {
+        if (bus_.lr1121_spi_bus == nullptr) {
+          return false;
+        }
+        bool result =
+            bus_.lr1121_spi_bus->GpioWrite(gpio::lr1121::kCs, false);
+        bus_.lr1121_spi_bus->DelayUs(100);
+        result &=
+            bus_.lr1121_spi_bus->GpioWrite(gpio::lr1121::kCs, true);
+        return result;
+      });
 }
 
 bool TDisplayP4AirDriver::Init(InitMode mode) {
@@ -453,12 +462,22 @@ bool TDisplayP4AirDriver::SetLr1121PowerState(Lr1121PowerState state) {
     return !status_.xl9535.init_flag ||
            chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
   }
-  const int16_t result = state == Lr1121PowerState::kSleep
-                             ? chip_.lr1121->sleep()
-                             : chip_.lr1121->standby();
-  if (result != RADIOLIB_ERR_NONE) {
+  lr11xx_status_t result = LR11XX_STATUS_ERROR;
+  if (state == Lr1121PowerState::kSleep) {
+    const lr11xx_system_sleep_cfg_t sleep_config = {
+        .is_warm_start = true,
+        .is_rtc_timeout = false,
+    };
+    result =
+        chip_.lr1121->Invoke(lr11xx_system_set_sleep, sleep_config, 0U);
+  } else if (chip_.lr1121->Wakeup()) {
+    result = chip_.lr1121->Invoke(
+        lr11xx_system_set_standby, LR11XX_SYSTEM_STANDBY_CFG_RC);
+  }
+  if (result != LR11XX_STATUS_OK) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "LR1121 power state change failed (error code: %d)\n", result);
+        "LR1121 power state change failed (error code: %d)\n",
+        static_cast<int>(result));
     return false;
   }
   return true;
@@ -1095,35 +1114,111 @@ bool TDisplayP4AirDriver::ConfigEs8389() {
 }
 
 bool TDisplayP4AirDriver::InitLr1121() {
-  bool result = true;
-
-  int16_t ret = chip_.lr1121->begin(
-      2450.0, 125.0, 12, 7, RADIOLIB_LR11X0_LORA_SYNC_WORD_PRIVATE, 13, 8);
-  if (ret != RADIOLIB_ERR_NONE) {
-    status_.lr1121.init_flag = false;
+  status_.lr1121.init_flag = false;
+  if (chip_.lr1121 == nullptr ||
+      !tool_->SetGpioMode(
+          gpio::lr1121::kRst, cpp_bus_driver::Tool::GpioMode::kOutput) ||
+      !tool_->SetGpioMode(
+          gpio::lr1121::kInt, cpp_bus_driver::Tool::GpioMode::kInput) ||
+      !chip_.lr1121->Init(10000000)) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitLr1121 failed (error code: %d)\n", ret);
+        "InitLr1121 transport failed\n");
     return false;
   }
 
-  const uint32_t rf_switch_dio_pins[] = {
-      RADIOLIB_LR11X0_DIO5, RADIOLIB_LR11X0_DIO6, RADIOLIB_NC, RADIOLIB_NC,
-      RADIOLIB_NC,
+  lr11xx_system_version_t version = {};
+  if (chip_.lr1121->Invoke(lr11xx_system_get_version, &version) !=
+          LR11XX_STATUS_OK ||
+      version.type != LR11XX_SYSTEM_VERSION_TYPE_LR1121) {
+    chip_.lr1121->Deinit();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitLr1121 chip detection failed\n");
+    return false;
+  }
+
+  const lr11xx_system_rfswitch_cfg_t rf_switch_config = {
+      .enable = 0x03,
+      .standby = 0x00,
+      .rx = 0x02,
+      .tx = 0x00,
+      .tx_hp = 0x01,
+      .tx_hf = 0x00,
+      .gnss = 0x00,
+      .wifi = 0x00,
   };
-  const Module::RfSwitchMode_t rf_switch_table[] = {
-      {LR11x0::MODE_STBY, {0, 0}},
-      {LR11x0::MODE_RX, {0, 1}},
-      {LR11x0::MODE_TX, {0, 0}},
-      {LR11x0::MODE_TX_HP, {1, 0}},
-      {LR11x0::MODE_TX_HF, {0, 0}},
-      {LR11x0::MODE_GNSS, {0, 0}},
-      {LR11x0::MODE_WIFI, {0, 0}},
-      END_OF_MODE_TABLE,
+  usp_cpp_bus_driver::Lr11xx::LoraConfig lora_config = {
+      .frequency_hz = 2450000000U,
+      .modulation =
+          {
+              .sf = LR11XX_RADIO_LORA_SF12,
+              .bw = LR11XX_RADIO_LORA_BW_125,
+              .cr = LR11XX_RADIO_LORA_CR_4_7,
+              .ldro = 1,
+          },
+      .packet =
+          {
+              .preamble_len_in_symb = 8,
+              .header_type = LR11XX_RADIO_LORA_PKT_EXPLICIT,
+              .pld_len_in_bytes = 255,
+              .crc = LR11XX_RADIO_LORA_CRC_ON,
+              .iq = LR11XX_RADIO_LORA_IQ_STANDARD,
+          },
+      .sync_word = 0x12,
+      .pa =
+          {
+              .pa_sel = LR11XX_RADIO_PA_SEL_HF,
+              .pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VREG,
+              .pa_duty_cycle = 0x04,
+              .pa_hp_sel = 0x07,
+          },
+      .output_power_dbm = 13,
+      .ramp_time = LR11XX_RADIO_RAMP_48_US,
   };
-  chip_.lr1121->setRfSwitchTable(rf_switch_dio_pins, rf_switch_table);
+
+  bool result =
+      chip_.lr1121->Invoke(
+          lr11xx_system_set_standby, LR11XX_SYSTEM_STANDBY_CFG_RC) ==
+          LR11XX_STATUS_OK &&
+      chip_.lr1121->Invoke(lr11xx_system_set_tcxo_mode,
+          LR11XX_SYSTEM_TCXO_CTRL_1_6V, 163U) == LR11XX_STATUS_OK &&
+      chip_.lr1121->Invoke(
+          lr11xx_radio_set_rx_tx_fallback_mode,
+          LR11XX_RADIO_FALLBACK_STDBY_RC) == LR11XX_STATUS_OK &&
+      chip_.lr1121->Invoke(lr11xx_system_clear_irq_status,
+          LR11XX_SYSTEM_IRQ_ALL_MASK) == LR11XX_STATUS_OK &&
+      chip_.lr1121->Invoke(lr11xx_system_set_dio_irq_params,
+          LR11XX_SYSTEM_IRQ_NONE, LR11XX_SYSTEM_IRQ_NONE) ==
+          LR11XX_STATUS_OK &&
+      chip_.lr1121->Invoke(lr11xx_system_calibrate,
+          static_cast<uint8_t>(LR11XX_SYSTEM_CALIB_LF_RC_MASK |
+                               LR11XX_SYSTEM_CALIB_HF_RC_MASK |
+                               LR11XX_SYSTEM_CALIB_PLL_MASK |
+                               LR11XX_SYSTEM_CALIB_ADC_MASK |
+                               LR11XX_SYSTEM_CALIB_IMG_MASK |
+                               LR11XX_SYSTEM_CALIB_PLL_TX_MASK)) ==
+          LR11XX_STATUS_OK &&
+      chip_.lr1121->Invoke(
+          lr11xx_system_drive_dio_in_sleep_mode, true) ==
+          LR11XX_STATUS_OK &&
+      chip_.lr1121->Invoke(
+          lr11xx_system_set_dio_as_rf_switch, &rf_switch_config) ==
+          LR11XX_STATUS_OK &&
+      chip_.lr1121->Invoke(
+          lr11xx_system_calibrate_image_in_mhz, 2446U, 2454U) ==
+          LR11XX_STATUS_OK &&
+      chip_.lr1121->Configure(lora_config);
+  if (!result) {
+    chip_.lr1121->Deinit();
+    status_.lr1121.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitLr1121 configuration failed\n");
+    return false;
+  }
 
   status_.lr1121.init_flag = result;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitLr1121 success\n");
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+      "InitLr1121 success (hw: %u, fw: 0x%04x)\n",
+      static_cast<unsigned>(version.hw), static_cast<unsigned>(version.fw));
   return result;
 }
 

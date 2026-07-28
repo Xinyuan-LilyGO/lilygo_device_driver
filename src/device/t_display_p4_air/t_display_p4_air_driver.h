@@ -17,10 +17,10 @@
 #include "esp32p4_driver.h"
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
-#include "radiolib_cpp_bus_driver_library.h"
 #include "SensorQMC6310.hpp"
 #include "stsw_st25rfal002_cpp_bus_driver_library.h"
 #include "t_display_p4_air_config.h"
+#include "usp_cpp_bus_driver_library.h"
 
 namespace lilygo_device_driver {
 namespace t_display_p4_air::device {
@@ -120,9 +120,6 @@ class TDisplayP4AirDriver {
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> lr1121_spi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareUart> nrf9151_uart_bus;
-
-    RadioLibHal* lr1121_radiolib_hal = nullptr;
-    Module* lr1121_module = nullptr;
   };
 
   struct Chip {
@@ -137,8 +134,7 @@ class TDisplayP4AirDriver {
     std::unique_ptr<cpp_bus_driver::Nrf9151> nrf9151;
     std::unique_ptr<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy> bhi260ap;
     std::unique_ptr<SensorQMC6310> qmc6310n;
-
-    LR1121* lr1121 = nullptr;
+    std::unique_ptr<usp_cpp_bus_driver::Lr11xx> lr1121;
   };
 
   struct Status {

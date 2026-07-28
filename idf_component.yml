@@ -25,7 +25,6 @@ dependencies:
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
-      - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
 
   espressif/esp_codec_dev:
     version: "1.5.10"
@@ -46,11 +45,12 @@ dependencies:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
 
   usp_cpp_bus_driver:
-    path: "../usp_cpp_bus_driver"
+    path: "../../app/lilygo_device_driver_example/libraries/usp_cpp_bus_driver"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_GLASSES_P4} == True"
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
+      - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
 
   stsw-st25rfal002_cpp_bus_driver:
     path: "../stsw-st25rfal002_cpp_bus_driver"
