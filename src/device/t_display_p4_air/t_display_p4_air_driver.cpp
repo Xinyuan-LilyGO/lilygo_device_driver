@@ -7,6 +7,7 @@
  */
 #include "t_display_p4_air_driver.h"
 
+#include "firmware/bhi260ap/BHI260AP.fw.h"
 #include "sdmmc_cmd.h"
 
 namespace lilygo_device_driver {
@@ -58,6 +59,11 @@ bool TDisplayP4AirDriver::IsXl9535Ready() const {
 
 bool TDisplayP4AirDriver::IsSgm38121Ready() const {
   return status_.sgm38121.init_flag && chip_.sgm38121 != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsBhi260apReady() const {
+  return status_.bhi260ap.init_flag && chip_.bhi260ap != nullptr &&
+         chip_.bhi260ap->initialized() && chip_.bhi260ap->firmware_running();
 }
 
 bool TDisplayP4AirDriver::IsAw86224Ready() const {
@@ -113,6 +119,9 @@ void TDisplayP4AirDriver::CreateDrivers() {
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
   bus_.hi8561_i2c_touch_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
+  bus_.bhi260ap_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(
+          bus_.sgm38121_i2c_bus);
   bus_.aw86224_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
   bus_.st25r3916_i2c_bus =
@@ -147,6 +156,9 @@ void TDisplayP4AirDriver::CreateDrivers() {
           device::st25r3916::kI2cAddress);
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
       bus_.hi8561_i2c_touch_bus, device::hi8561::kTouchI2cAddress);
+  chip_.bhi260ap =
+      std::make_unique<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy>(
+          bus_.bhi260ap_i2c_bus, device::bhi260ap::kI2cAddress);
   chip_.hi8561_backlight =
       std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBacklight);
   chip_.nrf9151 =
@@ -646,6 +658,33 @@ bool TDisplayP4AirDriver::InitSgm38121() {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSgm38121 success\n");
   } else {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSgm38121 failed\n");
+  }
+  return result;
+}
+
+bool TDisplayP4AirDriver::InitBhi260ap() {
+  if (chip_.bhi260ap == nullptr || bus_.bhi260ap_i2c_bus == nullptr) {
+    status_.bhi260ap.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBhi260ap failed\n");
+    return false;
+  }
+
+  bool result = chip_.bhi260ap->Init();
+  if (result) {
+    result = chip_.bhi260ap->BootFromRam(
+        bhy2_firmware_image,
+        static_cast<uint32_t>(sizeof(bhy2_firmware_image)));
+  }
+  status_.bhi260ap.init_flag = result;
+
+  if (result) {
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "InitBhi260ap success (kernel version: %u)\n",
+        static_cast<unsigned int>(chip_.bhi260ap->kernel_version()));
+  } else {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitBhi260ap failed (error code: %d)\n",
+        static_cast<int>(chip_.bhi260ap->last_error()));
   }
   return result;
 }

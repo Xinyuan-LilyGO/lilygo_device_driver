@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 
+#include "bhi2xy_sensorapi_cpp_bus_driver_library.h"
 #include "cpp_bus_driver_library.h"
 #include "esp32p4_driver.h"
 #include "esp_codec_dev.h"
@@ -112,6 +113,7 @@ class TDisplayP4AirDriver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> aw86224_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> st25r3916_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> hi8561_i2c_touch_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c1> bhi260ap_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> lr1121_spi_bus;
@@ -131,6 +133,7 @@ class TDisplayP4AirDriver {
     std::unique_ptr<cpp_bus_driver::Hi8561Touch> hi8561_touch;
     std::unique_ptr<cpp_bus_driver::Pwm> hi8561_backlight;
     std::unique_ptr<cpp_bus_driver::Nrf9151> nrf9151;
+    std::unique_ptr<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy> bhi260ap;
 
     LR1121* lr1121 = nullptr;
   };
@@ -147,6 +150,10 @@ class TDisplayP4AirDriver {
     struct {
       bool init_flag = false;
     } sgm38121;
+
+    struct {
+      bool init_flag = false;
+    } bhi260ap;
 
     struct {
       bool init_flag = false;
@@ -226,6 +233,7 @@ class TDisplayP4AirDriver {
   bool IsAxp517Ready() const;
   bool IsXl9535Ready() const;
   bool IsSgm38121Ready() const;
+  bool IsBhi260apReady() const;
   bool IsAw86224Ready() const;
   bool IsSt25r3916Ready() const;
   bool IsHi8561Ready() const;
@@ -285,6 +293,7 @@ class TDisplayP4AirDriver {
   bool SetUartTarget(UartTarget target);
 
   bool InitSgm38121();
+  bool InitBhi260ap();
 
   bool InitScreen();
   bool DeinitScreen();

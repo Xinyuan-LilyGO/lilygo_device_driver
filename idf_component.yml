@@ -51,3 +51,9 @@ dependencies:
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
+
+  bhi2xy_sensorapi_cpp_bus_driver:
+    path: "../bhi2xy_sensorapi_cpp_bus_driver"
+    require: public
+    matches:
+      - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
