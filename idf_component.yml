@@ -7,7 +7,7 @@ dependencies:
   idf: ">=5.5.3"
 
   llgok/cpp_bus_driver:
-    version: "^2.2.0"
+    version: "2.2.0"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_GLASSES_P4} == True"
@@ -15,39 +15,39 @@ dependencies:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
 
   llgok/arduino_cpp_bus_driver:
-    version: "^2.0.0"
+    version: "2.0.0"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
   llgok/radiolib_cpp_bus_driver:
-    version: "^2.0.0"
+    version: "2.0.0"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
 
   espressif/esp_codec_dev:
-    version: "^1.5.10"
+    version: "1.5.10"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
 
   llgok/icm20948_we:
-    version: "^1.0.0"
+    version: "1.0.0"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
-  llgok/usp_cpp_bus_driver:
-    version: "^1.0.0"
+  usp_cpp_bus_driver:
+    path: "../usp_cpp_bus_driver"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_GLASSES_P4} == True"
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
 
-  llgok/stsw-st25rfal002_cpp_bus_driver:
-    version: "^1.0.0"
+  stsw-st25rfal002_cpp_bus_driver:
+    path: "../stsw-st25rfal002_cpp_bus_driver"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
