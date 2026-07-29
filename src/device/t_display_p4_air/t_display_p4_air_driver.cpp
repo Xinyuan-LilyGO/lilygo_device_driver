@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-07-28 09:11:27
+ * @LastEditTime: 2026-07-29 09:52:59
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -671,7 +671,7 @@ bool TDisplayP4AirDriver::InitSgm38121() {
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3300);
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3000);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
