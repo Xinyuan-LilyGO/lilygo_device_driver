@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-05-21 18:05:18
+ * @LastEditTime: 2026-07-29 11:14:50
  * @License: GPL 3.0
  */
 
@@ -16,8 +16,8 @@
 #include "cpp_bus_driver_library.h"
 #include "esp32p4_driver.h"
 #include "radiolib_cpp_bus_driver_library.h"
-#include "sx126x/sx126x_driver.h"
 #include "t_display_p4_keyboard_config.h"
+#include "usp_cpp_bus_driver_library.h"
 
 namespace lilygo_device_driver {
 namespace t_display_p4::device {
@@ -26,6 +26,12 @@ enum class ScreenType {
   kUnknown,
   kHi8561,
   kRm69a10,
+};
+
+enum class RadioType {
+  kUnknown,
+  kSx1262,
+  kLr2021,
 };
 
 // 屏幕型号、分辨率和 MIPI 参数信息
@@ -112,6 +118,16 @@ class TDisplayP4Driver {
     kSleep,    // 保留配置的低功耗状态。
   };
 
+  enum class Lr2021PowerState {
+    kStandby,
+    kSleep,
+  };
+
+  enum class RadioPowerState {
+    kStandby,
+    kSleep,
+  };
+
   enum class Cc1101PowerState {
     kStandby,
     kSleep,
@@ -147,6 +163,8 @@ class TDisplayP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareUart> l76k_uart_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareSpi> radio_spi_bus;
+    // 保留原名称，兼容直接复用该 SPI 总线的现有代码。
     std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> hi8561_i2c_touch_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> gt9895_i2c_touch_bus;
@@ -174,6 +192,7 @@ class TDisplayP4Driver {
     std::unique_ptr<cpp_bus_driver::L76k> l76k;
     std::unique_ptr<ICM20948_WE> icm20948;
     std::unique_ptr<usp_cpp_bus_driver::Sx126x> sx1262;
+    std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
     std::unique_ptr<cpp_bus_driver::Hi8561> hi8561;
     std::unique_ptr<cpp_bus_driver::Hi8561Touch> hi8561_touch;
     std::unique_ptr<cpp_bus_driver::Pwm> hi8561_backlight;
@@ -252,6 +271,10 @@ class TDisplayP4Driver {
 
     struct {
       bool init_flag = false;
+    } lr2021;
+
+    struct {
+      bool init_flag = false;
     } xl9555;
 
     struct {
@@ -286,6 +309,7 @@ class TDisplayP4Driver {
   }
   t_display_p4::device::ScreenType screen_type() const;
   const t_display_p4::device::ScreenInfo& screen_info() const;
+  t_display_p4::device::RadioType radio_type() const { return radio_type_; }
   const t_display_p4::device::CameraInfo& camera_info() const {
     return t_display_p4::device::kCameraInfo;
   }
@@ -314,7 +338,9 @@ class TDisplayP4Driver {
   bool IsEs8311Ready() const;
   bool IsL76kReady() const;
   bool IsIcm20948Ready() const;
+  bool IsRadioReady() const;
   bool IsSx1262Ready() const;
+  bool IsLr2021Ready() const;
   bool IsXl9555Ready() const;
   bool IsTca8418Ready() const;
   bool IsTca8418BacklightReady() const;
@@ -357,7 +383,9 @@ class TDisplayP4Driver {
   bool SetEs8311PowerState(Es8311PowerState state);
   bool SetL76kSleep(bool sleep);
   bool SetIcm20948Sleep(bool sleep);
+  bool SetRadioPowerState(RadioPowerState state);
   bool SetSx1262PowerState(Sx1262PowerState state);
+  bool SetLr2021PowerState(Lr2021PowerState state);
   bool SetCc1101PowerState(Cc1101PowerState state);
   bool SetNrf24l01PowerState(Nrf24l01PowerState state);
 
@@ -387,7 +415,9 @@ class TDisplayP4Driver {
   bool ConfigEs8311();
   bool InitL76k();
   bool InitIcm20948();
+  bool InitRadio();
   bool InitSx1262();
+  bool InitLr2021();
 
   bool InitXl9555();
   bool ConfigXl9555();
@@ -452,6 +482,8 @@ class TDisplayP4Driver {
   sdmmc_card_t* sd_card_ = nullptr;
   std::string sd_card_base_path_;
   const t_display_p4::device::ScreenInfo* screen_info_ = nullptr;
+  t_display_p4::device::RadioType radio_type_ =
+      t_display_p4::device::RadioType::kUnknown;
   bool keyboard_connected_ = false;
 
   /**

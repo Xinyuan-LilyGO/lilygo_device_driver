@@ -7,6 +7,7 @@
  */
 #include "t_display_p4_driver.h"
 
+#include <array>
 #include <cstdint>
 
 namespace lilygo_device_driver {
@@ -18,6 +19,13 @@ namespace {
 
 using ScreenInfo = device::ScreenInfo;
 using ScreenType = device::ScreenType;
+using RadioType = device::RadioType;
+
+constexpr uint16_t kSx1262VersionStringAddress = 0x0320;
+constexpr std::array<uint8_t, 6> kSx1262VersionPrefix = {
+    'S', 'X', '1', '2', '6', '1'};
+constexpr uint8_t kLr2021ExpectedVersionMajor = 0x01;
+constexpr uint8_t kLr2021ExpectedVersionMinor = 0x18;
 
 constexpr ScreenInfo kHi8561ScreenInfo = {
     .type = ScreenType::kHi8561,
@@ -171,8 +179,23 @@ bool TDisplayP4Driver::IsIcm20948Ready() const {
   return status_.icm20948.init_flag && chip_.icm20948 != nullptr;
 }
 
+bool TDisplayP4Driver::IsRadioReady() const {
+  switch (radio_type_) {
+    case RadioType::kSx1262:
+      return IsSx1262Ready();
+    case RadioType::kLr2021:
+      return IsLr2021Ready();
+    default:
+      return false;
+  }
+}
+
 bool TDisplayP4Driver::IsSx1262Ready() const {
   return status_.sx1262.init_flag && chip_.sx1262 != nullptr;
+}
+
+bool TDisplayP4Driver::IsLr2021Ready() const {
+  return status_.lr2021.init_flag && chip_.lr2021 != nullptr;
 }
 
 bool TDisplayP4Driver::IsXl9555Ready() const {
@@ -225,14 +248,18 @@ bool TDisplayP4Driver::IsTouchReady() const {
 
 void TDisplayP4Driver::CreateDrivers() {
   tool_ = std::make_unique<cpp_bus_driver::Tool>();
+  radio_type_ = RadioType::kUnknown;
+  status_.sx1262.init_flag = false;
+  status_.lr2021.init_flag = false;
 
   bus_.xl9535_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
       gpio::i2c::kPort1Sda, gpio::i2c::kPort1Scl, I2C_NUM_0);
   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
       gpio::i2c::kPort2Sda, gpio::i2c::kPort2Scl, I2C_NUM_1);
-  bus_.sx1262_spi_bus =
+  bus_.radio_spi_bus =
       std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::spi::kPort1Mosi,
           gpio::spi::kPort1Sclk, gpio::spi::kPort1Miso, SPI2_HOST, 0);
+  bus_.sx1262_spi_bus = bus_.radio_spi_bus;
 
   bus_.bq27220_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
@@ -296,10 +323,30 @@ void TDisplayP4Driver::CreateDrivers() {
       });
 
   chip_.sx1262 = std::make_unique<usp_cpp_bus_driver::Sx126x>(
-      bus_.sx1262_spi_bus, gpio::sx1262::kBusy, gpio::sx1262::kCs,
+      bus_.radio_spi_bus, gpio::radio::kBusy, gpio::radio::kCs,
       [this](bool level) {
-        return chip_.xl9535->GpioWrite(gpio::xl9535::kSx1262Rst,
+        return chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst,
             static_cast<uint8_t>(level));
+      });
+
+  chip_.lr2021 = std::make_unique<usp_cpp_bus_driver::Lr20xx>(
+      bus_.radio_spi_bus, gpio::radio::kBusy, gpio::radio::kCs,
+      [this](bool released) {
+        if (chip_.xl9535 == nullptr || tool_ == nullptr) {
+          return false;
+        }
+        if (!released) {
+          bool result =
+              chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 1);
+          tool_->DelayMs(10);
+          result &= chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
+          tool_->DelayMs(9);
+          return result;
+        }
+        const bool result =
+            chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 1);
+        tool_->DelayMs(10);
+        return result;
       });
 
   bus_.xl9555_i2c_bus = std::make_shared<cpp_bus_driver::SoftwareI2c>(
@@ -308,9 +355,9 @@ void TDisplayP4Driver::CreateDrivers() {
       keyboard_gpio::tca8418::kSda, keyboard_gpio::tca8418::kScl);
 
   bus_.cc1101_spi_bus =
-      std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.sx1262_spi_bus, 0);
+      std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.radio_spi_bus, 0);
   bus_.nrf24l01_spi_bus =
-      std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.sx1262_spi_bus, 0);
+      std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.radio_spi_bus, 0);
 
   bus_.cc1101_radiolib_hal = new RadiolibCppBusDriverHal(
       bus_.cc1101_spi_bus, 10000000, keyboard_gpio::t_mix_rf::cc1101::kCs);
@@ -669,12 +716,12 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4Driver*>(arg);
-                     if (self->InitSx1262()) {
-                       self->SetSx1262PowerState(Sx1262PowerState::kSleep);
+                     if (self->InitRadio()) {
+                       self->SetRadioPowerState(RadioPowerState::kSleep);
                      }
                      vTaskDelete(NULL);
                    },
-                   "InitSx1262Task", 4096, this, 3, NULL) == pdPASS);
+                   "InitRadioTask", 4096, this, 3, NULL) == pdPASS);
 
     result &= (xTaskCreate(
                    [](void* arg) {
@@ -701,8 +748,8 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
               SetEs8311PowerState(Es8311PowerState::kSleep);
     result &= InitL76k() && SetL76kSleep(true);
     result &= InitIcm20948() && SetIcm20948Sleep(true);
-    result &= InitSx1262() &&
-              SetSx1262PowerState(Sx1262PowerState::kSleep);
+    result &= InitRadio() &&
+              SetRadioPowerState(RadioPowerState::kSleep);
 
     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
   }
@@ -957,7 +1004,34 @@ bool TDisplayP4Driver::SetIcm20948Sleep(bool sleep) {
   return true;
 }
 
+bool TDisplayP4Driver::SetRadioPowerState(RadioPowerState state) {
+  if (!IsRadioReady()) {
+    if (state == RadioPowerState::kSleep) {
+      return true;
+    }
+    if (!InitRadio()) {
+      return false;
+    }
+  }
+
+  switch (radio_type_) {
+    case RadioType::kSx1262:
+      return SetSx1262PowerState(
+          state == RadioPowerState::kSleep ? Sx1262PowerState::kSleep
+                                           : Sx1262PowerState::kStandby);
+    case RadioType::kLr2021:
+      return SetLr2021PowerState(
+          state == RadioPowerState::kSleep ? Lr2021PowerState::kSleep
+                                           : Lr2021PowerState::kStandby);
+    default:
+      return state == RadioPowerState::kSleep;
+  }
+}
+
 bool TDisplayP4Driver::SetSx1262PowerState(Sx1262PowerState state) {
+  if (radio_type_ == RadioType::kLr2021) {
+    return false;
+  }
   if (!IsSx1262Ready()) {
     if (state == Sx1262PowerState::kSleep) {
       return true;
@@ -975,6 +1049,41 @@ bool TDisplayP4Driver::SetSx1262PowerState(Sx1262PowerState state) {
     default:
       return false;
   }
+}
+
+bool TDisplayP4Driver::SetLr2021PowerState(Lr2021PowerState state) {
+  if (radio_type_ == RadioType::kSx1262) {
+    return false;
+  }
+  if (!IsLr2021Ready()) {
+    if (state == Lr2021PowerState::kSleep) {
+      return true;
+    }
+    if (!InitLr2021()) {
+      return false;
+    }
+  }
+
+  lr20xx_status_t result = LR20XX_STATUS_ERROR;
+  if (state == Lr2021PowerState::kSleep) {
+    const lr20xx_system_sleep_cfg_t sleep_config = {
+        .is_clk_32k_enabled = false,
+        .is_ram_retention_enabled = true,
+    };
+    result = chip_.lr2021->SetSleep(sleep_config) ? LR20XX_STATUS_OK
+                                                  : LR20XX_STATUS_ERROR;
+  } else if (chip_.lr2021->Wakeup()) {
+    result = chip_.lr2021->Invoke(
+        lr20xx_system_set_standby_mode, LR20XX_SYSTEM_STANDBY_MODE_RC);
+  }
+
+  if (result != LR20XX_STATUS_OK) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "LR2021 power state change failed (error code: %d)\n",
+        static_cast<int>(result));
+    return false;
+  }
+  return true;
 }
 
 bool TDisplayP4Driver::SetCc1101PowerState(Cc1101PowerState state) {
@@ -1040,7 +1149,7 @@ bool TDisplayP4Driver::SetPowerState(PowerState state) {
   result &= SetEs8311PowerState(Es8311PowerState::kSleep);
   result &= SetIcm20948Sleep(true);
   result &= SetL76kSleep(true);
-  result &= SetSx1262PowerState(Sx1262PowerState::kSleep);
+  result &= SetRadioPowerState(RadioPowerState::kSleep);
   result &= SetCameraPowerEnabled(false);
   result &= SetUsbHostPowerEnabled(false);
 
@@ -1079,6 +1188,11 @@ bool TDisplayP4Driver::SetPowerState(PowerState state) {
     result &= chip_.sx1262->Deinit();
     status_.sx1262.init_flag = false;
   }
+  if (status_.lr2021.init_flag) {
+    result &= chip_.lr2021->Deinit();
+    status_.lr2021.init_flag = false;
+  }
+  radio_type_ = RadioType::kUnknown;
   if (status_.l76k.init_flag) {
     result &= chip_.l76k->Deinit();
     status_.l76k.init_flag = false;
@@ -1096,6 +1210,7 @@ bool TDisplayP4Driver::SetPowerState(PowerState state) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 1);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
     result &= chip_.xl9535->Deinit();
     status_.xl9535.init_flag = false;
   }
@@ -1167,7 +1282,7 @@ bool TDisplayP4Driver::ConfigXl9535() {
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kGpsWakeUp, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSx1262Rst, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
   if (!result) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
     return false;
@@ -1198,13 +1313,13 @@ bool TDisplayP4Driver::ConfigXl9535() {
   result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kSdPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kSx1262Rst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+      gpio::xl9535::kRadioRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kSky13453Vctl, cpp_bus_driver::Xl95x5::Mode::kOutput);
   result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kIcm20948Int, cpp_bus_driver::Xl95x5::Mode::kInput);
   result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kSx1262Dio1, cpp_bus_driver::Xl95x5::Mode::kInput);
+      gpio::xl9535::kRadioDio1, cpp_bus_driver::Xl95x5::Mode::kInput);
   if (!result) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
     return false;
@@ -1550,16 +1665,169 @@ bool TDisplayP4Driver::InitIcm20948() {
   return true;
 }
 
-bool TDisplayP4Driver::InitSx1262() {
-  if (!chip_.sx1262->Init(10000000)) {
-    status_.sx1262.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSx1262 failed\n");
-    return false;
-  } else {
-    status_.sx1262.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSx1262 success\n");
+bool TDisplayP4Driver::InitRadio() {
+  if (IsRadioReady()) {
     return true;
   }
+
+  radio_type_ = RadioType::kUnknown;
+  if (InitSx1262()) {
+    return true;
+  }
+  if (InitLr2021()) {
+    return true;
+  }
+
+  LogMessage(LogLevel::kError, __FILE__, __LINE__,
+      "No supported radio detected on shared SX1262/LR2021 pins\n");
+  return false;
+}
+
+bool TDisplayP4Driver::InitSx1262() {
+  if (IsSx1262Ready()) {
+    radio_type_ = RadioType::kSx1262;
+    return true;
+  }
+  if (IsLr2021Ready() || chip_.sx1262 == nullptr) {
+    return false;
+  }
+
+  status_.sx1262.init_flag = false;
+  if (!chip_.sx1262->Init(10000000)) {
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "SX1262 transport probe failed\n");
+    return false;
+  }
+
+  // SX1261 与 SX1262 的内部版本字符串均以 "SX1261" 开头。
+  std::array<uint8_t, 6> version = {};
+  const bool detected =
+      sx126x_read_register(chip_.sx1262->context(),
+          kSx1262VersionStringAddress, version.data(),
+          static_cast<uint8_t>(version.size())) == SX126X_STATUS_OK &&
+      version == kSx1262VersionPrefix;
+  if (!detected) {
+    chip_.sx1262->Deinit(false);
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "SX1262 chip detection failed, trying LR2021\n");
+    return false;
+  }
+
+  status_.sx1262.init_flag = true;
+  radio_type_ = RadioType::kSx1262;
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+      "Auto detected T-Display-P4 radio: SX1262\n");
+  return true;
+}
+
+bool TDisplayP4Driver::InitLr2021() {
+  if (IsLr2021Ready()) {
+    radio_type_ = RadioType::kLr2021;
+    return true;
+  }
+  if (IsSx1262Ready() || chip_.lr2021 == nullptr) {
+    return false;
+  }
+
+  status_.lr2021.init_flag = false;
+  if (!chip_.lr2021->Init(10000000)) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitLr2021 transport failed\n");
+    return false;
+  }
+
+  constexpr uint8_t kDetectionAttempts = 10;
+  lr20xx_system_version_t version = {};
+  bool detected = false;
+  for (uint8_t attempt = 0; attempt < kDetectionAttempts; ++attempt) {
+    version = {};
+    detected =
+        chip_.lr2021->Invoke(lr20xx_system_get_version, &version) ==
+            LR20XX_STATUS_OK &&
+        version.major == kLr2021ExpectedVersionMajor &&
+        version.minor == kLr2021ExpectedVersionMinor;
+    if (detected) {
+      break;
+    }
+    if (attempt + 1U < kDetectionAttempts) {
+      tool_->DelayMs(10);
+      if (!chip_.lr2021->Reset()) {
+        break;
+      }
+    }
+  }
+
+  if (!detected) {
+    chip_.lr2021->Deinit(false);
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitLr2021 chip detection failed (fw: %u.%u)\n",
+        static_cast<unsigned>(version.major),
+        static_cast<unsigned>(version.minor));
+    return false;
+  }
+
+  const auto configure_rf_switch =
+      [this](lr20xx_system_dio_t dio,
+          lr20xx_system_dio_rf_switch_cfg_t config) {
+        return chip_.lr2021->Invoke(lr20xx_system_set_dio_function, dio,
+                   LR20XX_SYSTEM_DIO_FUNC_RF_SWITCH,
+                   LR20XX_SYSTEM_DIO_DRIVE_NONE) == LR20XX_STATUS_OK &&
+               chip_.lr2021->Invoke(
+                   lr20xx_system_set_dio_rf_switch_cfg, dio, config) ==
+                   LR20XX_STATUS_OK;
+      };
+  constexpr auto kCalibrationMask =
+      static_cast<lr20xx_system_calibration_mask_t>(
+          LR20XX_SYSTEM_CALIB_LF_RC_MASK |
+          LR20XX_SYSTEM_CALIB_HF_RC_MASK | LR20XX_SYSTEM_CALIB_PLL_MASK |
+          LR20XX_SYSTEM_CALIB_AAF_MASK | LR20XX_SYSTEM_CALIB_MU_MASK |
+          LR20XX_SYSTEM_CALIB_PA_OFF_MASK);
+
+  const bool result =
+      chip_.lr2021->Invoke(lr20xx_system_set_standby_mode,
+          LR20XX_SYSTEM_STANDBY_MODE_RC) == LR20XX_STATUS_OK &&
+      chip_.lr2021->Invoke(lr20xx_system_set_tcxo_mode,
+          LR20XX_SYSTEM_TCXO_CTRL_3_3V, 32768U) == LR20XX_STATUS_OK &&
+      chip_.lr2021->Invoke(
+          lr20xx_system_set_reg_mode, LR20XX_SYSTEM_REG_MODE_DCDC) ==
+          LR20XX_STATUS_OK &&
+      chip_.lr2021->Invoke(lr20xx_radio_common_set_rx_tx_fallback_mode,
+          LR20XX_RADIO_FALLBACK_STDBY_RC) == LR20XX_STATUS_OK &&
+      chip_.lr2021->Invoke(
+          lr20xx_system_clear_irq_status, LR20XX_SYSTEM_IRQ_ALL_MASK) ==
+          LR20XX_STATUS_OK &&
+      chip_.lr2021->Invoke(lr20xx_system_calibrate, kCalibrationMask) ==
+          LR20XX_STATUS_OK &&
+      configure_rf_switch(LR20XX_SYSTEM_DIO_6,
+          LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_RX_HF) &&
+      configure_rf_switch(LR20XX_SYSTEM_DIO_7,
+          LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_TX_HF) &&
+      configure_rf_switch(LR20XX_SYSTEM_DIO_8,
+          LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_RX_LF |
+              LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_TX_LF) &&
+      configure_rf_switch(LR20XX_SYSTEM_DIO_10,
+          LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_RX_HF |
+              LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_TX_HF) &&
+      chip_.lr2021->Invoke(lr20xx_system_set_dio_function,
+          LR20XX_SYSTEM_DIO_11, LR20XX_SYSTEM_DIO_FUNC_IRQ,
+          LR20XX_SYSTEM_DIO_DRIVE_NONE) == LR20XX_STATUS_OK &&
+      chip_.lr2021->Invoke(lr20xx_system_set_dio_irq_cfg,
+          LR20XX_SYSTEM_DIO_11, static_cast<lr20xx_system_irq_mask_t>(0)) ==
+          LR20XX_STATUS_OK;
+  if (!result) {
+    chip_.lr2021->Deinit(false);
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitLr2021 hardware configuration failed\n");
+    return false;
+  }
+
+  status_.lr2021.init_flag = true;
+  radio_type_ = RadioType::kLr2021;
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+      "Auto detected T-Display-P4 radio: LR2021 (fw: %u.%u)\n",
+      static_cast<unsigned>(version.major),
+      static_cast<unsigned>(version.minor));
+  return true;
 }
 
 bool TDisplayP4Driver::InitXl9555() {

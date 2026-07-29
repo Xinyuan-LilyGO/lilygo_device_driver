@@ -1168,8 +1168,8 @@ bool TDisplayP4AirDriver::InitLr1121() {
           {
               .pa_sel = LR11XX_RADIO_PA_SEL_HF,
               .pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VREG,
-              .pa_duty_cycle = 0x04,
-              .pa_hp_sel = 0x07,
+              .pa_duty_cycle = 0x00,
+              .pa_hp_sel = 0x00,
           },
       .output_power_dbm = 13,
       .ramp_time = LR11XX_RADIO_RAMP_48_US,

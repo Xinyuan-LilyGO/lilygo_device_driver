@@ -47,8 +47,12 @@ inline constexpr auto kRtcInt = cpp_bus_driver::Xl95x5::Pin::kIo12;
 inline constexpr auto kEsp32c6WakeUp = cpp_bus_driver::Xl95x5::Pin::kIo13;
 inline constexpr auto kEsp32c6En = cpp_bus_driver::Xl95x5::Pin::kIo14;
 inline constexpr auto kSdPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo15;
-inline constexpr auto kSx1262Rst = cpp_bus_driver::Xl95x5::Pin::kIo16;
-inline constexpr auto kSx1262Dio1 = cpp_bus_driver::Xl95x5::Pin::kIo17;
+inline constexpr auto kRadioRst = cpp_bus_driver::Xl95x5::Pin::kIo16;
+inline constexpr auto kRadioDio1 = cpp_bus_driver::Xl95x5::Pin::kIo17;
+inline constexpr auto kSx1262Rst = kRadioRst;
+inline constexpr auto kSx1262Dio1 = kRadioDio1;
+inline constexpr auto kLr2021Rst = kRadioRst;
+inline constexpr auto kLr2021Dio1 = kRadioDio1;
 }  // namespace xl9535
 
 namespace es8311 {
@@ -81,13 +85,29 @@ inline constexpr int kSda = i2c::kPort1Sda;
 inline constexpr int kScl = i2c::kPort1Scl;
 }  // namespace bq27220
 
-namespace sx1262 {
+namespace radio {
 inline constexpr int kCs = 24;
 inline constexpr int kBusy = 6;
 inline constexpr int kSclk = spi::kPort1Sclk;
 inline constexpr int kMosi = spi::kPort1Mosi;
 inline constexpr int kMiso = spi::kPort1Miso;
+}  // namespace radio
+
+namespace sx1262 {
+inline constexpr int kCs = radio::kCs;
+inline constexpr int kBusy = radio::kBusy;
+inline constexpr int kSclk = radio::kSclk;
+inline constexpr int kMosi = radio::kMosi;
+inline constexpr int kMiso = radio::kMiso;
 }  // namespace sx1262
+
+namespace lr2021 {
+inline constexpr int kCs = radio::kCs;
+inline constexpr int kBusy = radio::kBusy;
+inline constexpr int kSclk = radio::kSclk;
+inline constexpr int kMosi = radio::kMosi;
+inline constexpr int kMiso = radio::kMiso;
+}  // namespace lr2021
 
 namespace l76k {
 inline constexpr int kTx = 22;
