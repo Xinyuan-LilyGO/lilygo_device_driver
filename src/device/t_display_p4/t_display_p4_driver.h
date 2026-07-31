@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-07-31 10:00:00
+ * @LastEditTime: 2026-07-31 13:41:31
  * @License: GPL 3.0
  */
 
@@ -12,7 +12,6 @@
 #include <memory>
 #include <string>
 
-#include "ICM20948_WE.h"
 #include "cpp_bus_driver_library.h"
 #include "esp32p4_driver.h"
 #include "t_display_p4_keyboard_config.h"
@@ -158,12 +157,11 @@ class TDisplayP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> pcf8563_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> aw86224_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> es8311_i2c_bus;
-    std::unique_ptr<TwoWire> icm20948_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c1> icm20948_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareUart> l76k_uart_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> radio_spi_bus;
-    // 保留原名称，兼容直接复用该 SPI 总线的现有代码。
     std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> hi8561_i2c_touch_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c1> gt9895_i2c_touch_bus;
@@ -183,7 +181,7 @@ class TDisplayP4Driver {
     std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
     std::unique_ptr<cpp_bus_driver::Es8311> es8311;
     std::unique_ptr<cpp_bus_driver::L76k> l76k;
-    std::unique_ptr<ICM20948_WE> icm20948;
+    std::unique_ptr<cpp_bus_driver::Icm20948> icm20948;
     std::unique_ptr<usp_cpp_bus_driver::Sx126x> sx1262;
     std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
     std::unique_ptr<cpp_bus_driver::Hi8561> hi8561;

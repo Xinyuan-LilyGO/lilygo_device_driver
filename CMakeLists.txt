@@ -50,9 +50,7 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
         )
     list(APPEND requires
             "cpp_bus_driver"
-            "usp_cpp_bus_driver"
-            "arduino_cpp_bus_driver"
-            "ICM20948_WE")
+            "usp_cpp_bus_driver")
 endif()
 
 idf_component_register(

@@ -280,7 +280,9 @@ void TDisplayP4Driver::CreateDrivers() {
   bus_.l76k_uart_bus = std::make_shared<cpp_bus_driver::HardwareUart>(
       gpio::l76k::kRx, gpio::l76k::kTx, UART_NUM_1);
 
-  bus_.icm20948_i2c_bus = std::make_unique<TwoWire>(1);
+  bus_.icm20948_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c1>(
+          bus_.sgm38121_i2c_bus);
 
   chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220>(
       bus_.bq27220_i2c_bus, device::bq27220::kI2cAddress);
@@ -313,8 +315,8 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.es8311 = std::make_unique<cpp_bus_driver::Es8311>(
       bus_.es8311_i2c_bus, bus_.es8311_i2s_bus, device::es8311::kI2cAddress);
 
-  chip_.icm20948 = std::make_unique<ICM20948_WE>(
-      bus_.icm20948_i2c_bus.get(), device::icm20948::kI2cAddress);
+  chip_.icm20948 = std::make_unique<cpp_bus_driver::Icm20948>(
+      bus_.icm20948_i2c_bus, device::icm20948::kI2cAddress);
 
   chip_.l76k = std::make_unique<cpp_bus_driver::L76k>(
       bus_.l76k_uart_bus, [this](bool value) -> bool {
@@ -624,11 +626,6 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
   result &= InitSgm38121();
   result &= SetCameraPowerEnabled(false);
-
-  result &= bus_.icm20948_i2c_bus->set_bus_handle(
-      bus_.sgm38121_i2c_bus->bus_handle());
-  result &=
-      bus_.icm20948_i2c_bus->begin(gpio::icm20948::kSda, gpio::icm20948::kScl);
 
   result &= InitBq27220();
 
@@ -984,14 +981,7 @@ bool TDisplayP4Driver::SetIcm20948Sleep(bool sleep) {
       return false;
     }
   }
-  if (sleep) {
-    chip_.icm20948->setMagOpMode(AK09916_PWR_DOWN);
-    chip_.icm20948->sleep(true);
-  } else {
-    chip_.icm20948->sleep(false);
-    chip_.icm20948->setMagOpMode(AK09916_CONT_MODE_20HZ);
-  }
-  return true;
+  return chip_.icm20948->SetSleep(sleep);
 }
 
 bool TDisplayP4Driver::SetRadioPowerState(RadioPowerState state) {
@@ -1158,7 +1148,7 @@ bool TDisplayP4Driver::SetPowerState(PowerState state) {
     status_.es8311.power_state_valid = false;
   }
   if (status_.icm20948.init_flag) {
-    result &= bus_.icm20948_i2c_bus->end(false);
+    result &= chip_.icm20948->Deinit(false);
     status_.icm20948.init_flag = false;
   }
 
@@ -1640,15 +1630,21 @@ bool TDisplayP4Driver::InitL76k() {
 }
 
 bool TDisplayP4Driver::InitIcm20948() {
-  if (!chip_.icm20948->init() || !chip_.icm20948->initMagnetometer()) {
+  cpp_bus_driver::Icm20948::Config config;
+  config.accel_range = cpp_bus_driver::Icm20948::AccelRange::k2g;
+  config.gyro_range = cpp_bus_driver::Icm20948::GyroRange::k250Dps;
+  config.accel_dlpf = cpp_bus_driver::Icm20948::Dlpf::k6;
+  config.gyro_dlpf = cpp_bus_driver::Icm20948::Dlpf::k6;
+  config.accel_sample_rate_divider = 9;
+  config.gyro_sample_rate_divider = 9;
+  config.magnetometer_mode =
+      cpp_bus_driver::Icm20948::MagnetometerMode::kContinuous20Hz;
+
+  if (!chip_.icm20948->Init(config)) {
     status_.icm20948.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitIcm20948 failed\n");
     return false;
   }
-
-  chip_.icm20948->setAccRange(ICM20948_ACC_RANGE_2G);
-  chip_.icm20948->setAccDLPF(ICM20948_DLPF_6);
-  chip_.icm20948->setMagOpMode(AK09916_CONT_MODE_20HZ);
 
   status_.icm20948.init_flag = true;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitIcm20948 success\n");
