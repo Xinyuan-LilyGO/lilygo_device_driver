@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-07-31 00:18:28
+ * @LastEditTime: 2026-07-31 10:00:00
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -359,15 +359,6 @@ void TDisplayP4Driver::CreateDrivers() {
   bus_.nrf24l01_spi_bus =
       std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.radio_spi_bus, 0);
 
-  bus_.nrf24l01_radiolib_hal = new RadiolibCppBusDriverHal(
-      bus_.nrf24l01_spi_bus, 10000000, keyboard_gpio::t_mix_rf::nrf24l01::kCs);
-
-  bus_.nrf24l01_module =
-      new Module(bus_.nrf24l01_radiolib_hal, static_cast<uint32_t>(RADIOLIB_NC),
-          static_cast<uint32_t>(keyboard_gpio::t_mix_rf::nrf24l01::kInt),
-          static_cast<uint32_t>(keyboard_gpio::t_mix_rf::nrf24l01::kCe),
-          static_cast<uint32_t>(RADIOLIB_NC));
-
   chip_.xl9555 = std::make_unique<cpp_bus_driver::Xl95x5>(
       bus_.xl9555_i2c_bus, keyboard_device::xl9555::kI2cAddress);
   chip_.tca8418 = std::make_unique<cpp_bus_driver::Tca8418>(
@@ -380,7 +371,12 @@ void TDisplayP4Driver::CreateDrivers() {
       keyboard_gpio::t_mix_rf::cc1101::kMiso,
       keyboard_gpio::t_mix_rf::cc1101::kGdo0,
       keyboard_gpio::t_mix_rf::cc1101::kGdo2);
-  chip_.nrf24l01 = new nRF24(bus_.nrf24l01_module);
+  chip_.nrf24l01 =
+      std::make_unique<cpp_bus_driver::Nrf24l01x>(
+          bus_.nrf24l01_spi_bus,
+          keyboard_gpio::t_mix_rf::nrf24l01::kCs,
+          keyboard_gpio::t_mix_rf::nrf24l01::kCe,
+          keyboard_gpio::t_mix_rf::nrf24l01::kInt);
 }
 
 bool TDisplayP4Driver::DetectScreenType() {
@@ -586,7 +582,7 @@ bool TDisplayP4Driver::DeinitKeyboard() {
     status_.cc1101.init_flag = false;
   }
   if (status_.nrf24l01.init_flag) {
-    result &= bus_.nrf24l01_spi_bus->Deinit();
+    result &= chip_.nrf24l01->Deinit(false);
     status_.nrf24l01.init_flag = false;
   }
   if (status_.xl9555.init_flag) {
@@ -1099,12 +1095,12 @@ bool TDisplayP4Driver::SetNrf24l01PowerState(Nrf24l01PowerState state) {
   if (!IsNrf24l01Ready()) {
     return state == Nrf24l01PowerState::kSleep;
   }
-  const int16_t result = state == Nrf24l01PowerState::kSleep
-                             ? chip_.nrf24l01->sleep()
-                             : chip_.nrf24l01->standby();
-  if (result != RADIOLIB_ERR_NONE) {
+  const bool result = state == Nrf24l01PowerState::kSleep
+                          ? chip_.nrf24l01->PowerDown()
+                          : chip_.nrf24l01->Standby();
+  if (!result) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "NRF24L01 power state change failed (error code: %d)\n", result);
+        "NRF24L01 power state change failed\n");
     return false;
   }
   return true;
@@ -1989,17 +1985,15 @@ bool TDisplayP4Driver::SetCc1101RfSwitch(Cc1101RfSwitch rf_switch) {
 }
 
 bool TDisplayP4Driver::InitNrf24l01() {
-  int16_t ret = chip_.nrf24l01->begin();
-  if (ret != RADIOLIB_ERR_NONE) {
+  if (chip_.nrf24l01 == nullptr || !chip_.nrf24l01->Init()) {
     status_.nrf24l01.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitNrf24l01 failed (error code: %d)\n", ret);
+        "InitNrf24l01 failed\n");
     return false;
-  } else {
-    status_.nrf24l01.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitNrf24l01 success\n");
-    return true;
   }
+  status_.nrf24l01.init_flag = true;
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitNrf24l01 success\n");
+  return true;
 }
 
 bool TDisplayP4Driver::InitSpiffs(

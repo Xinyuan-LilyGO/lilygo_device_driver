@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-07-31 00:18:28
+ * @LastEditTime: 2026-07-31 10:00:00
  * @License: GPL 3.0
  */
 
@@ -15,7 +15,6 @@
 #include "ICM20948_WE.h"
 #include "cpp_bus_driver_library.h"
 #include "esp32p4_driver.h"
-#include "radiolib_cpp_bus_driver_library.h"
 #include "t_display_p4_keyboard_config.h"
 #include "usp_cpp_bus_driver_library.h"
 
@@ -174,10 +173,6 @@ class TDisplayP4Driver {
 
     std::shared_ptr<cpp_bus_driver::HardwareSpi> cc1101_spi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> nrf24l01_spi_bus;
-
-    RadioLibHal* nrf24l01_radiolib_hal = nullptr;
-
-    Module* nrf24l01_module = nullptr;
   };
 
   struct Chip {
@@ -202,7 +197,7 @@ class TDisplayP4Driver {
     std::unique_ptr<cpp_bus_driver::Pwm> tca8418_backlight;
 
     std::unique_ptr<cpp_bus_driver::Cc1101> cc1101;
-    nRF24* nrf24l01 = nullptr;
+    std::unique_ptr<cpp_bus_driver::Nrf24l01x> nrf24l01;
   };
 
   struct Status {

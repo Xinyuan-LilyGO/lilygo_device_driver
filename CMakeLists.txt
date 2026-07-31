@@ -52,8 +52,7 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
             "cpp_bus_driver"
             "usp_cpp_bus_driver"
             "arduino_cpp_bus_driver"
-            "ICM20948_WE"
-            "radiolib_cpp_bus_driver")
+            "ICM20948_WE")
 endif()
 
 idf_component_register(
