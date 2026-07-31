@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-07-29 11:14:50
+ * @LastEditTime: 2026-07-31 00:18:28
  * @License: GPL 3.0
  */
 
@@ -175,10 +175,8 @@ class TDisplayP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareSpi> cc1101_spi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> nrf24l01_spi_bus;
 
-    RadioLibHal* cc1101_radiolib_hal = nullptr;
     RadioLibHal* nrf24l01_radiolib_hal = nullptr;
 
-    Module* cc1101_module = nullptr;
     Module* nrf24l01_module = nullptr;
   };
 
@@ -203,7 +201,7 @@ class TDisplayP4Driver {
     std::unique_ptr<cpp_bus_driver::Tca8418> tca8418;
     std::unique_ptr<cpp_bus_driver::Pwm> tca8418_backlight;
 
-    CC1101* cc1101 = nullptr;
+    std::unique_ptr<cpp_bus_driver::Cc1101> cc1101;
     nRF24* nrf24l01 = nullptr;
   };
 

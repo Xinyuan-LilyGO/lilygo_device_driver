@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-07-29 09:39:00
+ * @LastEditTime: 2026-07-31 00:18:28
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -359,15 +359,8 @@ void TDisplayP4Driver::CreateDrivers() {
   bus_.nrf24l01_spi_bus =
       std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.radio_spi_bus, 0);
 
-  bus_.cc1101_radiolib_hal = new RadiolibCppBusDriverHal(
-      bus_.cc1101_spi_bus, 10000000, keyboard_gpio::t_mix_rf::cc1101::kCs);
   bus_.nrf24l01_radiolib_hal = new RadiolibCppBusDriverHal(
       bus_.nrf24l01_spi_bus, 10000000, keyboard_gpio::t_mix_rf::nrf24l01::kCs);
-
-  bus_.cc1101_module = new Module(bus_.cc1101_radiolib_hal,
-      static_cast<uint32_t>(RADIOLIB_NC), static_cast<uint32_t>(RADIOLIB_NC),
-      static_cast<uint32_t>(RADIOLIB_NC),
-      keyboard_gpio::t_mix_rf::cc1101::kBusy);
 
   bus_.nrf24l01_module =
       new Module(bus_.nrf24l01_radiolib_hal, static_cast<uint32_t>(RADIOLIB_NC),
@@ -382,7 +375,11 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.tca8418_backlight =
       std::make_unique<cpp_bus_driver::Pwm>(keyboard_gpio::tca8418::kBl);
 
-  chip_.cc1101 = new CC1101(bus_.cc1101_module);
+  chip_.cc1101 = std::make_unique<cpp_bus_driver::Cc1101>(
+      bus_.cc1101_spi_bus, keyboard_gpio::t_mix_rf::cc1101::kCs,
+      keyboard_gpio::t_mix_rf::cc1101::kMiso,
+      keyboard_gpio::t_mix_rf::cc1101::kGdo0,
+      keyboard_gpio::t_mix_rf::cc1101::kGdo2);
   chip_.nrf24l01 = new nRF24(bus_.nrf24l01_module);
 }
 
@@ -558,10 +555,6 @@ bool TDisplayP4Driver::InitKeyboard() {
   result &= tool_->GpioWrite(keyboard_gpio::t_mix_rf::nrf24l01::kCs, 1);
   result &= tool_->GpioWrite(keyboard_gpio::t_mix_rf::st25r3916::kCs, 1);
 
-  result &= tool_->SetGpioMode(keyboard_gpio::t_mix_rf::cc1101::kBusy,
-      cpp_bus_driver::Tool::GpioMode::kInput,
-      cpp_bus_driver::Tool::GpioStatus::kPulldown);
-
   if (!result) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "Keyboard gpio failed\n");
     return false;
@@ -589,7 +582,7 @@ bool TDisplayP4Driver::DeinitKeyboard() {
     status_.tca8418.init_flag = false;
   }
   if (status_.cc1101.init_flag) {
-    result &= bus_.cc1101_spi_bus->Deinit();
+    result &= chip_.cc1101->Deinit(false);
     status_.cc1101.init_flag = false;
   }
   if (status_.nrf24l01.init_flag) {
@@ -613,9 +606,10 @@ bool TDisplayP4Driver::DeinitKeyboard() {
   }
 
   result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kCs);
+  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kGdo0);
+  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kGdo2);
   result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::nrf24l01::kCs);
   result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::st25r3916::kCs);
-  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kBusy);
 
   keyboard_connected_ = false;
 
@@ -1090,12 +1084,12 @@ bool TDisplayP4Driver::SetCc1101PowerState(Cc1101PowerState state) {
   if (!IsCc1101Ready()) {
     return state == Cc1101PowerState::kSleep;
   }
-  const int16_t result = state == Cc1101PowerState::kSleep
-                             ? chip_.cc1101->sleep()
-                             : chip_.cc1101->standby();
-  if (result != RADIOLIB_ERR_NONE) {
+  const bool result = state == Cc1101PowerState::kSleep
+                          ? chip_.cc1101->Sleep()
+                          : chip_.cc1101->Wakeup();
+  if (!result) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "CC1101 power state change failed (error code: %d)\n", result);
+        "CC1101 power state change failed\n");
     return false;
   }
   return true;
@@ -1936,11 +1930,10 @@ bool TDisplayP4Driver::InitTca8418Backlight() {
 }
 
 bool TDisplayP4Driver::InitCc1101() {
-  int16_t ret = chip_.cc1101->begin();
-  if (ret != RADIOLIB_ERR_NONE) {
+  if (chip_.cc1101 == nullptr || !chip_.cc1101->Init()) {
     status_.cc1101.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitCc1101 failed (error code: %d)\n", ret);
+    LogMessage(
+        LogLevel::kError, __FILE__, __LINE__, "InitCc1101 failed\n");
     return false;
   } else {
     status_.cc1101.init_flag = true;
