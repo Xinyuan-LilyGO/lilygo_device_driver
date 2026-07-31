@@ -176,17 +176,6 @@ void TDisplayP4AirDriver::CreateDrivers() {
       [this](bool released) {
         return tool_ != nullptr &&
                tool_->GpioWrite(gpio::lr1121::kRst, released);
-      },
-      [this]() {
-        if (bus_.lr1121_spi_bus == nullptr) {
-          return false;
-        }
-        bool result =
-            bus_.lr1121_spi_bus->GpioWrite(gpio::lr1121::kCs, false);
-        bus_.lr1121_spi_bus->DelayUs(100);
-        result &=
-            bus_.lr1121_spi_bus->GpioWrite(gpio::lr1121::kCs, true);
-        return result;
       });
 }
 
