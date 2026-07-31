@@ -5,7 +5,6 @@
 [![Release](https://img.shields.io/github/v/release/Xinyuan-LilyGO/lilygo_device_driver?style=flat-square)](https://github.com/Xinyuan-LilyGO/lilygo_device_driver/releases)
 [![License](https://img.shields.io/github/license/Xinyuan-LilyGO/lilygo_device_driver?style=flat-square)](./LICENSE)
 [![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v5.5.3%2B-ff6f00?style=flat-square)](https://github.com/espressif/esp-idf)
-[![C++](https://img.shields.io/badge/C%2B%2B-11%2B-00599c?style=flat-square)](https://isocpp.org/)
 
 **lilygo_device_driver** 是一个面向 LILYGO 开发板的 C++ 设备级驱动库。它把板级引脚定义、电源初始化、存储挂载工具和板载外设驱动整理到统一的设备入口中，让应用代码可以先初始化整块设备，再通过一致的接口访问 bus、chip 和初始化状态。
 

@@ -272,10 +272,18 @@ class TDisplayP4AirDriver {
   bool SetPowerState(PowerState state);
 
   bool SetScreenSleep(bool sleep);
+  bool SetTouchEnabled(bool enabled);
   bool SetCameraPowerEnabled(bool enabled);
+  bool SetBhi260apSleep(bool sleep);
+  bool SetQmc6310nSleep(bool sleep);
+  bool SetSt25r3916PowerEnabled(bool enabled);
   bool SetNs4150Enabled(bool enabled);
   bool SetAw86224Standby();
   bool SetEs8389PowerState(Es8389PowerState state);
+  bool SetEsp32c5PowerEnabled(bool enabled);
+  bool SetUsbHostPowerEnabled(bool enabled);
+  bool SetSdPowerEnabled(bool enabled);
+  bool SetLedEnabled(bool enabled);
   bool SetLr1121PowerState(Lr1121PowerState state);
   bool SetNrf9151PowerEnabled(bool enabled);
 
@@ -313,6 +321,7 @@ class TDisplayP4AirDriver {
   bool InitAw86224();
   bool InitSt25r3916();
   bool InitEs8389();
+  bool DeinitEs8389();
   bool ConfigEs8389();
   bool InitLr1121();
   bool InitNrf9151();
@@ -362,6 +371,10 @@ class TDisplayP4AirDriver {
   Status status_;
   sdmmc_card_t* sd_card_ = nullptr;
   std::string sd_card_base_path_;
+  // 当前挂载是否使用 SDSPI 主机
+  bool sd_card_uses_spi_ = false;
+  // 当前 SDSPI 主机编号
+  spi_host_device_t sd_card_spi_host_id_ = SPI2_HOST;
   const t_display_p4_air::device::ScreenInfo* screen_info_ = nullptr;
 
   const audio_codec_ctrl_if_t* es8389_ctrl_if_ = nullptr;

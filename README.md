@@ -5,7 +5,6 @@
 [![Release](https://img.shields.io/github/v/release/Xinyuan-LilyGO/lilygo_device_driver?style=flat-square)](https://github.com/Xinyuan-LilyGO/lilygo_device_driver/releases)
 [![License](https://img.shields.io/github/license/Xinyuan-LilyGO/lilygo_device_driver?style=flat-square)](./LICENSE)
 [![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v5.5.3%2B-ff6f00?style=flat-square)](https://github.com/espressif/esp-idf)
-[![C++](https://img.shields.io/badge/C%2B%2B-11%2B-00599c?style=flat-square)](https://isocpp.org/)
 
 **lilygo_device_driver** is a C++ device-level driver library for LILYGO boards. It collects board pin definitions, power initialization, storage mounting helpers, and board peripheral drivers behind one device-oriented entry point, so application code can initialize a board and then access its buses and chips through a consistent interface.
 

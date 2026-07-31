@@ -7,6 +7,7 @@
  */
 #include "t_display_p4_air_driver.h"
 
+#include "driver/gpio.h"
 #include "firmware/bhi260ap/BHI260AP.fw.h"
 #include "sdmmc_cmd.h"
 
@@ -200,6 +201,9 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
   result &= InitAxp517();
   result &= InitXl9535();
   result &= ConfigXl9535();
+  result &= SetEsp32c5PowerEnabled(false);
+  result &= SetUsbHostPowerEnabled(false);
+  result &= SetSdPowerEnabled(false);
   result &= InitSgm38121();
   result &= SetCameraPowerEnabled(false);
 
@@ -207,7 +211,9 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4AirDriver*>(arg);
-                     self->InitBhi260ap();
+                     if (self->InitBhi260ap()) {
+                       self->SetBhi260apSleep(true);
+                     }
                      vTaskDelete(NULL);
                    },
                    "InitBhi260apTask", 8192, this, 3, NULL) == pdPASS);
@@ -215,7 +221,9 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4AirDriver*>(arg);
-                     self->InitQmc6310n();
+                     if (self->InitQmc6310n()) {
+                       self->SetQmc6310nSleep(true);
+                     }
                      vTaskDelete(NULL);
                    },
                    "InitQmc6310nTask", 4096, this, 3, NULL) == pdPASS);
@@ -223,7 +231,9 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4AirDriver*>(arg);
-                     self->InitSt25r3916();
+                     if (self->InitSt25r3916()) {
+                       self->SetSt25r3916PowerEnabled(false);
+                     }
                      vTaskDelete(NULL);
                    },
                    "InitSt25r3916Task", 4096, this, 3, NULL) == pdPASS);
@@ -234,6 +244,8 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
                      if (self->InitScreen()) {
                        self->InitTouch();
                        self->InitScreenBacklight();
+                       self->SetScreenSleep(true);
+                       self->SetTouchEnabled(false);
                      }
                      vTaskDelete(NULL);
                    },
@@ -275,19 +287,40 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4AirDriver*>(arg);
-                     self->InitNrf9151();
+                     self->SetNrf9151PowerEnabled(true);
                      self->SetNrf9151PowerEnabled(false);
                      vTaskDelete(NULL);
                    },
                    "InitNrf9151Task", 4096, this, 3, NULL) == pdPASS);
 
   } else {
-    result &= InitBhi260ap();
-    result &= InitQmc6310n();
-    result &= InitSt25r3916();
-    result &= InitScreen();
-    result &= InitTouch();
-    result &= InitScreenBacklight();
+    const bool bhi260ap_initialized = InitBhi260ap();
+    result &= bhi260ap_initialized;
+    if (bhi260ap_initialized) {
+      result &= SetBhi260apSleep(true);
+    }
+
+    const bool qmc6310n_initialized = InitQmc6310n();
+    result &= qmc6310n_initialized;
+    if (qmc6310n_initialized) {
+      result &= SetQmc6310nSleep(true);
+    }
+
+    const bool st25r3916_initialized = InitSt25r3916();
+    result &= st25r3916_initialized;
+    if (st25r3916_initialized) {
+      result &= SetSt25r3916PowerEnabled(false);
+    }
+
+    const bool screen_initialized = InitScreen();
+    result &= screen_initialized;
+    if (screen_initialized) {
+      result &= InitTouch();
+      result &= InitScreenBacklight();
+      result &= SetScreenSleep(true);
+      result &= SetTouchEnabled(false);
+    }
+
     result &= InitAw86224() && SetAw86224Standby();
     const bool lr1121_initialized = InitLr1121();
     const bool lr1121_sleep =
@@ -301,7 +334,7 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
                                   : SetNs4150Enabled(false);
     result &= es8389_initialized && es8389_sleep;
 
-    const bool nrf9151_initialized = InitNrf9151();
+    const bool nrf9151_initialized = SetNrf9151PowerEnabled(true);
     const bool nrf9151_off = SetNrf9151PowerEnabled(false);
     result &= nrf9151_initialized && nrf9151_off;
   }
@@ -310,41 +343,127 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
 }
 
 bool TDisplayP4AirDriver::SetPowerState(PowerState state) {
-  bool result = true;
-
-  switch (state) {
-    case PowerState::kActive:
-      result &= SetScreenSleep(false);
-      break;
-    case PowerState::kSleep:
-      result &= SetScreenSleep(true);
-      break;
-    case PowerState::kOff:
-      result &= SetAw86224Standby();
-      result &= SetEs8389PowerState(Es8389PowerState::kSleep);
-      result &= SetLr1121PowerState(Lr1121PowerState::kSleep);
-      result &= SetNrf9151PowerEnabled(false);
-      result &= SetCameraPowerEnabled(false);
-      if (IsSdmmcReady()) {
-        result &= DeinitSdmmc();
-      }
-      result &= DeinitScreenBacklight();
-      result &= DeinitTouch();
-      result &= DeinitScreen();
-      if (status_.xl9535.init_flag) {
-        result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
-        result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
-        result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);
-        result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
-        result &= chip_.xl9535->GpioWrite(
-            gpio::xl9535::kNs4150En, 0);
-      }
-      result &= tool_->GpioWrite(gpio::power::kEnable3v3, 0);
-      break;
-    default:
-      return false;
+  if (state == PowerState::kActive) {
+    bool result = SetTouchEnabled(true);
+    result &= SetScreenSleep(false);
+    return result;
+  }
+  if (state != PowerState::kSleep && state != PowerState::kOff) {
+    return false;
   }
 
+  bool result = true;
+  if (status_.hi8561.init_flag) {
+    result &= SetScreenSleep(true);
+  }
+  result &= SetTouchEnabled(false);
+  result &= SetBhi260apSleep(true);
+  result &= SetQmc6310nSleep(true);
+  result &= SetSt25r3916PowerEnabled(false);
+  result &= SetAw86224Standby();
+  result &= SetEs8389PowerState(Es8389PowerState::kSleep);
+  result &= SetLr1121PowerState(Lr1121PowerState::kSleep);
+  result &= SetNrf9151PowerEnabled(false);
+  result &= SetCameraPowerEnabled(false);
+  result &= DeinitSdmmc();
+  result &= SetEsp32c5PowerEnabled(false);
+  result &= SetUsbHostPowerEnabled(false);
+  result &= SetSdPowerEnabled(false);
+
+  if (state == PowerState::kSleep) {
+    return result;
+  }
+
+  if (status_.aw86224.init_flag) {
+    result &= chip_.aw86224->Deinit(false);
+    status_.aw86224.init_flag = false;
+  }
+  result &= DeinitEs8389();
+  if (status_.bhi260ap.init_flag) {
+    result &= chip_.bhi260ap->Deinit(false);
+    status_.bhi260ap.init_flag = false;
+  }
+  if (status_.lr1121.init_flag) {
+    result &= chip_.lr1121->Deinit(true);
+    status_.lr1121.init_flag = false;
+  }
+
+  result &= DeinitScreenBacklight();
+  result &= DeinitTouch();
+  result &= DeinitScreen();
+
+  if (status_.sgm38121.init_flag) {
+    result &= chip_.sgm38121->Deinit(false);
+    status_.sgm38121.init_flag = false;
+  }
+  if (status_.axp517.init_flag) {
+    // 清除可能由其他示例开启的 ADC 和 Boost 状态。
+    result &= chip_.axp517->SetAdcChannel(
+        cpp_bus_driver::Axp517::AdcChannel{});
+    result &= chip_.axp517->SetBoostEnable(false);
+    result &= chip_.axp517->Deinit(false);
+    status_.axp517.init_flag = false;
+  }
+  chip_.qmc6310n.reset();
+  status_.qmc6310n.init_flag = false;
+
+  if (status_.xl9535.init_flag) {
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Trig, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Rst, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 0);
+    result &= chip_.xl9535->GpioWrite(
+        gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 1);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLed1, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, 0);
+    result &= chip_.xl9535->Deinit(false);
+    status_.xl9535.init_flag = false;
+  }
+
+  if (bus_.sgm38121_i2c_bus != nullptr) {
+    result &= bus_.sgm38121_i2c_bus->Deinit(true);
+  }
+  if (bus_.xl9535_i2c_bus != nullptr) {
+    result &= bus_.xl9535_i2c_bus->Deinit(true);
+  }
+
+  result &= DeinitLdoPower(3);
+  result &= DeinitLdoPower(4);
+
+  result &= tool_->ResetGpio(gpio::hi8561::kTouchInt);
+  result &= tool_->ResetGpio(gpio::bhi260ap::kInt);
+  result &= tool_->ResetGpio(gpio::st25r3916::kInt);
+  result &= tool_->ResetGpio(gpio::lr1121::kCs);
+  result &= tool_->ResetGpio(gpio::lr1121::kBusy);
+  result &= tool_->ResetGpio(gpio::lr1121::kInt);
+  result &= tool_->ResetGpio(gpio::lr1121::kRst);
+
+  result &= tool_->GpioWrite(gpio::power::kEnable3v3, 0);
+  const gpio_num_t power_enable_gpio =
+      static_cast<gpio_num_t>(gpio::power::kEnable3v3);
+  const esp_err_t sleep_select_result = gpio_sleep_sel_dis(power_enable_gpio);
+  if (sleep_select_result != ESP_OK) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "Disable 3.3V power enable GPIO sleep selection failed "
+        "(error code: %#X)\n",
+        sleep_select_result);
+    result = false;
+  }
+  const esp_err_t hold_result =
+      gpio_hold_en(power_enable_gpio);
+  if (hold_result != ESP_OK) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "Hold 3.3V power enable GPIO failed (error code: %#X)\n",
+        hold_result);
+    result = false;
+  }
   return result;
 }
 
@@ -364,6 +483,24 @@ bool TDisplayP4AirDriver::SetScreenSleep(bool sleep) {
     result &= chip_.hi8561->SetScreenOff(false);
   }
   return result;
+}
+
+bool TDisplayP4AirDriver::SetTouchEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  if (enabled && status_.hi8561_touch.init_flag) {
+    return true;
+  }
+
+  bool result = true;
+  if (!enabled) {
+    result &= DeinitTouch();
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
+    return result;
+  }
+
+  return InitTouch();
 }
 
 bool TDisplayP4AirDriver::SetCameraPowerEnabled(bool enabled) {
@@ -393,6 +530,52 @@ bool TDisplayP4AirDriver::SetCameraPowerEnabled(bool enabled) {
   return result;
 }
 
+bool TDisplayP4AirDriver::SetBhi260apSleep(bool sleep) {
+  if (!IsBhi260apReady()) {
+    return sleep;
+  }
+
+  struct bhy2_dev* context = chip_.bhi260ap->context();
+  uint8_t host_interface_control = 0;
+  if (context == nullptr ||
+      bhy2_get_host_intf_ctrl(&host_interface_control, context) != BHY2_OK) {
+    return false;
+  }
+
+  if (sleep) {
+    host_interface_control |= BHY2_HIF_CTRL_AP_SUSPENDED;
+  } else {
+    host_interface_control &=
+        static_cast<uint8_t>(~BHY2_HIF_CTRL_AP_SUSPENDED);
+  }
+  return bhy2_set_host_intf_ctrl(host_interface_control, context) == BHY2_OK;
+}
+
+bool TDisplayP4AirDriver::SetQmc6310nSleep(bool sleep) {
+  if (!IsQmc6310nReady()) {
+    return sleep;
+  }
+  return chip_.qmc6310n->setOperationMode(
+      sleep ? OperationMode::SUSPEND
+            : OperationMode::CONTINUOUS_MEASUREMENT);
+}
+
+bool TDisplayP4AirDriver::SetSt25r3916PowerEnabled(bool enabled) {
+  if (enabled) {
+    return IsSt25r3916Ready() || InitSt25r3916();
+  }
+  if (!status_.st25r3916.init_flag) {
+    return true;
+  }
+
+  status_.st25r3916.result = chip_.st25r3916->Deinit(false);
+  status_.st25r3916.platform_error = chip_.st25r3916->platform_error();
+  status_.st25r3916.init_flag = false;
+  return status_.st25r3916.result == RFAL_ERR_NONE &&
+         status_.st25r3916.platform_error ==
+             stsw_st25rfal002_cpp_bus_driver::PlatformError::kNone;
+}
+
 bool TDisplayP4AirDriver::SetNs4150Enabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
@@ -403,6 +586,46 @@ bool TDisplayP4AirDriver::SetNs4150Enabled(bool enabled) {
     tool_->DelayMs(10);
   }
   return result;
+}
+
+bool TDisplayP4AirDriver::SetEsp32c5PowerEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  const bool result = chip_.xl9535->GpioWrite(
+      gpio::xl9535::kEsp32c5En, enabled ? 1 : 0);
+  if (result && enabled) {
+    tool_->DelayMs(120);
+  }
+  return result;
+}
+
+bool TDisplayP4AirDriver::SetUsbHostPowerEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  return chip_.xl9535->GpioWrite(
+      gpio::xl9535::kUsbPhyPowerEn, enabled ? 1 : 0);
+}
+
+bool TDisplayP4AirDriver::SetSdPowerEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  const bool result = chip_.xl9535->GpioWrite(
+      gpio::xl9535::kSdPowerEn, enabled ? 1 : 0);
+  if (result && enabled) {
+    tool_->DelayMs(20);
+  }
+  return result;
+}
+
+bool TDisplayP4AirDriver::SetLedEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  return chip_.xl9535->GpioWrite(
+      gpio::xl9535::kLed1, enabled ? 1 : 0);
 }
 
 bool TDisplayP4AirDriver::SetAw86224Standby() {
@@ -495,9 +718,26 @@ bool TDisplayP4AirDriver::SetNrf9151PowerEnabled(bool enabled) {
 
 bool TDisplayP4AirDriver::InitPower() {
   bool result = true;
+  const gpio_num_t power_enable_gpio =
+      static_cast<gpio_num_t>(gpio::power::kEnable3v3);
 
   result &= tool_->SetGpioMode(
       gpio::power::kEnable3v3, cpp_bus_driver::Tool::GpioMode::kOutput);
+  const esp_err_t hold_result = gpio_hold_dis(power_enable_gpio);
+  if (hold_result != ESP_OK && hold_result != ESP_ERR_NOT_SUPPORTED) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "Release 3.3V power enable GPIO failed (error code: %#X)\n",
+        hold_result);
+    result = false;
+  }
+  const esp_err_t sleep_select_result = gpio_sleep_sel_dis(power_enable_gpio);
+  if (sleep_select_result != ESP_OK) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "Disable 3.3V power enable GPIO sleep selection failed "
+        "(error code: %#X)\n",
+        sleep_select_result);
+    result = false;
+  }
   result &= tool_->GpioWrite(gpio::power::kEnable3v3, 1);
 
   result &= InitLdoPower(3, 2500);
@@ -512,9 +752,16 @@ bool TDisplayP4AirDriver::InitAxp517() {
     return false;
   }
 
-  status_.axp517.init_flag = true;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitAxp517 success\n");
-  return true;
+  const bool result =
+      chip_.axp517->SetAdcChannel(cpp_bus_driver::Axp517::AdcChannel{}) &&
+      chip_.axp517->SetBoostEnable(false);
+  status_.axp517.init_flag = result;
+  if (!result) {
+    chip_.axp517->Deinit(false);
+  }
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitAxp517 success\n" : "InitAxp517 failed\n");
+  return result;
 }
 
 bool TDisplayP4AirDriver::InitXl9535() {
@@ -543,6 +790,7 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Trig, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Rst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 0);
@@ -562,6 +810,7 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kSdPowerEn, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kNrf9151En, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kBhi260apRst, kOutput);
+  result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kAdl161Trig, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kAdl161Rst, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kLr1121PowerEn, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kUsbPhyPowerEn, kOutput);
@@ -579,24 +828,14 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
     return false;
   }
 
-  // 关闭状态保持 10 ms 后，只执行一次上电或复位释放。屏幕和触摸保持
-  // 该板原有的高到低时序，其余 RST 信号按低到高时序释放。
+  // 默认只点亮 LED。其他独立电源保持关闭，复位信号保持有效，
+  // 对应初始化函数在访问芯片前再执行上电或复位释放时序。
   tool_->DelayMs(10);
-  result = chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Rst, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
+  result = SetLedEnabled(true);
   if (!result) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
     return false;
   }
-
-  tool_->DelayMs(120);
   return true;
 }
 
@@ -686,6 +925,20 @@ bool TDisplayP4AirDriver::InitBhi260ap() {
     return false;
   }
 
+  if (!status_.xl9535.init_flag ||
+      !chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0)) {
+    status_.bhi260ap.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBhi260ap failed\n");
+    return false;
+  }
+  tool_->DelayMs(2);
+  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 1)) {
+    status_.bhi260ap.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBhi260ap failed\n");
+    return false;
+  }
+  tool_->DelayMs(120);
+
   bool result = chip_.bhi260ap->Init();
   if (result) {
     result = chip_.bhi260ap->BootFromRam(
@@ -699,9 +952,12 @@ bool TDisplayP4AirDriver::InitBhi260ap() {
         "InitBhi260ap success (kernel version: %u)\n",
         static_cast<unsigned int>(chip_.bhi260ap->kernel_version()));
   } else {
+    const int8_t last_error = chip_.bhi260ap->last_error();
+    chip_.bhi260ap->Deinit(false);
+    chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitBhi260ap failed (error code: %d)\n",
-        static_cast<int>(chip_.bhi260ap->last_error()));
+        static_cast<int>(last_error));
   }
   return result;
 }
@@ -730,6 +986,16 @@ bool TDisplayP4AirDriver::InitQmc6310n() {
 }
 
 bool TDisplayP4AirDriver::InitScreen() {
+  if (!status_.xl9535.init_flag ||
+      !chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1)) {
+    return false;
+  }
+  tool_->DelayMs(2);
+  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0)) {
+    return false;
+  }
+  tool_->DelayMs(120);
+
   screen_info_ = kDefaultScreenInfo;
   const auto& screen = screen_info();
 
@@ -811,6 +1077,22 @@ bool TDisplayP4AirDriver::InitHi8561() {
 }
 
 bool TDisplayP4AirDriver::InitHi8561Touch() {
+  if (!status_.xl9535.init_flag ||
+      !chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
+    status_.hi8561_touch.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitHi8561Touch failed\n");
+    return false;
+  }
+  tool_->DelayMs(2);
+  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0)) {
+    status_.hi8561_touch.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitHi8561Touch failed\n");
+    return false;
+  }
+  tool_->DelayMs(120);
+
   if (!chip_.hi8561_touch->Init()) {
     status_.hi8561_touch.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
@@ -1036,6 +1318,53 @@ bool TDisplayP4AirDriver::InitEs8389() {
   return result;
 }
 
+bool TDisplayP4AirDriver::DeinitEs8389() {
+  bool result = true;
+  if (status_.es8389.init_flag &&
+      status_.es8389.power_state_valid &&
+      status_.es8389.power_state == Es8389PowerState::kActive) {
+    result &= SetEs8389PowerState(Es8389PowerState::kSleep);
+  } else {
+    result &= SetNs4150Enabled(false);
+  }
+
+  if (es8389_input_codec_dev_ != nullptr) {
+    esp_codec_dev_delete(es8389_input_codec_dev_);
+    es8389_input_codec_dev_ = nullptr;
+  }
+  if (es8389_output_codec_dev_ != nullptr) {
+    esp_codec_dev_delete(es8389_output_codec_dev_);
+    es8389_output_codec_dev_ = nullptr;
+  }
+  if (es8389_codec_if_ != nullptr) {
+    result &=
+        (audio_codec_delete_codec_if(es8389_codec_if_) == ESP_CODEC_DEV_OK);
+    es8389_codec_if_ = nullptr;
+  }
+  if (es8389_ctrl_if_ != nullptr) {
+    result &=
+        (audio_codec_delete_ctrl_if(es8389_ctrl_if_) == ESP_CODEC_DEV_OK);
+    es8389_ctrl_if_ = nullptr;
+  }
+  if (es8389_data_if_ != nullptr) {
+    result &=
+        (audio_codec_delete_data_if(es8389_data_if_) == ESP_CODEC_DEV_OK);
+    es8389_data_if_ = nullptr;
+  }
+  if (es8389_gpio_if_ != nullptr) {
+    result &=
+        (audio_codec_delete_gpio_if(es8389_gpio_if_) == ESP_CODEC_DEV_OK);
+    es8389_gpio_if_ = nullptr;
+  }
+  if (bus_.es8389_i2s_bus != nullptr) {
+    result &= bus_.es8389_i2s_bus->Deinit();
+  }
+
+  status_.es8389.init_flag = false;
+  status_.es8389.power_state_valid = false;
+  return result;
+}
+
 bool TDisplayP4AirDriver::ConfigEs8389() {
   if (!status_.es8389.init_flag || (es8389_input_codec_dev_ == nullptr) ||
       (es8389_output_codec_dev_ == nullptr)) {
@@ -1104,12 +1433,20 @@ bool TDisplayP4AirDriver::ConfigEs8389() {
 
 bool TDisplayP4AirDriver::InitLr1121() {
   status_.lr1121.init_flag = false;
-  if (chip_.lr1121 == nullptr ||
-      !tool_->SetGpioMode(
+  if (chip_.lr1121 == nullptr || !status_.xl9535.init_flag ||
+      !chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 1)) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitLr1121 power enable failed\n");
+    return false;
+  }
+  tool_->DelayMs(10);
+
+  if (!tool_->SetGpioMode(
           gpio::lr1121::kRst, cpp_bus_driver::Tool::GpioMode::kOutput) ||
       !tool_->SetGpioMode(
           gpio::lr1121::kInt, cpp_bus_driver::Tool::GpioMode::kInput) ||
       !chip_.lr1121->Init(10000000)) {
+    chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitLr1121 transport failed\n");
     return false;
@@ -1120,6 +1457,7 @@ bool TDisplayP4AirDriver::InitLr1121() {
           LR11XX_STATUS_OK ||
       version.type != LR11XX_SYSTEM_VERSION_TYPE_LR1121) {
     chip_.lr1121->Deinit();
+    chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitLr1121 chip detection failed\n");
     return false;
@@ -1198,6 +1536,7 @@ bool TDisplayP4AirDriver::InitLr1121() {
       chip_.lr1121->Configure(lora_config);
   if (!result) {
     chip_.lr1121->Deinit();
+    chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
     status_.lr1121.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitLr1121 configuration failed\n");
@@ -1319,6 +1658,9 @@ bool TDisplayP4AirDriver::InitSdmmc(const char* base_path, int max_freq_khz) {
   if (sd_card_ != nullptr && !DeinitSdmmc()) {
     return false;
   }
+  if (!SetSdPowerEnabled(true)) {
+    return false;
+  }
 
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
       .format_if_mount_failed = false,
@@ -1351,12 +1693,15 @@ bool TDisplayP4AirDriver::InitSdmmc(const char* base_path, int max_freq_khz) {
     status_.sd_card.init_flag = false;
     sd_card_ = nullptr;
     sd_card_base_path_.clear();
+    sd_card_uses_spi_ = false;
+    SetSdPowerEnabled(false);
     return false;
   }
 
   sdmmc_card_print_info(stdout, card);
   sd_card_ = card;
   sd_card_base_path_ = base_path;
+  sd_card_uses_spi_ = false;
   status_.sd_card.init_flag = true;
   return true;
 }
@@ -1370,9 +1715,12 @@ bool TDisplayP4AirDriver::DeinitSdmmc() {
   if (sd_card_ == nullptr) {
     status_.sd_card.init_flag = false;
     sd_card_base_path_.clear();
-    return true;
+    sd_card_uses_spi_ = false;
+    return SetSdPowerEnabled(false);
   }
 
+  const bool uses_spi = sd_card_uses_spi_;
+  const spi_host_device_t spi_host_id = sd_card_spi_host_id_;
   const esp_err_t result =
       esp_vfs_fat_sdcard_unmount(sd_card_base_path_.c_str(), sd_card_);
   if (result != ESP_OK) {
@@ -1384,8 +1732,19 @@ bool TDisplayP4AirDriver::DeinitSdmmc() {
 
   sd_card_ = nullptr;
   sd_card_base_path_.clear();
+  sd_card_uses_spi_ = false;
   status_.sd_card.init_flag = false;
-  return true;
+  bool deinit_result = true;
+  if (uses_spi) {
+    const esp_err_t spi_result = spi_bus_free(spi_host_id);
+    if (spi_result != ESP_OK) {
+      LogMessage(LogLevel::kError, __FILE__, __LINE__,
+          "spi_bus_free failed (error code: %#X)\n", spi_result);
+      deinit_result = false;
+    }
+  }
+  deinit_result &= SetSdPowerEnabled(false);
+  return deinit_result;
 }
 
 bool TDisplayP4AirDriver::InitSdspi(
@@ -1394,6 +1753,9 @@ bool TDisplayP4AirDriver::InitSdspi(
     return false;
   }
   if (sd_card_ != nullptr && !DeinitSdmmc()) {
+    return false;
+  }
+  if (!SetSdPowerEnabled(true)) {
     return false;
   }
 
@@ -1434,6 +1796,8 @@ bool TDisplayP4AirDriver::InitSdspi(
     status_.sd_card.init_flag = false;
     sd_card_ = nullptr;
     sd_card_base_path_.clear();
+    sd_card_uses_spi_ = false;
+    SetSdPowerEnabled(false);
     return false;
   }
 
@@ -1450,12 +1814,17 @@ bool TDisplayP4AirDriver::InitSdspi(
     status_.sd_card.init_flag = false;
     sd_card_ = nullptr;
     sd_card_base_path_.clear();
+    sd_card_uses_spi_ = false;
+    spi_bus_free(host_id);
+    SetSdPowerEnabled(false);
     return false;
   }
 
   sdmmc_card_print_info(stdout, card);
   sd_card_ = card;
   sd_card_base_path_ = base_path;
+  sd_card_uses_spi_ = true;
+  sd_card_spi_host_id_ = host_id;
   status_.sd_card.init_flag = true;
   return true;
 }
