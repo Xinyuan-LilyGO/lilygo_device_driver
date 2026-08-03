@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-08-03 11:58:58
+ * @LastEditTime: 2026-08-03 16:14:09
  * @License: GPL 3.0
  */
 
@@ -12,12 +12,12 @@
 #include <memory>
 #include <string>
 
+#include "SensorQMC6310.hpp"
 #include "bhi2xy_sensorapi_cpp_bus_driver_library.h"
 #include "cpp_bus_driver_library.h"
 #include "esp32p4_driver.h"
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
-#include "SensorQMC6310.hpp"
 #include "stsw_st25rfal002_cpp_bus_driver_library.h"
 #include "t_display_p4_air_config.h"
 #include "usp_cpp_bus_driver_library.h"

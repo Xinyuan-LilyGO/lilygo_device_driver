@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-08-03 13:46:03
+ * @LastEditTime: 2026-08-03 16:14:05
  * @License: GPL 3.0
  */
 
@@ -464,7 +464,7 @@ class TDisplayP4Driver {
    * @return SD 卡挂载成功时返回 true，否则返回 false。
    */
   bool InitSdspi(const char* base_path, spi_host_device_t host_id,
-                 int max_freq_khz = SDMMC_FREQ_DEFAULT);
+      int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
  private:
   std::unique_ptr<cpp_bus_driver::Tool> tool_;

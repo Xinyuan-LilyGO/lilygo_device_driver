@@ -2,7 +2,7 @@
  * @Description: T-Glasses-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:58:49
- * @LastEditTime: 2026-07-29 09:53:08
+ * @LastEditTime: 2026-08-03 16:14:10
  * @License: GPL 3.0
  */
 #include "t_glasses_p4_driver.h"
@@ -32,8 +32,7 @@ constexpr ScreenInfo kS023msafjf10111e1ScreenInfo = {
     .height = device::s023msafjf10111e1::kScreenHeight,
     .bits_per_pixel = device::screen::kBitsPerPixel,
     .pixel_format = device::screen::kPixelFormat,
-    .mipi_dsi_dpi_clk_mhz =
-        device::s023msafjf10111e1::kScreenMipiDsiDpiClkMhz,
+    .mipi_dsi_dpi_clk_mhz = device::s023msafjf10111e1::kScreenMipiDsiDpiClkMhz,
     .mipi_dsi_hsync = device::s023msafjf10111e1::kScreenMipiDsiHsync,
     .mipi_dsi_hbp = device::s023msafjf10111e1::kScreenMipiDsiHbp,
     .mipi_dsi_hfp = device::s023msafjf10111e1::kScreenMipiDsiHfp,
@@ -41,12 +40,10 @@ constexpr ScreenInfo kS023msafjf10111e1ScreenInfo = {
     .mipi_dsi_vbp = device::s023msafjf10111e1::kScreenMipiDsiVbp,
     .mipi_dsi_vfp = device::s023msafjf10111e1::kScreenMipiDsiVfp,
     .data_lane_num = device::s023msafjf10111e1::kScreenDataLaneNum,
-    .lane_bit_rate_mbps =
-        device::s023msafjf10111e1::kScreenLaneBitRateMbps,
+    .lane_bit_rate_mbps = device::s023msafjf10111e1::kScreenLaneBitRateMbps,
 };
 
-constexpr const ScreenInfo* kDefaultScreenInfo =
-    &kS023msafjf10111e1ScreenInfo;
+constexpr const ScreenInfo* kDefaultScreenInfo = &kS023msafjf10111e1ScreenInfo;
 
 /**
  * @brief 将屏幕像素位宽转换为 MIPI 颜色格式。
@@ -152,17 +149,15 @@ void TGlassesP4Driver::CreateDrivers() {
   chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
       bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
   chip_.es8311 = std::make_unique<cpp_bus_driver::Es8311>(
-      bus_.es8311_i2c_bus, bus_.es8311_i2s_bus,
-      device::es8311::kI2cAddress);
-  chip_.sx1262 = std::make_unique<usp_cpp_bus_driver::Sx126x>(
-      bus_.sx1262_spi_bus, gpio::sx1262::kBusy, gpio::sx1262::kCs,
-      [this](bool level) {
-        return tool_->GpioWrite(gpio::sx1262::kRst, level);
-      });
-  chip_.s023msafjf10111e1 =
-      std::make_unique<cpp_bus_driver::S023msafjf10111e1>(
-          bus_.screen_i2c_bus, device::s023msafjf10111e1::kI2cAddress,
-          gpio::s023msafjf10111e1::kRst);
+      bus_.es8311_i2c_bus, bus_.es8311_i2s_bus, device::es8311::kI2cAddress);
+  chip_.sx1262 =
+      std::make_unique<usp_cpp_bus_driver::Sx126x>(bus_.sx1262_spi_bus,
+          gpio::sx1262::kBusy, gpio::sx1262::kCs, [this](bool level) {
+            return tool_->GpioWrite(gpio::sx1262::kRst, level);
+          });
+  chip_.s023msafjf10111e1 = std::make_unique<cpp_bus_driver::S023msafjf10111e1>(
+      bus_.screen_i2c_bus, device::s023msafjf10111e1::kI2cAddress,
+      gpio::s023msafjf10111e1::kRst);
 }
 
 bool TGlassesP4Driver::InitDrivers(InitMode mode) {
@@ -204,8 +199,7 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
                    [](void* arg) {
                      auto self = static_cast<TGlassesP4Driver*>(arg);
                      if (self->InitEs8311() && self->ConfigEs8311()) {
-                       self->SetEs8311PowerState(
-                           Es8311PowerState::kSleep);
+                       self->SetEs8311PowerState(Es8311PowerState::kSleep);
                      }
                      vTaskDelete(nullptr);
                    },
@@ -215,8 +209,7 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
                    [](void* arg) {
                      auto self = static_cast<TGlassesP4Driver*>(arg);
                      if (self->InitSx1262()) {
-                       self->SetSx1262PowerState(
-                           Sx1262PowerState::kSleep);
+                       self->SetSx1262PowerState(Sx1262PowerState::kSleep);
                      }
                      vTaskDelete(nullptr);
                    },
@@ -235,8 +228,7 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     result &= InitAw86224() && SetAw86224Standby();
     result &= InitEs8311() && ConfigEs8311() &&
               SetEs8311PowerState(Es8311PowerState::kSleep);
-    result &= InitSx1262() &&
-              SetSx1262PowerState(Sx1262PowerState::kSleep);
+    result &= InitSx1262() && SetSx1262PowerState(Sx1262PowerState::kSleep);
 
     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
 
@@ -332,24 +324,22 @@ bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
 }
 
 bool TGlassesP4Driver::SetAw86224Standby() {
-  return !status_.aw86224.init_flag ||
-         chip_.aw86224->StopRamPlaybackWaveform();
+  return !status_.aw86224.init_flag || chip_.aw86224->StopRamPlaybackWaveform();
 }
 
 bool TGlassesP4Driver::SetEs8311PowerState(Es8311PowerState state) {
   if (!status_.es8311.init_flag) {
     return state == Es8311PowerState::kSleep;
   }
-  if (status_.es8311.power_state_valid &&
-      status_.es8311.power_state == state) {
+  if (status_.es8311.power_state_valid && status_.es8311.power_state == state) {
     return true;
   }
   status_.es8311.power_state_valid = false;
 
   const bool playback_enabled = state == Es8311PowerState::kPlayback ||
                                 state == Es8311PowerState::kDuplex;
-  const bool capture_enabled = state == Es8311PowerState::kCapture ||
-                               state == Es8311PowerState::kDuplex;
+  const bool capture_enabled =
+      state == Es8311PowerState::kCapture || state == Es8311PowerState::kDuplex;
   const bool sleep = state == Es8311PowerState::kSleep;
   cpp_bus_driver::Es8311::PowerStatus power_status = {
       .contorl =
@@ -399,10 +389,10 @@ bool TGlassesP4Driver::InitPower() {
   bool result = true;
   result &= InitLdoPower(4, 3300);
   result &= InitLdoPower(3, 2500);
-  result &= tool_->SetGpioMode(gpio::power::kEn5v0,
-      cpp_bus_driver::Tool::GpioMode::kOutput);
-  result &= tool_->SetGpioMode(gpio::power::kEn3v3,
-      cpp_bus_driver::Tool::GpioMode::kOutput);
+  result &= tool_->SetGpioMode(
+      gpio::power::kEn5v0, cpp_bus_driver::Tool::GpioMode::kOutput);
+  result &= tool_->SetGpioMode(
+      gpio::power::kEn3v3, cpp_bus_driver::Tool::GpioMode::kOutput);
   result &= tool_->GpioWrite(gpio::power::kEn5v0, true);
   result &= tool_->GpioWrite(gpio::power::kEn3v3, true);
   tool_->DelayMs(200);
@@ -528,8 +518,8 @@ bool TGlassesP4Driver::DeinitScreen() {
 bool TGlassesP4Driver::InitS023msafjf10111e1() {
   if (!chip_.s023msafjf10111e1->Init()) {
     status_.s023msafjf10111e1.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitS023msafjf10111e1 failed\n");
+    LogMessage(
+        LogLevel::kError, __FILE__, __LINE__, "InitS023msafjf10111e1 failed\n");
     return false;
   }
 
@@ -540,11 +530,11 @@ bool TGlassesP4Driver::InitS023msafjf10111e1() {
 
   status_.s023msafjf10111e1.init_flag = result;
   if (result) {
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-        "InitS023msafjf10111e1 success\n");
+    LogMessage(
+        LogLevel::kInfo, __FILE__, __LINE__, "InitS023msafjf10111e1 success\n");
   } else {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitS023msafjf10111e1 failed\n");
+    LogMessage(
+        LogLevel::kError, __FILE__, __LINE__, "InitS023msafjf10111e1 failed\n");
   }
   return result;
 }
@@ -655,8 +645,7 @@ bool TGlassesP4Driver::InitSx1262() {
   return true;
 }
 
-bool TGlassesP4Driver::InitSdmmc(
-    const char* base_path, int max_freq_khz) {
+bool TGlassesP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
       .format_if_mount_failed = false,
       .max_files = 5,

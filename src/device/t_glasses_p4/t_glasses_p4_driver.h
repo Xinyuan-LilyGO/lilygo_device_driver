@@ -2,7 +2,7 @@
  * @Description: T-Glasses-P4 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:58:49
- * @LastEditTime: 2026-05-24 17:00:00
+ * @LastEditTime: 2026-08-03 16:14:12
  * @License: GPL 3.0
  */
 
@@ -295,21 +295,21 @@ class TGlassesP4Driver {
   TGlassesP4Driver& operator=(const TGlassesP4Driver&) = delete;
 };
 
-  /**
-   * @brief 通过 SDMMC 主机挂载 SD 卡。
-   * @param base_path SD 卡挂载路径。
-   * @param max_freq_khz SDMMC 总线最大频率，单位为 kHz。
-   * @return SD 卡挂载成功时返回 true，否则返回 false。
-   */
+/**
+ * @brief 通过 SDMMC 主机挂载 SD 卡。
+ * @param base_path SD 卡挂载路径。
+ * @param max_freq_khz SDMMC 总线最大频率，单位为 kHz。
+ * @return SD 卡挂载成功时返回 true，否则返回 false。
+ */
 bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
-  /**
-   * @brief 通过 SDSPI 主机挂载 SD 卡。
-   * @param base_path SD 卡挂载路径。
-   * @param host_id SD 卡使用的 SPI 主机。
-   * @param max_freq_khz SDSPI 总线最大频率，单位为 kHz。
-   * @return SD 卡挂载成功时返回 true，否则返回 false。
-   */
+/**
+ * @brief 通过 SDSPI 主机挂载 SD 卡。
+ * @param base_path SD 卡挂载路径。
+ * @param host_id SD 卡使用的 SPI 主机。
+ * @param max_freq_khz SDSPI 总线最大频率，单位为 kHz。
+ * @return SD 卡挂载成功时返回 true，否则返回 false。
+ */
 bool InitSdspi(const char* base_path, spi_host_device_t host_id,
     int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
