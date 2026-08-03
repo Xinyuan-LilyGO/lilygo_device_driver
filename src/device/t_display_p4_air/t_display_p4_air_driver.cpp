@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-07-29 09:52:59
+ * @LastEditTime: 2026-08-03 10:19:15
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -202,7 +202,6 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
   result &= InitXl9535();
   result &= ConfigXl9535();
   result &= SetEsp32c5PowerEnabled(false);
-  result &= SetUsbHostPowerEnabled(false);
   result &= SetSdPowerEnabled(false);
   result &= InitSgm38121();
   result &= SetCameraPowerEnabled(false);
@@ -367,7 +366,6 @@ bool TDisplayP4AirDriver::SetPowerState(PowerState state) {
   result &= SetCameraPowerEnabled(false);
   result &= DeinitSdmmc();
   result &= SetEsp32c5PowerEnabled(false);
-  result &= SetUsbHostPowerEnabled(false);
   result &= SetSdPowerEnabled(false);
 
   if (state == PowerState::kSleep) {
@@ -414,7 +412,6 @@ bool TDisplayP4AirDriver::SetPowerState(PowerState state) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Trig, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Rst, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 0);
     result &= chip_.xl9535->GpioWrite(
         gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);
@@ -793,7 +790,10 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Trig, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Rst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 0);
+  // ESP32-P4 只有在 USB PHY 电源保持开启时才能降低功耗；关闭该电源会
+  // 产生约 20 mA 功耗，因此这里只在初始化时拉高，后续内部流程不再主动
+  // 控制此引脚，预留接口仅供需要时显式调整。
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 1);
   result &= chip_.xl9535->GpioWrite(
       gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);

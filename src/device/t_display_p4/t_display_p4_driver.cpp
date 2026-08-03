@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-07-31 10:00:00
+ * @LastEditTime: 2026-08-03 10:19:15
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -1131,7 +1131,6 @@ bool TDisplayP4Driver::SetPowerState(PowerState state) {
   result &= SetL76kSleep(true);
   result &= SetRadioPowerState(RadioPowerState::kSleep);
   result &= SetCameraPowerEnabled(false);
-  result &= SetUsbHostPowerEnabled(false);
 
   if (IsSdmmcReady()) {
     result &= DeinitSdmmc();
@@ -1258,7 +1257,10 @@ bool TDisplayP4Driver::ConfigXl9535() {
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEthernetRst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 0);
+  // ESP32-P4 只有在 USB PHY 电源保持开启时才能降低功耗；关闭该电源会
+  // 产生约 20 mA 功耗，因此这里只在初始化时拉高，后续内部流程不再主动
+  // 控制此引脚，预留接口仅供需要时显式调整。
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kGpsWakeUp, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);

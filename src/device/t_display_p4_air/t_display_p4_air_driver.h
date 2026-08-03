@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-07-27 14:15:09
+ * @LastEditTime: 2026-08-03 10:19:15
  * @License: GPL 3.0
  */
 
