@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-08-03 10:19:15
+ * @LastEditTime: 2026-08-03 13:51:35
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -364,7 +364,9 @@ bool TDisplayP4AirDriver::SetPowerState(PowerState state) {
   result &= SetLr1121PowerState(Lr1121PowerState::kSleep);
   result &= SetNrf9151PowerEnabled(false);
   result &= SetCameraPowerEnabled(false);
-  result &= DeinitSdmmc();
+  // 休眠状态保留运行期重新挂载能力；关断后即将进入深度睡眠，无需再
+  // 手动释放 SPI 主机总线，但仍需卸载文件系统以避免数据损坏。
+  result &= DeinitSdmmc(state == PowerState::kSleep);
   result &= SetEsp32c5PowerEnabled(false);
   result &= SetSdPowerEnabled(false);
 
@@ -372,39 +374,8 @@ bool TDisplayP4AirDriver::SetPowerState(PowerState state) {
     return result;
   }
 
-  if (status_.aw86224.init_flag) {
-    result &= chip_.aw86224->Deinit(false);
-    status_.aw86224.init_flag = false;
-  }
-  result &= DeinitEs8389();
-  if (status_.bhi260ap.init_flag) {
-    result &= chip_.bhi260ap->Deinit(false);
-    status_.bhi260ap.init_flag = false;
-  }
-  if (status_.lr1121.init_flag) {
-    result &= chip_.lr1121->Deinit(true);
-    status_.lr1121.init_flag = false;
-  }
-
-  result &= DeinitScreenBacklight();
-  result &= DeinitTouch();
-  result &= DeinitScreen();
-
-  if (status_.sgm38121.init_flag) {
-    result &= chip_.sgm38121->Deinit(false);
-    status_.sgm38121.init_flag = false;
-  }
-  if (status_.axp517.init_flag) {
-    // 清除可能由其他示例开启的 ADC 和 Boost 状态。
-    result &= chip_.axp517->SetAdcChannel(
-        cpp_bus_driver::Axp517::AdcChannel{});
-    result &= chip_.axp517->SetBoostEnable(false);
-    result &= chip_.axp517->Deinit(false);
-    status_.axp517.init_flag = false;
-  }
-  chip_.qmc6310n.reset();
-  status_.qmc6310n.init_flag = false;
-
+  // 深度睡眠会停止并复位 ESP32-P4 内部总线，此处只设置外部芯片和
+  // 电源引脚的最终状态，不再逐个反初始化芯片或释放共享总线。
   if (status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
@@ -420,47 +391,12 @@ bool TDisplayP4AirDriver::SetPowerState(PowerState state) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 1);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLed1, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, 0);
-    result &= chip_.xl9535->Deinit(false);
-    status_.xl9535.init_flag = false;
-  }
-
-  if (bus_.sgm38121_i2c_bus != nullptr) {
-    result &= bus_.sgm38121_i2c_bus->Deinit(true);
-  }
-  if (bus_.xl9535_i2c_bus != nullptr) {
-    result &= bus_.xl9535_i2c_bus->Deinit(true);
   }
 
   result &= DeinitLdoPower(3);
   result &= DeinitLdoPower(4);
 
-  result &= tool_->ResetGpio(gpio::hi8561::kTouchInt);
-  result &= tool_->ResetGpio(gpio::bhi260ap::kInt);
-  result &= tool_->ResetGpio(gpio::st25r3916::kInt);
-  result &= tool_->ResetGpio(gpio::lr1121::kCs);
-  result &= tool_->ResetGpio(gpio::lr1121::kBusy);
-  result &= tool_->ResetGpio(gpio::lr1121::kInt);
-  result &= tool_->ResetGpio(gpio::lr1121::kRst);
-
   result &= tool_->GpioWrite(gpio::power::kEnable3v3, 0);
-  const gpio_num_t power_enable_gpio =
-      static_cast<gpio_num_t>(gpio::power::kEnable3v3);
-  const esp_err_t sleep_select_result = gpio_sleep_sel_dis(power_enable_gpio);
-  if (sleep_select_result != ESP_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "Disable 3.3V power enable GPIO sleep selection failed "
-        "(error code: %#X)\n",
-        sleep_select_result);
-    result = false;
-  }
-  const esp_err_t hold_result =
-      gpio_hold_en(power_enable_gpio);
-  if (hold_result != ESP_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "Hold 3.3V power enable GPIO failed (error code: %#X)\n",
-        hold_result);
-    result = false;
-  }
   return result;
 }
 
@@ -715,26 +651,9 @@ bool TDisplayP4AirDriver::SetNrf9151PowerEnabled(bool enabled) {
 
 bool TDisplayP4AirDriver::InitPower() {
   bool result = true;
-  const gpio_num_t power_enable_gpio =
-      static_cast<gpio_num_t>(gpio::power::kEnable3v3);
 
   result &= tool_->SetGpioMode(
       gpio::power::kEnable3v3, cpp_bus_driver::Tool::GpioMode::kOutput);
-  const esp_err_t hold_result = gpio_hold_dis(power_enable_gpio);
-  if (hold_result != ESP_OK && hold_result != ESP_ERR_NOT_SUPPORTED) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "Release 3.3V power enable GPIO failed (error code: %#X)\n",
-        hold_result);
-    result = false;
-  }
-  const esp_err_t sleep_select_result = gpio_sleep_sel_dis(power_enable_gpio);
-  if (sleep_select_result != ESP_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "Disable 3.3V power enable GPIO sleep selection failed "
-        "(error code: %#X)\n",
-        sleep_select_result);
-    result = false;
-  }
   result &= tool_->GpioWrite(gpio::power::kEnable3v3, 1);
 
   result &= InitLdoPower(3, 2500);
@@ -830,7 +749,6 @@ bool TDisplayP4AirDriver::ConfigXl9535() {
 
   // 默认只点亮 LED。其他独立电源保持关闭，复位信号保持有效，
   // 对应初始化函数在访问芯片前再执行上电或复位释放时序。
-  tool_->DelayMs(10);
   result = SetLedEnabled(true);
   if (!result) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
@@ -1711,7 +1629,7 @@ bool TDisplayP4AirDriver::IsSdmmcReady() const {
          sdmmc_get_status(sd_card_) == ESP_OK;
 }
 
-bool TDisplayP4AirDriver::DeinitSdmmc() {
+bool TDisplayP4AirDriver::DeinitSdmmc(bool release_bus) {
   if (sd_card_ == nullptr) {
     status_.sd_card.init_flag = false;
     sd_card_base_path_.clear();
@@ -1735,7 +1653,7 @@ bool TDisplayP4AirDriver::DeinitSdmmc() {
   sd_card_uses_spi_ = false;
   status_.sd_card.init_flag = false;
   bool deinit_result = true;
-  if (uses_spi) {
+  if (uses_spi && release_bus) {
     const esp_err_t spi_result = spi_bus_free(spi_host_id);
     if (spi_result != ESP_OK) {
       LogMessage(LogLevel::kError, __FILE__, __LINE__,

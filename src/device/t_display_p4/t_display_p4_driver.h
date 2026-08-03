@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-08-03 10:19:15
+ * @LastEditTime: 2026-08-03 13:46:03
  * @License: GPL 3.0
  */
 
@@ -370,6 +370,7 @@ class TDisplayP4Driver {
   bool SetEthernetPowerEnabled(bool enabled);
   bool SetAudioPowerEnabled(bool enabled);
   bool SetUsbHostPowerEnabled(bool enabled);
+  bool SetSdPowerEnabled(bool enabled);
   bool SetAw86224Standby();
   bool SetEs8311PowerState(Es8311PowerState state);
   bool SetL76kSleep(bool sleep);

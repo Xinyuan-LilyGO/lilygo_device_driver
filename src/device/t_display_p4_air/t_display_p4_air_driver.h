@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-08-03 10:19:15
+ * @LastEditTime: 2026-08-03 11:58:58
  * @License: GPL 3.0
  */
 
@@ -343,10 +343,11 @@ class TDisplayP4AirDriver {
   bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
   /**
-   * @brief 卸载 SD 卡文件系统并释放 SDMMC 主机资源。
+   * @brief 卸载 SD 卡文件系统并按需释放 SDSPI 总线资源。
+   * @param release_bus 使用 SDSPI 时是否释放 SPI 主机总线。
    * @return 卸载成功或当前未挂载时返回 true，否则返回 false。
    */
-  bool DeinitSdmmc();
+  bool DeinitSdmmc(bool release_bus = true);
 
   /**
    * @brief 检查已挂载 SD 卡是否仍可响应 SDMMC 命令。

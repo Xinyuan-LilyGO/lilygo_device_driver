@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-08-03 10:19:15
+ * @LastEditTime: 2026-08-03 13:46:03
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -384,6 +384,16 @@ void TDisplayP4Driver::CreateDrivers() {
 bool TDisplayP4Driver::DetectScreenType() {
   status_.gt9895.init_flag = false;
 
+  if (!status_.xl9535.init_flag ||
+      !chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0)) {
+    return false;
+  }
+  tool_->DelayMs(2);
+  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
+    return false;
+  }
+  tool_->DelayMs(120);
+
   if (chip_.gt9895 != nullptr && chip_.gt9895->Init()) {
     screen_info_ = ScreenInfoForType(device::ScreenType::kRm69a10);
     status_.gt9895.init_flag = true;
@@ -402,6 +412,16 @@ bool TDisplayP4Driver::DetectScreenType() {
 }
 
 bool TDisplayP4Driver::InitScreen() {
+  if (!status_.xl9535.init_flag ||
+      !chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0)) {
+    return false;
+  }
+  tool_->DelayMs(2);
+  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1)) {
+    return false;
+  }
+  tool_->DelayMs(120);
+
   if (!DetectScreenType()) {
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "DetectScreenType failed\n");
@@ -888,6 +908,18 @@ bool TDisplayP4Driver::SetUsbHostPowerEnabled(bool enabled) {
   return result;
 }
 
+bool TDisplayP4Driver::SetSdPowerEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  const bool result = chip_.xl9535->GpioWrite(
+      gpio::xl9535::kSdPowerEn, enabled ? 0 : 1);
+  if (result && enabled) {
+    tool_->DelayMs(20);
+  }
+  return result;
+}
+
 bool TDisplayP4Driver::SetAw86224Standby() {
   return !IsAw86224Ready() || chip_.aw86224->StopRamPlaybackWaveform();
 }
@@ -1114,10 +1146,7 @@ bool TDisplayP4Driver::SetPowerState(PowerState state) {
   if (state == PowerState::kActive) {
     return SetScreenSleep(false);
   }
-  if (state == PowerState::kSleep) {
-    return SetScreenSleep(true);
-  }
-  if (state != PowerState::kOff) {
+  if (state != PowerState::kSleep && state != PowerState::kOff) {
     return false;
   }
 
@@ -1131,56 +1160,21 @@ bool TDisplayP4Driver::SetPowerState(PowerState state) {
   result &= SetL76kSleep(true);
   result &= SetRadioPowerState(RadioPowerState::kSleep);
   result &= SetCameraPowerEnabled(false);
+  result &= SetEsp32c6PowerEnabled(false);
+  result &= SetEthernetPowerEnabled(false);
+  result &= SetAudioPowerEnabled(false);
 
-  if (IsSdmmcReady()) {
-    result &= DeinitSdmmc();
-  }
-  result &= SetKeyboardPowerState(PowerState::kOff);
+  result &= SetKeyboardPowerState(PowerState::kSleep);
 
-  if (status_.aw86224.init_flag) {
-    result &= chip_.aw86224->Deinit();
-    status_.aw86224.init_flag = false;
-  }
-  if (status_.es8311.init_flag) {
-    result &= chip_.es8311->Deinit();
-    status_.es8311.init_flag = false;
-    status_.es8311.power_state_valid = false;
-  }
-  if (status_.icm20948.init_flag) {
-    result &= chip_.icm20948->Deinit(false);
-    status_.icm20948.init_flag = false;
+  if (state == PowerState::kSleep) {
+    return result;
   }
 
-  result &= DeinitTouch();
-  result &= DeinitScreenBacklight();
-  result &= DeinitScreen();
+  // 卸载文件系统以保证缓存数据已经写回；底层总线由深度睡眠复位。
+  result &= DeinitSdmmc();
 
-  if (status_.bq27220.init_flag) {
-    result &= chip_.bq27220->Deinit();
-    status_.bq27220.init_flag = false;
-  }
-  if (status_.pcf8563.init_flag) {
-    result &= chip_.pcf8563->Deinit();
-    status_.pcf8563.init_flag = false;
-  }
-  if (status_.sx1262.init_flag) {
-    result &= chip_.sx1262->Deinit();
-    status_.sx1262.init_flag = false;
-  }
-  if (status_.lr2021.init_flag) {
-    result &= chip_.lr2021->Deinit();
-    status_.lr2021.init_flag = false;
-  }
-  radio_type_ = RadioType::kUnknown;
-  if (status_.l76k.init_flag) {
-    result &= chip_.l76k->Deinit();
-    status_.l76k.init_flag = false;
-  }
-  if (status_.sgm38121.init_flag) {
-    result &= chip_.sgm38121->Deinit();
-    status_.sgm38121.init_flag = false;
-  }
-
+  // 深度睡眠会停止并复位 ESP32-P4 内部总线，此处只设置外部芯片和
+  // 电源引脚的最终状态，不再逐个反初始化芯片或释放共享总线。
   if (status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
@@ -1190,9 +1184,10 @@ bool TDisplayP4Driver::SetPowerState(PowerState state) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 1);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
-    result &= chip_.xl9535->Deinit();
-    status_.xl9535.init_flag = false;
   }
+
+  result &= DeinitLdoPower(3);
+  result &= DeinitLdoPower(4);
   return result;
 }
 
@@ -1314,17 +1309,6 @@ bool TDisplayP4Driver::ConfigXl9535() {
     return false;
   }
   tool_->DelayMs(10);
-
-  // 屏幕和触摸在电源稳定后释放复位；SD 卡在挂载前只开启一次电源。
-  result = chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
-  if (!result) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
-    return false;
-  }
-
-  tool_->DelayMs(120);
   return true;
 }
 
@@ -1390,6 +1374,22 @@ bool TDisplayP4Driver::InitHi8561() {
 }
 
 bool TDisplayP4Driver::InitHi8561Touch() {
+  if (!status_.xl9535.init_flag ||
+      !chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0)) {
+    status_.hi8561_touch.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitHi8561Touch failed\n");
+    return false;
+  }
+  tool_->DelayMs(2);
+  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
+    status_.hi8561_touch.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitHi8561Touch failed\n");
+    return false;
+  }
+  tool_->DelayMs(120);
+
   if (chip_.hi8561_touch == nullptr) {
     status_.hi8561_touch.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
@@ -2058,6 +2058,9 @@ bool TDisplayP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
   if (sd_card_ != nullptr && !DeinitSdmmc()) {
     return false;
   }
+  if (!SetSdPowerEnabled(true)) {
+    return false;
+  }
 
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
       .format_if_mount_failed = false,
@@ -2090,6 +2093,7 @@ bool TDisplayP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
     status_.sd_card.init_flag = false;
     sd_card_ = nullptr;
     sd_card_base_path_.clear();
+    SetSdPowerEnabled(false);
     return false;
   }
 
@@ -2110,7 +2114,7 @@ bool TDisplayP4Driver::DeinitSdmmc() {
   if (sd_card_ == nullptr) {
     status_.sd_card.init_flag = false;
     sd_card_base_path_.clear();
-    return true;
+    return SetSdPowerEnabled(false);
   }
 
   const esp_err_t result =
@@ -2125,11 +2129,21 @@ bool TDisplayP4Driver::DeinitSdmmc() {
   sd_card_ = nullptr;
   sd_card_base_path_.clear();
   status_.sd_card.init_flag = false;
-  return true;
+  return SetSdPowerEnabled(false);
 }
 
 bool TDisplayP4Driver::InitSdspi(
     const char* base_path, spi_host_device_t host_id, int max_freq_khz) {
+  if (base_path == nullptr || base_path[0] == '\0') {
+    return false;
+  }
+  if (sd_card_ != nullptr && !DeinitSdmmc()) {
+    return false;
+  }
+  if (!SetSdPowerEnabled(true)) {
+    return false;
+  }
+
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
       .format_if_mount_failed = false,
       .max_files = 5,
@@ -2167,6 +2181,7 @@ bool TDisplayP4Driver::InitSdspi(
     status_.sd_card.init_flag = false;
     sd_card_ = nullptr;
     sd_card_base_path_.clear();
+    SetSdPowerEnabled(false);
     return false;
   }
 
@@ -2183,6 +2198,7 @@ bool TDisplayP4Driver::InitSdspi(
     status_.sd_card.init_flag = false;
     sd_card_ = nullptr;
     sd_card_base_path_.clear();
+    SetSdPowerEnabled(false);
     return false;
   }
 
