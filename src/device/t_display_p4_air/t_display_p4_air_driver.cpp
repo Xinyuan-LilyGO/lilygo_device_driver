@@ -1392,7 +1392,7 @@ bool TDisplayP4AirDriver::InitLr1121() {
       .wifi = 0x00,
   };
   usp_cpp_bus_driver::Lr11xx::LoraConfig lora_config = {
-      .frequency_hz = 2450000000U,
+      .frequency_hz = 868000000U,
       .modulation =
           {
               .sf = LR11XX_RADIO_LORA_SF12,
@@ -1409,14 +1409,15 @@ bool TDisplayP4AirDriver::InitLr1121() {
               .iq = LR11XX_RADIO_LORA_IQ_STANDARD,
           },
       .sync_word = 0x12,
+      .rx_boosted = true,
       .pa =
           {
-              .pa_sel = LR11XX_RADIO_PA_SEL_HF,
-              .pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VREG,
-              .pa_duty_cycle = 0x00,
-              .pa_hp_sel = 0x00,
+              .pa_sel = LR11XX_RADIO_PA_SEL_HP,
+              .pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VBAT,
+              .pa_duty_cycle = 0x04,
+              .pa_hp_sel = 0x07,
           },
-      .output_power_dbm = 13,
+      .output_power_dbm = 22,
       .ramp_time = LR11XX_RADIO_RAMP_48_US,
   };
 
@@ -1447,9 +1448,6 @@ bool TDisplayP4AirDriver::InitLr1121() {
           LR11XX_STATUS_OK &&
       chip_.lr1121->Invoke(
           lr11xx_system_set_dio_as_rf_switch, &rf_switch_config) ==
-          LR11XX_STATUS_OK &&
-      chip_.lr1121->Invoke(
-          lr11xx_system_calibrate_image_in_mhz, 2446U, 2454U) ==
           LR11XX_STATUS_OK &&
       chip_.lr1121->Configure(lora_config);
   if (!result) {
