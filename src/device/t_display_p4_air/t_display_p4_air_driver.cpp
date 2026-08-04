@@ -38,6 +38,21 @@ constexpr ScreenInfo kHi8561ScreenInfo = {
 
 constexpr const ScreenInfo* kDefaultScreenInfo = &kHi8561ScreenInfo;
 
+constexpr uint32_t kCameraPowerRailDelayMs = 2;
+constexpr uint32_t kCameraPowerOffDelayMs = 50;
+constexpr auto kCameraDovddChannel =
+    cpp_bus_driver::Sgm38121::Channel::kAvdd1;
+constexpr auto kCameraAvddChannel =
+    cpp_bus_driver::Sgm38121::Channel::kAvdd2;
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
+constexpr uint32_t kCameraPowerReadyDelayMs = 5;
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710) || \
+    defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
+constexpr auto kCameraDvddChannel =
+    cpp_bus_driver::Sgm38121::Channel::kDvdd1;
+constexpr uint32_t kCameraPowerReadyDelayMs = 30;
+#endif
+
 }  // namespace
 
 TDisplayP4AirDriver& TDisplayP4AirDriver::GetInstance() {
@@ -381,26 +396,53 @@ bool TDisplayP4AirDriver::SetCameraPowerEnabled(bool enabled) {
   if (!status_.sgm38121.init_flag) {
     return !enabled;
   }
-  const auto status = enabled ? cpp_bus_driver::Sgm38121::Status::kOn
-                              : cpp_bus_driver::Sgm38121::Status::kOff;
-  bool result = true;
-#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1, status);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
-#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710) || \
+
+  const auto on = cpp_bus_driver::Sgm38121::Status::kOn;
+  const auto off = cpp_bus_driver::Sgm38121::Status::kOff;
+
+  if (enabled) {
+    if (!chip_.sgm38121->SetChannelStatus(kCameraDovddChannel, on)) {
+      chip_.sgm38121->SetChannelStatus(kCameraDovddChannel, off);
+      tool_->DelayMs(kCameraPowerOffDelayMs);
+      return false;
+    }
+    tool_->DelayMs(kCameraPowerRailDelayMs);
+
+    if (!chip_.sgm38121->SetChannelStatus(kCameraAvddChannel, on)) {
+      chip_.sgm38121->SetChannelStatus(kCameraAvddChannel, off);
+      tool_->DelayMs(kCameraPowerRailDelayMs);
+      chip_.sgm38121->SetChannelStatus(kCameraDovddChannel, off);
+      tool_->DelayMs(kCameraPowerOffDelayMs);
+      return false;
+    }
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710) || \
     defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kDvdd1, status);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1, status);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
+    tool_->DelayMs(kCameraPowerRailDelayMs);
+
+    if (!chip_.sgm38121->SetChannelStatus(kCameraDvddChannel, on)) {
+      chip_.sgm38121->SetChannelStatus(kCameraDvddChannel, off);
+      tool_->DelayMs(kCameraPowerRailDelayMs);
+      chip_.sgm38121->SetChannelStatus(kCameraAvddChannel, off);
+      tool_->DelayMs(kCameraPowerRailDelayMs);
+      chip_.sgm38121->SetChannelStatus(kCameraDovddChannel, off);
+      tool_->DelayMs(kCameraPowerOffDelayMs);
+      return false;
+    }
 #endif
-  if (result && enabled) {
-    tool_->DelayMs(10);
+    tool_->DelayMs(kCameraPowerReadyDelayMs);
+    return true;
   }
+
+  bool result = true;
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710) || \
+    defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
+  result &= chip_.sgm38121->SetChannelStatus(kCameraDvddChannel, off);
+  tool_->DelayMs(kCameraPowerRailDelayMs);
+#endif
+  result &= chip_.sgm38121->SetChannelStatus(kCameraAvddChannel, off);
+  tool_->DelayMs(kCameraPowerRailDelayMs);
+  result &= chip_.sgm38121->SetChannelStatus(kCameraDovddChannel, off);
+  tool_->DelayMs(kCameraPowerOffDelayMs);
   return result;
 }
 
@@ -662,23 +704,23 @@ bool TDisplayP4AirDriver::InitSgm38121() {
   bool result = true;
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
   result &= chip_.sgm38121->SetOutputVoltage(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
+      kCameraDovddChannel, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
+      kCameraAvddChannel, 2800);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
   result &= chip_.sgm38121->SetOutputVoltage(
-      cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
+      kCameraDvddChannel, 1500);
   result &= chip_.sgm38121->SetOutputVoltage(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
+      kCameraDovddChannel, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3000);
+      kCameraAvddChannel, 3000);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
   result &= chip_.sgm38121->SetOutputVoltage(
-      cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
+      kCameraDvddChannel, 1500);
   result &= chip_.sgm38121->SetOutputVoltage(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
+      kCameraDovddChannel, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
+      kCameraAvddChannel, 2800);
 #endif
 
   status_.sgm38121.init_flag = result;
