@@ -316,6 +316,54 @@ class TDisplayP4Driver {
     };
   }
 
+  bool keyboard_connected() const { return keyboard_connected_; }
+
+  void CreateDrivers();
+
+  bool Init(InitMode mode = InitMode::kSync);
+  bool InitDrivers(InitMode mode = InitMode::kSync);
+  bool InitBq27220();
+  bool InitXl9535();
+  bool InitSgm38121();
+  bool InitHi8561();
+  bool InitHi8561Touch();
+  bool InitHi8561Backlight();
+  bool InitRm69a10();
+  bool InitGt9895();
+  bool InitPcf8563();
+  bool InitAw86224();
+  bool InitEs8311();
+  bool InitL76k();
+  bool InitIcm20948();
+  bool InitSx1262();
+  bool InitLr2021();
+  bool InitXl9555();
+  bool InitTca8418();
+  bool InitTca8418Backlight();
+  bool InitCc1101();
+  bool InitNrf24l01();
+  bool InitPower();
+  bool InitScreen();
+  bool InitTouch();
+  bool InitScreenBacklight();
+  bool InitRadio();
+  bool InitKeyboard();
+  bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf);
+  bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
+  bool InitSdspi(const char* base_path, spi_host_device_t host_id,
+      int max_freq_khz = SDMMC_FREQ_DEFAULT);
+
+  bool DeinitScreen();
+  bool DeinitTouch();
+  bool DeinitScreenBacklight();
+  bool DeinitKeyboard();
+  bool DeinitSdmmc();
+
+  bool ConfigXl9535();
+  bool ConfigEs8311();
+  bool ConfigXl9555();
+
+  bool IsBq27220Ready() const;
   bool IsXl9535Ready() const;
   bool IsSgm38121Ready() const;
   bool IsHi8561Ready() const;
@@ -323,13 +371,11 @@ class TDisplayP4Driver {
   bool IsHi8561BacklightReady() const;
   bool IsRm69a10Ready() const;
   bool IsGt9895Ready() const;
-  bool IsBq27220Ready() const;
   bool IsPcf8563Ready() const;
   bool IsAw86224Ready() const;
   bool IsEs8311Ready() const;
   bool IsL76kReady() const;
   bool IsIcm20948Ready() const;
-  bool IsRadioReady() const;
   bool IsSx1262Ready() const;
   bool IsLr2021Ready() const;
   bool IsXl9555Ready() const;
@@ -339,87 +385,27 @@ class TDisplayP4Driver {
   bool IsNrf24l01Ready() const;
   bool IsScreenReady() const;
   bool IsTouchReady() const;
-  bool keyboard_connected() const { return keyboard_connected_; }
+  bool IsRadioReady() const;
+  bool IsSdmmcReady() const;
 
-  void CreateDrivers();
-
-  /**
-   * @brief 初始化已创建的芯片驱动。
-   * @param mode 初始化模式。
-   * @return 所有必需驱动初始化成功时返回 true，否则返回 false。
-   */
-  bool InitDrivers(InitMode mode = InitMode::kSync);
-
-  /**
-   * @brief 创建并初始化所有板级驱动。
-   * @param mode 初始化模式。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
-  bool Init(InitMode mode = InitMode::kSync);
-
-  /**
-   * @brief 设置整板运行、休眠或关断状态
-   * @param state 目标电源状态
-   * @return 状态切换成功返回 true，否则返回 false
-   */
-  bool SetPowerState(PowerState state);
-
-  bool SetScreenSleep(bool sleep);
-  bool SetCameraPowerEnabled(bool enabled);
-  bool SetEsp32c6PowerEnabled(bool enabled);
-  bool SetEthernetPowerEnabled(bool enabled);
-  bool SetAudioPowerEnabled(bool enabled);
-  bool SetUsbHostPowerEnabled(bool enabled);
-  bool SetSdPowerEnabled(bool enabled);
   bool SetAw86224Standby();
   bool SetEs8311PowerState(Es8311PowerState state);
   bool SetL76kSleep(bool sleep);
   bool SetIcm20948Sleep(bool sleep);
-  bool SetRadioPowerState(RadioPowerState state);
   bool SetSx1262PowerState(Sx1262PowerState state);
   bool SetLr2021PowerState(Lr2021PowerState state);
   bool SetCc1101PowerState(Cc1101PowerState state);
   bool SetNrf24l01PowerState(Nrf24l01PowerState state);
-
-  bool InitPower();
-
-  bool InitBq27220();
-  bool InitXl9535();
-  bool ConfigXl9535();
-  bool InitSgm38121();
-
-  bool InitScreen();
-  bool DeinitScreen();
-  bool InitTouch();
-  bool DeinitTouch();
-  bool InitScreenBacklight();
-  bool DeinitScreenBacklight();
-
-  bool InitHi8561();
-  bool InitHi8561Touch();
-  bool InitHi8561Backlight();
-  bool InitRm69a10();
-  bool InitGt9895();
-
-  bool InitPcf8563();
-  bool InitAw86224();
-  bool InitEs8311();
-  bool ConfigEs8311();
-  bool InitL76k();
-  bool InitIcm20948();
-  bool InitRadio();
-  bool InitSx1262();
-  bool InitLr2021();
-
-  bool InitXl9555();
-  bool ConfigXl9555();
-  bool InitTca8418();
-  bool InitTca8418Backlight();
-  bool InitCc1101();
-  bool InitNrf24l01();
-
-  bool InitKeyboard();
-  bool DeinitKeyboard();
+  bool SetEsp32c6PowerEnabled(bool enabled);
+  bool SetScreenSleep(bool sleep);
+  bool SetTouchEnabled(bool enabled);
+  bool SetCameraPowerEnabled(bool enabled);
+  bool SetEthernetPowerEnabled(bool enabled);
+  bool SetAudioPowerEnabled(bool enabled);
+  bool SetUsbHostPowerEnabled(bool enabled);
+  bool SetSdPowerEnabled(bool enabled);
+  bool SetRadioPowerState(RadioPowerState state);
+  bool SetPowerState(PowerState state);
 
   /**
    * @brief 选择 CC1101 RF 开关通路。
@@ -427,44 +413,6 @@ class TDisplayP4Driver {
    * @return RF 开关引脚配置成功时返回 true，否则返回 false。
    */
   bool SetCc1101RfSwitch(Cc1101RfSwitch rf_switch);
-
-  /**
-   * @brief 挂载 SPIFFS 文件系统。
-   * @param base_path 文件系统挂载路径。
-   * @param spiffs_conf 返回挂载时使用的 SPIFFS 配置。
-   * @return SPIFFS 挂载成功时返回 true，否则返回 false。
-   */
-  bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf);
-
-  /**
-   * @brief 通过 SDMMC 主机挂载 SD 卡。
-   * @param base_path SD 卡挂载路径。
-   * @param max_freq_khz SDMMC 总线最大频率，单位为 kHz。
-   * @return SD 卡挂载成功时返回 true，否则返回 false。
-   */
-  bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
-
-  /**
-   * @brief 检查已挂载 SD 卡是否仍可响应 SDMMC 命令。
-   * @return SD 卡已挂载且可访问时返回 true，否则返回 false。
-   */
-  bool IsSdmmcReady() const;
-
-  /**
-   * @brief 卸载 SD 卡文件系统并释放 SDMMC 主机资源。
-   * @return 卸载成功或当前未挂载时返回 true，否则返回 false。
-   */
-  bool DeinitSdmmc();
-
-  /**
-   * @brief 通过 SDSPI 主机挂载 SD 卡。
-   * @param base_path SD 卡挂载路径。
-   * @param host_id SD 卡使用的 SPI 主机。
-   * @param max_freq_khz SDSPI 总线最大频率，单位为 kHz。
-   * @return SD 卡挂载成功时返回 true，否则返回 false。
-   */
-  bool InitSdspi(const char* base_path, spi_host_device_t host_id,
-      int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
  private:
   std::unique_ptr<cpp_bus_driver::Tool> tool_;
@@ -478,13 +426,13 @@ class TDisplayP4Driver {
       t_display_p4::device::RadioType::kUnknown;
   bool keyboard_connected_ = false;
 
+  bool SetKeyboardPowerState(PowerState state);
+
   /**
    * @brief 通过 GT9895 触摸 ID 检测屏幕类型。
    * @return 检测流程完成时返回 true，否则返回 false。
    */
   bool DetectScreenType();
-
-  bool SetKeyboardPowerState(PowerState state);
 
   TDisplayP4Driver() = default;
   ~TDisplayP4Driver() = default;

@@ -203,6 +203,27 @@ class TGlassesP4Driver {
     };
   }
 
+  void CreateDrivers();
+
+  bool Init(InitMode mode = InitMode::kSync);
+  bool InitDrivers(InitMode mode = InitMode::kSync);
+  bool InitSy6970();
+  bool InitBq27220();
+  bool InitSgm38121();
+  bool InitS023msafjf10111e1();
+  bool InitAw86224();
+  bool InitEs8311();
+  bool InitSx1262();
+  bool InitPower();
+  bool InitScreen();
+  bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
+  bool InitSdspi(const char* base_path, spi_host_device_t host_id,
+      int max_freq_khz = SDMMC_FREQ_DEFAULT);
+
+  bool DeinitScreen();
+
+  bool ConfigEs8311();
+
   bool IsSy6970Ready() const;
   bool IsBq27220Ready() const;
   bool IsSgm38121Ready() const;
@@ -211,73 +232,14 @@ class TGlassesP4Driver {
   bool IsEs8311Ready() const;
   bool IsSx1262Ready() const;
   bool IsScreenReady() const;
+  bool IsSdmmcReady() const;
 
-  void CreateDrivers();
-
-  /**
-   * @brief 初始化已经创建的板级驱动。
-   * @param mode 初始化模式。
-   * @return 必需驱动初始化成功时返回 true，否则返回 false。
-   */
-  bool InitDrivers(InitMode mode = InitMode::kSync);
-
-  /**
-   * @brief 创建并初始化所有板级驱动。
-   * @param mode 初始化模式。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
-  bool Init(InitMode mode = InitMode::kSync);
-
-  /**
-   * @brief 设置整板运行、休眠或关断状态
-   * @param state 目标电源状态
-   * @return 状态切换成功返回 true，否则返回 false
-   */
-  bool SetPowerState(PowerState state);
-
-  bool SetScreenSleep(bool sleep);
-  bool SetCameraPowerEnabled(bool enabled);
   bool SetAw86224Standby();
   bool SetEs8311PowerState(Es8311PowerState state);
   bool SetSx1262PowerState(Sx1262PowerState state);
-
-  bool InitPower();
-  bool InitSy6970();
-  bool InitBq27220();
-  bool InitSgm38121();
-
-  bool InitScreen();
-  bool DeinitScreen();
-  bool InitS023msafjf10111e1();
-
-  bool InitAw86224();
-  bool InitEs8311();
-  bool ConfigEs8311();
-  bool InitSx1262();
-
-  /**
-   * @brief 通过 SDMMC 主机挂载 SD 卡。
-   * @param base_path SD 卡挂载路径。
-   * @param max_freq_khz SDMMC 总线最大频率，单位为 kHz。
-   * @return SD 卡挂载成功时返回 true，否则返回 false。
-   */
-  bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
-
-  /**
-   * @brief 检查已挂载 SD 卡是否仍可响应 SDMMC 命令。
-   * @return SD 卡已挂载且可访问时返回 true，否则返回 false。
-   */
-  bool IsSdmmcReady() const;
-
-  /**
-   * @brief 通过 SDSPI 主机挂载 SD 卡。
-   * @param base_path SD 卡挂载路径。
-   * @param host_id SD 卡使用的 SPI 主机。
-   * @param max_freq_khz SDSPI 总线最大频率，单位为 kHz。
-   * @return SD 卡挂载成功时返回 true，否则返回 false。
-   */
-  bool InitSdspi(const char* base_path, spi_host_device_t host_id,
-      int max_freq_khz = SDMMC_FREQ_DEFAULT);
+  bool SetScreenSleep(bool sleep);
+  bool SetCameraPowerEnabled(bool enabled);
+  bool SetPowerState(PowerState state);
 
  private:
   std::unique_ptr<cpp_bus_driver::Tool> tool_;
@@ -294,23 +256,5 @@ class TGlassesP4Driver {
   TGlassesP4Driver(const TGlassesP4Driver&) = delete;
   TGlassesP4Driver& operator=(const TGlassesP4Driver&) = delete;
 };
-
-/**
- * @brief 通过 SDMMC 主机挂载 SD 卡。
- * @param base_path SD 卡挂载路径。
- * @param max_freq_khz SDMMC 总线最大频率，单位为 kHz。
- * @return SD 卡挂载成功时返回 true，否则返回 false。
- */
-bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
-
-/**
- * @brief 通过 SDSPI 主机挂载 SD 卡。
- * @param base_path SD 卡挂载路径。
- * @param host_id SD 卡使用的 SPI 主机。
- * @param max_freq_khz SDSPI 总线最大频率，单位为 kHz。
- * @return SD 卡挂载成功时返回 true，否则返回 false。
- */
-bool InitSdspi(const char* base_path, spi_host_device_t host_id,
-    int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
 }  // namespace lilygo_device_driver

@@ -126,126 +126,6 @@ device::ScreenType TDisplayP4Driver::screen_type() const {
   return screen_info().type;
 }
 
-bool TDisplayP4Driver::IsXl9535Ready() const {
-  return status_.xl9535.init_flag && chip_.xl9535 != nullptr;
-}
-
-bool TDisplayP4Driver::IsSgm38121Ready() const {
-  return status_.sgm38121.init_flag && chip_.sgm38121 != nullptr;
-}
-
-bool TDisplayP4Driver::IsHi8561Ready() const {
-  return status_.hi8561.init_flag && chip_.hi8561 != nullptr;
-}
-
-bool TDisplayP4Driver::IsHi8561TouchReady() const {
-  return status_.hi8561_touch.init_flag && chip_.hi8561_touch != nullptr;
-}
-
-bool TDisplayP4Driver::IsHi8561BacklightReady() const {
-  return status_.hi8561_backlight.init_flag &&
-         chip_.hi8561_backlight != nullptr;
-}
-
-bool TDisplayP4Driver::IsRm69a10Ready() const {
-  return status_.rm69a10.init_flag && chip_.rm69a10 != nullptr;
-}
-
-bool TDisplayP4Driver::IsGt9895Ready() const {
-  return status_.gt9895.init_flag && chip_.gt9895 != nullptr;
-}
-
-bool TDisplayP4Driver::IsBq27220Ready() const {
-  return status_.bq27220.init_flag && chip_.bq27220 != nullptr;
-}
-
-bool TDisplayP4Driver::IsPcf8563Ready() const {
-  return status_.pcf8563.init_flag && chip_.pcf8563 != nullptr;
-}
-
-bool TDisplayP4Driver::IsAw86224Ready() const {
-  return status_.aw86224.init_flag && chip_.aw86224 != nullptr;
-}
-
-bool TDisplayP4Driver::IsEs8311Ready() const {
-  return status_.es8311.init_flag && chip_.es8311 != nullptr;
-}
-
-bool TDisplayP4Driver::IsL76kReady() const {
-  return status_.l76k.init_flag && chip_.l76k != nullptr;
-}
-
-bool TDisplayP4Driver::IsIcm20948Ready() const {
-  return status_.icm20948.init_flag && chip_.icm20948 != nullptr;
-}
-
-bool TDisplayP4Driver::IsRadioReady() const {
-  switch (radio_type_) {
-    case RadioType::kSx1262:
-      return IsSx1262Ready();
-    case RadioType::kLr2021:
-      return IsLr2021Ready();
-    default:
-      return false;
-  }
-}
-
-bool TDisplayP4Driver::IsSx1262Ready() const {
-  return status_.sx1262.init_flag && chip_.sx1262 != nullptr;
-}
-
-bool TDisplayP4Driver::IsLr2021Ready() const {
-  return status_.lr2021.init_flag && chip_.lr2021 != nullptr;
-}
-
-bool TDisplayP4Driver::IsXl9555Ready() const {
-  return status_.xl9555.init_flag && chip_.xl9555 != nullptr;
-}
-
-bool TDisplayP4Driver::IsTca8418Ready() const {
-  return status_.tca8418.init_flag && chip_.tca8418 != nullptr;
-}
-
-bool TDisplayP4Driver::IsTca8418BacklightReady() const {
-  return status_.tca8418_backlight.init_flag &&
-         chip_.tca8418_backlight != nullptr;
-}
-
-bool TDisplayP4Driver::IsCc1101Ready() const {
-  return status_.cc1101.init_flag && chip_.cc1101 != nullptr;
-}
-
-bool TDisplayP4Driver::IsNrf24l01Ready() const {
-  return status_.nrf24l01.init_flag && chip_.nrf24l01 != nullptr;
-}
-
-bool TDisplayP4Driver::IsScreenReady() const {
-  if (bus_.screen_mipi_bus == nullptr ||
-      bus_.screen_mipi_bus->device_handle() == nullptr) {
-    return false;
-  }
-
-  switch (screen_type()) {
-    case device::ScreenType::kHi8561:
-      return IsHi8561Ready() && IsHi8561BacklightReady();
-    case device::ScreenType::kRm69a10:
-      return IsRm69a10Ready();
-    default:
-      return false;
-  }
-}
-
-bool TDisplayP4Driver::IsTouchReady() const {
-  switch (screen_type()) {
-    case device::ScreenType::kHi8561:
-      return IsHi8561TouchReady();
-    case device::ScreenType::kRm69a10:
-      return IsGt9895Ready();
-    default:
-      return false;
-  }
-}
-
 void TDisplayP4Driver::CreateDrivers() {
   tool_ = std::make_unique<cpp_bus_driver::Tool>();
   radio_type_ = RadioType::kUnknown;
@@ -376,251 +256,17 @@ void TDisplayP4Driver::CreateDrivers() {
       keyboard_gpio::t_mix_rf::nrf24l01::kInt);
 }
 
-bool TDisplayP4Driver::DetectScreenType() {
-  status_.gt9895.init_flag = false;
-
-  if (!status_.xl9535.init_flag ||
-      !chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0)) {
-    return false;
-  }
-  tool_->DelayMs(2);
-  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
-    return false;
-  }
-  tool_->DelayMs(120);
-
-  if (chip_.gt9895 != nullptr && chip_.gt9895->Init()) {
-    screen_info_ = ScreenInfoForType(device::ScreenType::kRm69a10);
-    status_.gt9895.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-        "Auto detected T-Display-P4 screen: %s\n", screen_info_->name);
-    return true;
-  }
-
-  if (bus_.gt9895_i2c_touch_bus != nullptr) {
-    bus_.gt9895_i2c_touch_bus->Deinit(false);
-  }
-  screen_info_ = ScreenInfoForType(device::ScreenType::kHi8561);
+bool TDisplayP4Driver::Init(InitMode mode) {
+  CreateDrivers();
+  const int64_t start_time_us = tool_->GetSystemTimeUs();
+  const bool result = InitDrivers(mode);
+  const int64_t elapsed_time_us = tool_->GetSystemTimeUs() - start_time_us;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-      "Auto detected T-Display-P4 screen: %s\n", screen_info_->name);
-  return true;
-}
-
-bool TDisplayP4Driver::InitScreen() {
-  if (!status_.xl9535.init_flag ||
-      !chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0)) {
-    return false;
-  }
-  tool_->DelayMs(2);
-  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1)) {
-    return false;
-  }
-  tool_->DelayMs(120);
-
-  if (!DetectScreenType()) {
-    LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "DetectScreenType failed\n");
-    return false;
-  }
-
-  const auto& screen = screen_info();
-  bus_.screen_mipi_bus = std::make_shared<cpp_bus_driver::HardwareMipi>(
-      screen.width, screen.height, screen.mipi_dsi_hsync, screen.mipi_dsi_hbp,
-      screen.mipi_dsi_hfp, screen.mipi_dsi_vsync, screen.mipi_dsi_vbp,
-      screen.mipi_dsi_vfp, screen.data_lane_num,
-      ColorFormatFromBitsPerPixel(screen.bits_per_pixel));
-
-  chip_.hi8561.reset();
-  chip_.rm69a10.reset();
-  status_.hi8561.init_flag = false;
-  status_.hi8561_touch.init_flag = false;
-  status_.hi8561_backlight.init_flag = false;
-  status_.rm69a10.init_flag = false;
-
-  switch (screen.type) {
-    case device::ScreenType::kHi8561:
-      chip_.hi8561 =
-          std::make_unique<cpp_bus_driver::Hi8561>(bus_.screen_mipi_bus);
-      return InitHi8561();
-    case device::ScreenType::kRm69a10:
-      chip_.rm69a10 =
-          std::make_unique<cpp_bus_driver::Rm69a10>(bus_.screen_mipi_bus);
-      return InitRm69a10();
-    default:
-      return false;
-  }
-}
-
-bool TDisplayP4Driver::DeinitScreen() {
-  bool result = true;
-
-  switch (screen_type()) {
-    case device::ScreenType::kHi8561:
-      if (status_.hi8561.init_flag) {
-        result &= chip_.hi8561->Deinit();
-        status_.hi8561.init_flag = false;
-      }
-      break;
-    case device::ScreenType::kRm69a10:
-      if (status_.rm69a10.init_flag) {
-        result &= chip_.rm69a10->Deinit();
-        status_.rm69a10.init_flag = false;
-      }
-      break;
-    default:
-      break;
-  }
-
-  return result;
-}
-
-bool TDisplayP4Driver::InitTouch() {
-  switch (screen_type()) {
-    case device::ScreenType::kHi8561:
-      return InitHi8561Touch();
-    case device::ScreenType::kRm69a10:
-      return status_.gt9895.init_flag || InitGt9895();
-    default:
-      return false;
-  }
-}
-
-bool TDisplayP4Driver::DeinitTouch() {
-  bool result = true;
-
-  switch (screen_type()) {
-    case device::ScreenType::kHi8561:
-      if (status_.hi8561_touch.init_flag) {
-        result &= chip_.hi8561_touch->Deinit();
-        status_.hi8561_touch.init_flag = false;
-      }
-      break;
-    case device::ScreenType::kRm69a10:
-      if (status_.gt9895.init_flag) {
-        result &= chip_.gt9895->Deinit();
-        status_.gt9895.init_flag = false;
-      }
-      break;
-    default:
-      break;
-  }
-
-  return result;
-}
-
-bool TDisplayP4Driver::InitScreenBacklight() {
-  switch (screen_type()) {
-    case device::ScreenType::kHi8561:
-      return InitHi8561Backlight();
-    case device::ScreenType::kRm69a10:
-      return true;
-    default:
-      return false;
-  }
-}
-
-bool TDisplayP4Driver::DeinitScreenBacklight() {
-  bool result = true;
-
-  switch (screen_type()) {
-    case device::ScreenType::kHi8561:
-      if (status_.hi8561_backlight.init_flag) {
-        result &= chip_.hi8561_backlight->Stop(0);
-        status_.hi8561_backlight.init_flag = false;
-      }
-      break;
-    case device::ScreenType::kRm69a10:
-      break;
-    default:
-      break;
-  }
-
-  return result;
-}
-
-bool TDisplayP4Driver::InitKeyboard() {
-  keyboard_connected_ = false;
-  status_.xl9555.init_flag = false;
-  status_.tca8418.init_flag = false;
-  status_.tca8418_backlight.init_flag = false;
-  status_.cc1101.init_flag = false;
-  status_.nrf24l01.init_flag = false;
-
-  if (!InitXl9555()) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "Keyboard device not connected\n");
-    return false;
-  }
-
-  bool result = ConfigXl9555();
-  if (!result) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9555 failed\n");
-    return false;
-  }
-
-  result &= tool_->SetGpioMode(keyboard_gpio::t_mix_rf::cc1101::kCs,
-      cpp_bus_driver::Tool::GpioMode::kOutput);
-  result &= tool_->SetGpioMode(keyboard_gpio::t_mix_rf::nrf24l01::kCs,
-      cpp_bus_driver::Tool::GpioMode::kOutput);
-  result &= tool_->SetGpioMode(keyboard_gpio::t_mix_rf::st25r3916::kCs,
-      cpp_bus_driver::Tool::GpioMode::kOutput);
-  result &= tool_->GpioWrite(keyboard_gpio::t_mix_rf::cc1101::kCs, 1);
-  result &= tool_->GpioWrite(keyboard_gpio::t_mix_rf::nrf24l01::kCs, 1);
-  result &= tool_->GpioWrite(keyboard_gpio::t_mix_rf::st25r3916::kCs, 1);
-
-  if (!result) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "Keyboard gpio failed\n");
-    return false;
-  }
-
-  result &= InitTca8418();
-  result &= InitTca8418Backlight();
-  result &= InitCc1101();
-  result &= InitNrf24l01();
-
-  keyboard_connected_ = result;
-
-  return result;
-}
-
-bool TDisplayP4Driver::DeinitKeyboard() {
-  bool result = true;
-
-  if (status_.tca8418_backlight.init_flag) {
-    result &= chip_.tca8418_backlight->Stop(0);
-    status_.tca8418_backlight.init_flag = false;
-  }
-  if (status_.tca8418.init_flag) {
-    result &= chip_.tca8418->Deinit();
-    status_.tca8418.init_flag = false;
-  }
-  if (status_.cc1101.init_flag) {
-    result &= chip_.cc1101->Deinit(false);
-    status_.cc1101.init_flag = false;
-  }
-  if (status_.nrf24l01.init_flag) {
-    result &= chip_.nrf24l01->Deinit(false);
-    status_.nrf24l01.init_flag = false;
-  }
-  if (status_.xl9555.init_flag) {
-    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1, 1);
-    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2, 1);
-    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3, 1);
-    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn, 0);
-    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
-
-    result &= chip_.xl9555->Deinit();
-    status_.xl9555.init_flag = false;
-  }
-
-  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kCs);
-  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kGdo0);
-  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kGdo2);
-  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::nrf24l01::kCs);
-  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::st25r3916::kCs);
-
-  keyboard_connected_ = false;
-
+      "TDisplayP4Driver init finished (mode: %s, result: %s, elapsed: %lld "
+      "ms)\n",
+      mode == InitMode::kAsync ? "async" : "sync",
+      result ? "success" : "failed",
+      static_cast<long long>(elapsed_time_us / 1000));
   return result;
 }
 
@@ -646,6 +292,8 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
                      if (self->InitScreen()) {
                        self->InitTouch();
                        self->InitScreenBacklight();
+                       self->SetScreenSleep(true);
+                       self->SetTouchEnabled(false);
                      }
                      vTaskDelete(NULL);
                    },
@@ -732,6 +380,8 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     if (screen_result) {
       result &= InitTouch();
       result &= InitScreenBacklight();
+      result &= SetScreenSleep(true);
+      result &= SetTouchEnabled(false);
     }
 
     if (InitKeyboard()) {
@@ -749,434 +399,6 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
   }
 
-  return result;
-}
-
-bool TDisplayP4Driver::SetKeyboardPowerState(PowerState state) {
-  bool result = true;
-
-  switch (state) {
-    case PowerState::kActive:
-      result &= SetCc1101PowerState(Cc1101PowerState::kStandby);
-      result &= SetNrf24l01PowerState(Nrf24l01PowerState::kStandby);
-      break;
-    case PowerState::kSleep:
-      result &= SetCc1101PowerState(Cc1101PowerState::kSleep);
-      result &= SetNrf24l01PowerState(Nrf24l01PowerState::kSleep);
-      if (status_.tca8418_backlight.init_flag) {
-        result &= chip_.tca8418_backlight->Stop(0);
-      }
-      if (status_.xl9555.init_flag) {
-        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1, 1);
-        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2, 1);
-        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3, 1);
-      }
-      break;
-    case PowerState::kOff:
-      result &= DeinitKeyboard();
-      break;
-    default:
-      return false;
-  }
-
-  return result;
-}
-
-bool TDisplayP4Driver::SetScreenSleep(bool sleep) {
-  if (!IsScreenReady()) {
-    return false;
-  }
-
-  bool result = true;
-  switch (screen_type()) {
-    case device::ScreenType::kHi8561:
-      if (sleep) {
-        if (IsHi8561BacklightReady()) {
-          result &= chip_.hi8561_backlight->Stop(0);
-        }
-        result &= chip_.hi8561->SetScreenOff(true);
-        result &= chip_.hi8561->SetSleep(true);
-      } else {
-        result &= chip_.hi8561->SetSleep(false);
-        result &= chip_.hi8561->SetScreenOff(false);
-      }
-      break;
-    case device::ScreenType::kRm69a10:
-      if (sleep) {
-        result &= chip_.rm69a10->SetBrightness(0);
-        result &= chip_.rm69a10->SetScreenOff(true);
-        result &= chip_.rm69a10->SetSleep(true);
-      } else {
-        result &= chip_.rm69a10->SetSleep(false);
-        result &= chip_.rm69a10->SetScreenOff(false);
-      }
-      break;
-    default:
-      return false;
-  }
-  return result;
-}
-
-bool TDisplayP4Driver::SetCameraPowerEnabled(bool enabled) {
-  if (!IsSgm38121Ready()) {
-    return !enabled;
-  }
-
-  const auto status = enabled ? cpp_bus_driver::Sgm38121::Status::kOn
-                              : cpp_bus_driver::Sgm38121::Status::kOff;
-  bool result = true;
-#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1, status);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
-#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710) || \
-    defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kDvdd1, status);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1, status);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
-#endif
-  if (result && enabled) {
-    tool_->DelayMs(10);
-  }
-  return result;
-}
-
-bool TDisplayP4Driver::SetEsp32c6PowerEnabled(bool enabled) {
-  if (!status_.xl9535.init_flag) {
-    return !enabled;
-  }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, enabled ? 1 : 0);
-  if (result && enabled) {
-    tool_->DelayMs(20);
-  }
-  return result;
-}
-
-bool TDisplayP4Driver::SetEthernetPowerEnabled(bool enabled) {
-  if (!status_.xl9535.init_flag) {
-    return !enabled;
-  }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kEthernetRst, enabled ? 1 : 0);
-  if (result && enabled) {
-    tool_->DelayMs(20);
-  }
-  return result;
-}
-
-bool TDisplayP4Driver::SetAudioPowerEnabled(bool enabled) {
-  if (!status_.xl9535.init_flag) {
-    return !enabled;
-  }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, enabled ? 1 : 0);
-  if (result && enabled) {
-    tool_->DelayMs(10);
-  }
-  return result;
-}
-
-bool TDisplayP4Driver::SetUsbHostPowerEnabled(bool enabled) {
-  if (!status_.xl9535.init_flag) {
-    return !enabled;
-  }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, enabled ? 1 : 0);
-  if (result && enabled) {
-    tool_->DelayMs(20);
-  }
-  return result;
-}
-
-bool TDisplayP4Driver::SetSdPowerEnabled(bool enabled) {
-  if (!status_.xl9535.init_flag) {
-    return !enabled;
-  }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, enabled ? 0 : 1);
-  if (result && enabled) {
-    tool_->DelayMs(20);
-  }
-  return result;
-}
-
-bool TDisplayP4Driver::SetAw86224Standby() {
-  return !IsAw86224Ready() || chip_.aw86224->StopRamPlaybackWaveform();
-}
-
-bool TDisplayP4Driver::SetEs8311PowerState(Es8311PowerState state) {
-  if (!IsEs8311Ready()) {
-    if (state == Es8311PowerState::kSleep) {
-      return true;
-    }
-    if (!InitEs8311() || !ConfigEs8311()) {
-      return false;
-    }
-  }
-  if (status_.es8311.power_state_valid && status_.es8311.power_state == state) {
-    return true;
-  }
-  status_.es8311.power_state_valid = false;
-
-  const bool playback_enabled = state == Es8311PowerState::kPlayback ||
-                                state == Es8311PowerState::kDuplex;
-  const bool capture_enabled =
-      state == Es8311PowerState::kCapture || state == Es8311PowerState::kDuplex;
-  const bool sleep = state == Es8311PowerState::kSleep;
-  // 该开关控制共享的 OUT_5V 音频电源域。除 NS4150 外，RT9080 也从
-  // OUT_5V 生成 ES8311 模拟 ADC 使用的 AD_3V3，因此仅采集时同样要开启。
-  if (!sleep && !SetAudioPowerEnabled(true)) {
-    return false;
-  }
-  cpp_bus_driver::Es8311::PowerStatus power_status = {
-      .contorl =
-          {
-              .analog_circuits = !sleep,
-              .analog_bias_circuits = !sleep,
-              .analog_adc_bias_circuits = capture_enabled,
-              .analog_adc_reference_circuits = capture_enabled,
-              .analog_dac_reference_circuit = playback_enabled,
-              .internal_reference_circuits = false,
-          },
-      .vmid = sleep
-                  ? cpp_bus_driver::Es8311::Vmid::kPowerDown
-                  : cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
-  };
-
-  bool result = true;
-  if (sleep) {
-    result &= chip_.es8311->SetOutputToHpDrive(false);
-    result &= chip_.es8311->SetPgaPower(false);
-    result &= chip_.es8311->SetAdcPower(false);
-    result &= chip_.es8311->SetDacPower(false);
-    result &= chip_.es8311->SetPowerStatus(power_status);
-  } else {
-    result &= chip_.es8311->SetPowerStatus(power_status);
-    result &= chip_.es8311->SetPgaPower(capture_enabled);
-    result &= chip_.es8311->SetAdcPower(capture_enabled);
-    result &= chip_.es8311->SetDacPower(playback_enabled);
-    result &= chip_.es8311->SetOutputToHpDrive(playback_enabled);
-  }
-  if (sleep) {
-    result &= SetAudioPowerEnabled(false);
-  } else if (!result) {
-    SetAudioPowerEnabled(false);
-  }
-  if (result) {
-    status_.es8311.power_state = state;
-    status_.es8311.power_state_valid = true;
-  }
-  return result;
-}
-
-bool TDisplayP4Driver::SetL76kSleep(bool sleep) {
-  if (!IsL76kReady()) {
-    if (sleep) {
-      return true;
-    }
-    if (!InitL76k()) {
-      return false;
-    }
-  }
-  return chip_.l76k->Sleep(sleep);
-}
-
-bool TDisplayP4Driver::SetIcm20948Sleep(bool sleep) {
-  if (!IsIcm20948Ready()) {
-    if (sleep) {
-      return true;
-    }
-    if (!InitIcm20948()) {
-      return false;
-    }
-  }
-  return chip_.icm20948->SetSleep(sleep);
-}
-
-bool TDisplayP4Driver::SetRadioPowerState(RadioPowerState state) {
-  if (!IsRadioReady()) {
-    if (state == RadioPowerState::kSleep) {
-      return true;
-    }
-    if (!InitRadio()) {
-      return false;
-    }
-  }
-
-  switch (radio_type_) {
-    case RadioType::kSx1262:
-      return SetSx1262PowerState(state == RadioPowerState::kSleep
-                                     ? Sx1262PowerState::kSleep
-                                     : Sx1262PowerState::kStandby);
-    case RadioType::kLr2021:
-      return SetLr2021PowerState(state == RadioPowerState::kSleep
-                                     ? Lr2021PowerState::kSleep
-                                     : Lr2021PowerState::kStandby);
-    default:
-      return state == RadioPowerState::kSleep;
-  }
-}
-
-bool TDisplayP4Driver::SetSx1262PowerState(Sx1262PowerState state) {
-  if (radio_type_ == RadioType::kLr2021) {
-    return false;
-  }
-  if (!IsSx1262Ready()) {
-    if (state == Sx1262PowerState::kSleep) {
-      return true;
-    }
-    if (!InitSx1262()) {
-      return false;
-    }
-  }
-
-  switch (state) {
-    case Sx1262PowerState::kStandby:
-      return chip_.sx1262->Wakeup();
-    case Sx1262PowerState::kSleep:
-      return chip_.sx1262->SetSleep();
-    default:
-      return false;
-  }
-}
-
-bool TDisplayP4Driver::SetLr2021PowerState(Lr2021PowerState state) {
-  if (radio_type_ == RadioType::kSx1262) {
-    return false;
-  }
-  if (!IsLr2021Ready()) {
-    if (state == Lr2021PowerState::kSleep) {
-      return true;
-    }
-    if (!InitLr2021()) {
-      return false;
-    }
-  }
-
-  lr20xx_status_t result = LR20XX_STATUS_ERROR;
-  if (state == Lr2021PowerState::kSleep) {
-    const lr20xx_system_sleep_cfg_t sleep_config = {
-        .is_clk_32k_enabled = false,
-        .is_ram_retention_enabled = true,
-    };
-    result = chip_.lr2021->SetSleep(sleep_config) ? LR20XX_STATUS_OK
-                                                  : LR20XX_STATUS_ERROR;
-  } else if (chip_.lr2021->Wakeup()) {
-    result = chip_.lr2021->Invoke(
-        lr20xx_system_set_standby_mode, LR20XX_SYSTEM_STANDBY_MODE_RC);
-  }
-
-  if (result != LR20XX_STATUS_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "LR2021 power state change failed (error code: %d)\n",
-        static_cast<int>(result));
-    return false;
-  }
-  return true;
-}
-
-bool TDisplayP4Driver::SetCc1101PowerState(Cc1101PowerState state) {
-  if (!IsCc1101Ready()) {
-    return state == Cc1101PowerState::kSleep;
-  }
-  const bool result = state == Cc1101PowerState::kSleep
-                          ? chip_.cc1101->Sleep()
-                          : chip_.cc1101->Wakeup();
-  if (!result) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "CC1101 power state change failed\n");
-    return false;
-  }
-  return true;
-}
-
-bool TDisplayP4Driver::SetNrf24l01PowerState(Nrf24l01PowerState state) {
-  if (!IsNrf24l01Ready()) {
-    return state == Nrf24l01PowerState::kSleep;
-  }
-  const bool result = state == Nrf24l01PowerState::kSleep
-                          ? chip_.nrf24l01->PowerDown()
-                          : chip_.nrf24l01->Standby();
-  if (!result) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "NRF24L01 power state change failed\n");
-    return false;
-  }
-  return true;
-}
-
-bool TDisplayP4Driver::Init(InitMode mode) {
-  CreateDrivers();
-  const int64_t start_time_us = tool_->GetSystemTimeUs();
-  const bool result = InitDrivers(mode);
-  const int64_t elapsed_time_us = tool_->GetSystemTimeUs() - start_time_us;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-      "TDisplayP4Driver init finished (mode: %s, result: %s, elapsed: %lld "
-      "ms)\n",
-      mode == InitMode::kAsync ? "async" : "sync",
-      result ? "success" : "failed",
-      static_cast<long long>(elapsed_time_us / 1000));
-  return result;
-}
-
-bool TDisplayP4Driver::SetPowerState(PowerState state) {
-  if (state == PowerState::kActive) {
-    return SetScreenSleep(false);
-  }
-  if (state != PowerState::kSleep && state != PowerState::kOff) {
-    return false;
-  }
-
-  bool result = true;
-  if (IsScreenReady()) {
-    result &= SetScreenSleep(true);
-  }
-  result &= SetAw86224Standby();
-  result &= SetEs8311PowerState(Es8311PowerState::kSleep);
-  result &= SetIcm20948Sleep(true);
-  result &= SetL76kSleep(true);
-  result &= SetRadioPowerState(RadioPowerState::kSleep);
-  result &= SetCameraPowerEnabled(false);
-  result &= SetEsp32c6PowerEnabled(false);
-  result &= SetEthernetPowerEnabled(false);
-  result &= SetAudioPowerEnabled(false);
-
-  result &= SetKeyboardPowerState(PowerState::kSleep);
-
-  if (state == PowerState::kSleep) {
-    return result;
-  }
-
-  // 卸载文件系统以保证缓存数据已经写回；底层总线由深度睡眠复位。
-  result &= DeinitSdmmc();
-
-  // 深度睡眠会停止并复位 ESP32-P4 内部总线，此处只设置外部芯片和
-  // 电源引脚的最终状态，不再逐个反初始化芯片或释放共享总线。
-  if (status_.xl9535.init_flag) {
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, 0);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEthernetRst, 0);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 1);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
-  }
-
-  result &= DeinitLdoPower(3);
-  result &= DeinitLdoPower(4);
-  return result;
-}
-
-bool TDisplayP4Driver::InitPower() {
-  bool result = true;
-  result &= InitLdoPower(3, 2500);
-  result &= InitLdoPower(4, 3300);
   return result;
 }
 
@@ -1217,81 +439,6 @@ bool TDisplayP4Driver::InitXl9535() {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitXl9535 success\n");
     return true;
   }
-}
-
-bool TDisplayP4Driver::ConfigXl9535() {
-  if (!status_.xl9535.init_flag) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
-    return false;
-  }
-
-  // XL9535 上电后输出寄存器默认为高电平。先预装安全状态，再切换输出方向，
-  // 避免电源、复位和唤醒信号在配置过程中被短暂拉高。
-  bool result = true;
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSky13453Vctl, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEthernetRst, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
-  // ESP32-P4 只有在 USB PHY 电源保持开启时才能降低功耗；关闭该电源会
-  // 产生约 20 mA 功耗，因此这里只在初始化时拉高，后续内部流程不再主动
-  // 控制此引脚，预留接口仅供需要时显式调整。
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kGpsWakeUp, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
-  if (!result) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
-    return false;
-  }
-
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kScreenRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kTouchInt, cpp_bus_driver::Xl95x5::Mode::kInput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kUsbPhyPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kAudioPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kPowerEn3v3, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kGpsWakeUp, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kRtcInt, cpp_bus_driver::Xl95x5::Mode::kInput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kEsp32c6WakeUp, cpp_bus_driver::Xl95x5::Mode::kInput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kEsp32c6En, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kEthernetRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kSdPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kRadioRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kSky13453Vctl, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kIcm20948Int, cpp_bus_driver::Xl95x5::Mode::kInput);
-  result &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kRadioDio1, cpp_bus_driver::Xl95x5::Mode::kInput);
-  if (!result) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
-    return false;
-  }
-
-  // 先关闭 kPowerEn3v3 并等待负载电容放电，再只执行一次上电。
-  tool_->DelayMs(500);
-  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 0)) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
-    return false;
-  }
-  tool_->DelayMs(10);
-  return true;
 }
 
 bool TDisplayP4Driver::InitSgm38121() {
@@ -1520,54 +667,6 @@ bool TDisplayP4Driver::InitEs8311() {
   }
 }
 
-bool TDisplayP4Driver::ConfigEs8311() {
-  if (!status_.es8311.init_flag) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
-    return false;
-  }
-
-  cpp_bus_driver::Es8311::PowerStatus ps = {
-      .contorl =
-          {
-              .analog_circuits = true,
-              .analog_bias_circuits = true,
-              .analog_adc_bias_circuits = true,
-              .analog_adc_reference_circuits = true,
-              .analog_dac_reference_circuit = true,
-              .internal_reference_circuits = false,
-          },
-      .vmid = cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
-  };
-  bool result = true;
-  result &= chip_.es8311->SetPowerStatus(ps);
-  result &= chip_.es8311->SetPgaPower(true);
-  result &= chip_.es8311->SetAdcPower(true);
-  result &= chip_.es8311->SetDacPower(true);
-  result &= chip_.es8311->SetOutputToHpDrive(true);
-  result &= chip_.es8311->SetAdcOffsetFreeze(
-      cpp_bus_driver::Es8311::AdcOffsetFreeze::kDynamicHpf);
-  result &= chip_.es8311->SetAdcHpfStage2Coeff(10);
-  result &= chip_.es8311->SetDacEqualizer(false);
-  result &= chip_.es8311->SetMic(cpp_bus_driver::Es8311::MicType::kAnalogMic,
-      cpp_bus_driver::Es8311::MicInput::kMic1p1n);
-  result &= chip_.es8311->SetAdcAutoVolumeControl(false);
-  result &=
-      chip_.es8311->SetAdcGain(cpp_bus_driver::Es8311::AdcGain::kGain18db);
-  result &= chip_.es8311->SetAdcPgaGain(
-      cpp_bus_driver::Es8311::AdcPgaGain::kGain30db);
-  result &= chip_.es8311->SetAdcVolume(191);
-  result &= chip_.es8311->SetDacVolume(191);
-
-  if (!result) {
-    status_.es8311.power_state_valid = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
-  } else {
-    status_.es8311.power_state = Es8311PowerState::kDuplex;
-    status_.es8311.power_state_valid = true;
-  }
-  return result;
-}
-
 bool TDisplayP4Driver::InitL76k() {
   if (!chip_.l76k->Init()) {
     if (!bus_.l76k_uart_bus->SetBaudRate(115200)) {
@@ -1635,24 +734,6 @@ bool TDisplayP4Driver::InitIcm20948() {
   status_.icm20948.init_flag = true;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitIcm20948 success\n");
   return true;
-}
-
-bool TDisplayP4Driver::InitRadio() {
-  if (IsRadioReady()) {
-    return true;
-  }
-
-  radio_type_ = RadioType::kUnknown;
-  if (InitSx1262()) {
-    return true;
-  }
-  if (InitLr2021()) {
-    return true;
-  }
-
-  LogMessage(LogLevel::kError, __FILE__, __LINE__,
-      "No supported radio detected on shared SX1262/LR2021 pins\n");
-  return false;
 }
 
 bool TDisplayP4Driver::InitSx1262() {
@@ -1808,51 +889,6 @@ bool TDisplayP4Driver::InitXl9555() {
   }
 }
 
-bool TDisplayP4Driver::ConfigXl9555() {
-  if (!status_.xl9555.init_flag) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9555 failed\n");
-    return false;
-  }
-
-  bool result = true;
-  result &= chip_.xl9555->SetGpioMode(
-      keyboard_gpio::xl9555::kLed1, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetGpioMode(
-      keyboard_gpio::xl9555::kLed2, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetGpioMode(
-      keyboard_gpio::xl9555::kLed3, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetGpioMode(keyboard_gpio::xl9555::kTca8418Rst,
-      cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &= chip_.xl9555->SetGpioMode(
-      keyboard_gpio::xl9555::kTMixRfEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &=
-      chip_.xl9555->SetGpioMode(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0,
-          cpp_bus_driver::Xl95x5::Mode::kOutput);
-  result &=
-      chip_.xl9555->SetGpioMode(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1,
-          cpp_bus_driver::Xl95x5::Mode::kOutput);
-
-  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1,
-      1);  // 关闭指示灯
-  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2, 1);
-  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3, 1);
-  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn, 1);
-
-  result &= SetCc1101RfSwitch(Cc1101RfSwitch::k868_915Mhz);
-
-  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 1);
-  tool_->DelayMs(10);
-  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
-  tool_->DelayMs(10);
-  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 1);
-  tool_->DelayMs(10);
-
-  if (!result) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9555 failed\n");
-  }
-  return result;
-}
-
 bool TDisplayP4Driver::InitTca8418() {
   if (!chip_.tca8418->Init()) {
     status_.tca8418.init_flag = false;
@@ -1907,46 +943,6 @@ bool TDisplayP4Driver::InitCc1101() {
   }
 }
 
-bool TDisplayP4Driver::SetCc1101RfSwitch(Cc1101RfSwitch rf_switch) {
-  if (!status_.xl9555.init_flag) {
-    LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "SetCc1101RfSwitch failed\n");
-    return false;
-  }
-
-  bool result = true;
-  switch (rf_switch) {
-    case Cc1101RfSwitch::k315Mhz:
-      result &= chip_.xl9555->GpioWrite(
-          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0, 0);
-      result &= chip_.xl9555->GpioWrite(
-          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1, 1);
-      break;
-    case Cc1101RfSwitch::k434Mhz:
-      result &= chip_.xl9555->GpioWrite(
-          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0, 1);
-      result &= chip_.xl9555->GpioWrite(
-          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1, 1);
-      break;
-    case Cc1101RfSwitch::k868_915Mhz:
-      result &= chip_.xl9555->GpioWrite(
-          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0, 1);
-      result &= chip_.xl9555->GpioWrite(
-          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1, 0);
-      break;
-
-    default:
-      result = false;
-      break;
-  }
-
-  if (!result) {
-    LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "SetCc1101RfSwitch failed\n");
-  }
-  return result;
-}
-
 bool TDisplayP4Driver::InitNrf24l01() {
   if (chip_.nrf24l01 == nullptr || !chip_.nrf24l01->Init()) {
     status_.nrf24l01.init_flag = false;
@@ -1956,6 +952,143 @@ bool TDisplayP4Driver::InitNrf24l01() {
   status_.nrf24l01.init_flag = true;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitNrf24l01 success\n");
   return true;
+}
+
+bool TDisplayP4Driver::InitPower() {
+  bool result = true;
+  result &= InitLdoPower(3, 2500);
+  result &= InitLdoPower(4, 3300);
+  return result;
+}
+
+bool TDisplayP4Driver::InitScreen() {
+  if (!status_.xl9535.init_flag ||
+      !chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0)) {
+    return false;
+  }
+  tool_->DelayMs(2);
+  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1)) {
+    return false;
+  }
+  tool_->DelayMs(120);
+
+  if (!DetectScreenType()) {
+    LogMessage(
+        LogLevel::kError, __FILE__, __LINE__, "DetectScreenType failed\n");
+    return false;
+  }
+
+  const auto& screen = screen_info();
+  bus_.screen_mipi_bus = std::make_shared<cpp_bus_driver::HardwareMipi>(
+      screen.width, screen.height, screen.mipi_dsi_hsync, screen.mipi_dsi_hbp,
+      screen.mipi_dsi_hfp, screen.mipi_dsi_vsync, screen.mipi_dsi_vbp,
+      screen.mipi_dsi_vfp, screen.data_lane_num,
+      ColorFormatFromBitsPerPixel(screen.bits_per_pixel));
+
+  chip_.hi8561.reset();
+  chip_.rm69a10.reset();
+  status_.hi8561.init_flag = false;
+  status_.hi8561_touch.init_flag = false;
+  status_.hi8561_backlight.init_flag = false;
+  status_.rm69a10.init_flag = false;
+
+  switch (screen.type) {
+    case device::ScreenType::kHi8561:
+      chip_.hi8561 =
+          std::make_unique<cpp_bus_driver::Hi8561>(bus_.screen_mipi_bus);
+      return InitHi8561();
+    case device::ScreenType::kRm69a10:
+      chip_.rm69a10 =
+          std::make_unique<cpp_bus_driver::Rm69a10>(bus_.screen_mipi_bus);
+      return InitRm69a10();
+    default:
+      return false;
+  }
+}
+
+bool TDisplayP4Driver::InitTouch() {
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return InitHi8561Touch();
+    case device::ScreenType::kRm69a10:
+      return status_.gt9895.init_flag || InitGt9895();
+    default:
+      return false;
+  }
+}
+
+bool TDisplayP4Driver::InitScreenBacklight() {
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return InitHi8561Backlight();
+    case device::ScreenType::kRm69a10:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool TDisplayP4Driver::InitRadio() {
+  if (IsRadioReady()) {
+    return true;
+  }
+
+  radio_type_ = RadioType::kUnknown;
+  if (InitSx1262()) {
+    return true;
+  }
+  if (InitLr2021()) {
+    return true;
+  }
+
+  LogMessage(LogLevel::kError, __FILE__, __LINE__,
+      "No supported radio detected on shared SX1262/LR2021 pins\n");
+  return false;
+}
+
+bool TDisplayP4Driver::InitKeyboard() {
+  keyboard_connected_ = false;
+  status_.xl9555.init_flag = false;
+  status_.tca8418.init_flag = false;
+  status_.tca8418_backlight.init_flag = false;
+  status_.cc1101.init_flag = false;
+  status_.nrf24l01.init_flag = false;
+
+  if (!InitXl9555()) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "Keyboard device not connected\n");
+    return false;
+  }
+
+  bool result = ConfigXl9555();
+  if (!result) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9555 failed\n");
+    return false;
+  }
+
+  result &= tool_->SetGpioMode(keyboard_gpio::t_mix_rf::cc1101::kCs,
+      cpp_bus_driver::Tool::GpioMode::kOutput);
+  result &= tool_->SetGpioMode(keyboard_gpio::t_mix_rf::nrf24l01::kCs,
+      cpp_bus_driver::Tool::GpioMode::kOutput);
+  result &= tool_->SetGpioMode(keyboard_gpio::t_mix_rf::st25r3916::kCs,
+      cpp_bus_driver::Tool::GpioMode::kOutput);
+  result &= tool_->GpioWrite(keyboard_gpio::t_mix_rf::cc1101::kCs, 1);
+  result &= tool_->GpioWrite(keyboard_gpio::t_mix_rf::nrf24l01::kCs, 1);
+  result &= tool_->GpioWrite(keyboard_gpio::t_mix_rf::st25r3916::kCs, 1);
+
+  if (!result) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "Keyboard gpio failed\n");
+    return false;
+  }
+
+  result &= InitTca8418();
+  result &= InitTca8418Backlight();
+  result &= InitCc1101();
+  result &= InitNrf24l01();
+
+  keyboard_connected_ = result;
+
+  return result;
 }
 
 bool TDisplayP4Driver::InitSpiffs(
@@ -2069,33 +1202,6 @@ bool TDisplayP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
   return true;
 }
 
-bool TDisplayP4Driver::IsSdmmcReady() const {
-  return status_.sd_card.init_flag && sd_card_ != nullptr &&
-         sdmmc_get_status(sd_card_) == ESP_OK;
-}
-
-bool TDisplayP4Driver::DeinitSdmmc() {
-  if (sd_card_ == nullptr) {
-    status_.sd_card.init_flag = false;
-    sd_card_base_path_.clear();
-    return SetSdPowerEnabled(false);
-  }
-
-  const esp_err_t result =
-      esp_vfs_fat_sdcard_unmount(sd_card_base_path_.c_str(), sd_card_);
-  if (result != ESP_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "esp_vfs_fat_sdcard_unmount failed (error code: %#X)\n", result);
-    status_.sd_card.init_flag = false;
-    return false;
-  }
-
-  sd_card_ = nullptr;
-  sd_card_base_path_.clear();
-  status_.sd_card.init_flag = false;
-  return SetSdPowerEnabled(false);
-}
-
 bool TDisplayP4Driver::InitSdspi(
     const char* base_path, spi_host_device_t host_id, int max_freq_khz) {
   if (base_path == nullptr || base_path[0] == '\0') {
@@ -2170,6 +1276,925 @@ bool TDisplayP4Driver::InitSdspi(
   sd_card_ = card;
   sd_card_base_path_ = base_path;
   status_.sd_card.init_flag = true;
+  return true;
+}
+
+bool TDisplayP4Driver::DeinitScreen() {
+  bool result = true;
+
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      if (status_.hi8561.init_flag) {
+        result &= chip_.hi8561->Deinit();
+        status_.hi8561.init_flag = false;
+      }
+      break;
+    case device::ScreenType::kRm69a10:
+      if (status_.rm69a10.init_flag) {
+        result &= chip_.rm69a10->Deinit();
+        status_.rm69a10.init_flag = false;
+      }
+      break;
+    default:
+      break;
+  }
+
+  return result;
+}
+
+bool TDisplayP4Driver::DeinitTouch() {
+  bool result = true;
+
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      if (status_.hi8561_touch.init_flag) {
+        result &= chip_.hi8561_touch->Deinit();
+        status_.hi8561_touch.init_flag = false;
+      }
+      break;
+    case device::ScreenType::kRm69a10:
+      if (status_.gt9895.init_flag) {
+        result &= chip_.gt9895->Deinit();
+        status_.gt9895.init_flag = false;
+      }
+      break;
+    default:
+      break;
+  }
+
+  return result;
+}
+
+bool TDisplayP4Driver::DeinitScreenBacklight() {
+  bool result = true;
+
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      if (status_.hi8561_backlight.init_flag) {
+        result &= chip_.hi8561_backlight->Stop(0);
+        status_.hi8561_backlight.init_flag = false;
+      }
+      break;
+    case device::ScreenType::kRm69a10:
+      break;
+    default:
+      break;
+  }
+
+  return result;
+}
+
+bool TDisplayP4Driver::DeinitKeyboard() {
+  bool result = true;
+
+  if (status_.tca8418_backlight.init_flag) {
+    result &= chip_.tca8418_backlight->Stop(0);
+    status_.tca8418_backlight.init_flag = false;
+  }
+  if (status_.tca8418.init_flag) {
+    result &= chip_.tca8418->Deinit();
+    status_.tca8418.init_flag = false;
+  }
+  if (status_.cc1101.init_flag) {
+    result &= chip_.cc1101->Deinit(false);
+    status_.cc1101.init_flag = false;
+  }
+  if (status_.nrf24l01.init_flag) {
+    result &= chip_.nrf24l01->Deinit(false);
+    status_.nrf24l01.init_flag = false;
+  }
+  if (status_.xl9555.init_flag) {
+    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1, 1);
+    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2, 1);
+    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3, 1);
+    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn, 0);
+    result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
+
+    result &= chip_.xl9555->Deinit();
+    status_.xl9555.init_flag = false;
+  }
+
+  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kCs);
+  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kGdo0);
+  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::cc1101::kGdo2);
+  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::nrf24l01::kCs);
+  result &= tool_->ResetGpio(keyboard_gpio::t_mix_rf::st25r3916::kCs);
+
+  keyboard_connected_ = false;
+
+  return result;
+}
+
+bool TDisplayP4Driver::DeinitSdmmc() {
+  if (sd_card_ == nullptr) {
+    status_.sd_card.init_flag = false;
+    sd_card_base_path_.clear();
+    return SetSdPowerEnabled(false);
+  }
+
+  const esp_err_t result =
+      esp_vfs_fat_sdcard_unmount(sd_card_base_path_.c_str(), sd_card_);
+  if (result != ESP_OK) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "esp_vfs_fat_sdcard_unmount failed (error code: %#X)\n", result);
+    status_.sd_card.init_flag = false;
+    return false;
+  }
+
+  sd_card_ = nullptr;
+  sd_card_base_path_.clear();
+  status_.sd_card.init_flag = false;
+  return SetSdPowerEnabled(false);
+}
+
+bool TDisplayP4Driver::ConfigXl9535() {
+  if (!status_.xl9535.init_flag) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
+    return false;
+  }
+
+  // XL9535 上电后输出寄存器默认为高电平。先预装安全状态，再切换输出方向，
+  // 避免电源、复位和唤醒信号在配置过程中被短暂拉高。
+  bool result = true;
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSky13453Vctl, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEthernetRst, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
+  // ESP32-P4 只有在 USB PHY 电源保持开启时才能降低功耗；关闭该电源会
+  // 产生约 20 mA 功耗，因此这里只在初始化时拉高，后续内部流程不再主动
+  // 控制此引脚，预留接口仅供需要时显式调整。
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kGpsWakeUp, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
+  if (!result) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
+    return false;
+  }
+
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kScreenRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kTouchInt, cpp_bus_driver::Xl95x5::Mode::kInput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kUsbPhyPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kAudioPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kPowerEn3v3, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kGpsWakeUp, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kRtcInt, cpp_bus_driver::Xl95x5::Mode::kInput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kEsp32c6WakeUp, cpp_bus_driver::Xl95x5::Mode::kInput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kEsp32c6En, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kEthernetRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kSdPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kRadioRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kSky13453Vctl, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kIcm20948Int, cpp_bus_driver::Xl95x5::Mode::kInput);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kRadioDio1, cpp_bus_driver::Xl95x5::Mode::kInput);
+  if (!result) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
+    return false;
+  }
+
+  // 先关闭 kPowerEn3v3 并等待负载电容放电，再只执行一次上电。
+  tool_->DelayMs(500);
+  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 0)) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
+    return false;
+  }
+  tool_->DelayMs(10);
+  return true;
+}
+
+bool TDisplayP4Driver::ConfigEs8311() {
+  if (!status_.es8311.init_flag) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
+    return false;
+  }
+
+  cpp_bus_driver::Es8311::PowerStatus ps = {
+      .contorl =
+          {
+              .analog_circuits = true,
+              .analog_bias_circuits = true,
+              .analog_adc_bias_circuits = true,
+              .analog_adc_reference_circuits = true,
+              .analog_dac_reference_circuit = true,
+              .internal_reference_circuits = false,
+          },
+      .vmid = cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
+  };
+  bool result = true;
+  result &= chip_.es8311->SetPowerStatus(ps);
+  result &= chip_.es8311->SetPgaPower(true);
+  result &= chip_.es8311->SetAdcPower(true);
+  result &= chip_.es8311->SetDacPower(true);
+  result &= chip_.es8311->SetOutputToHpDrive(true);
+  result &= chip_.es8311->SetAdcOffsetFreeze(
+      cpp_bus_driver::Es8311::AdcOffsetFreeze::kDynamicHpf);
+  result &= chip_.es8311->SetAdcHpfStage2Coeff(10);
+  result &= chip_.es8311->SetDacEqualizer(false);
+  result &= chip_.es8311->SetMic(cpp_bus_driver::Es8311::MicType::kAnalogMic,
+      cpp_bus_driver::Es8311::MicInput::kMic1p1n);
+  result &= chip_.es8311->SetAdcAutoVolumeControl(false);
+  result &=
+      chip_.es8311->SetAdcGain(cpp_bus_driver::Es8311::AdcGain::kGain18db);
+  result &= chip_.es8311->SetAdcPgaGain(
+      cpp_bus_driver::Es8311::AdcPgaGain::kGain30db);
+  result &= chip_.es8311->SetAdcVolume(191);
+  result &= chip_.es8311->SetDacVolume(191);
+
+  if (!result) {
+    status_.es8311.power_state_valid = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
+  } else {
+    status_.es8311.power_state = Es8311PowerState::kDuplex;
+    status_.es8311.power_state_valid = true;
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::ConfigXl9555() {
+  if (!status_.xl9555.init_flag) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9555 failed\n");
+    return false;
+  }
+
+  bool result = true;
+  result &= chip_.xl9555->SetGpioMode(
+      keyboard_gpio::xl9555::kLed1, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9555->SetGpioMode(
+      keyboard_gpio::xl9555::kLed2, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9555->SetGpioMode(
+      keyboard_gpio::xl9555::kLed3, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9555->SetGpioMode(keyboard_gpio::xl9555::kTca8418Rst,
+      cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &= chip_.xl9555->SetGpioMode(
+      keyboard_gpio::xl9555::kTMixRfEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &=
+      chip_.xl9555->SetGpioMode(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0,
+          cpp_bus_driver::Xl95x5::Mode::kOutput);
+  result &=
+      chip_.xl9555->SetGpioMode(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1,
+          cpp_bus_driver::Xl95x5::Mode::kOutput);
+
+  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1,
+      1);  // 关闭指示灯
+  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2, 1);
+  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3, 1);
+  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn, 1);
+
+  result &= SetCc1101RfSwitch(Cc1101RfSwitch::k868_915Mhz);
+
+  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 1);
+  tool_->DelayMs(10);
+  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
+  tool_->DelayMs(10);
+  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 1);
+  tool_->DelayMs(10);
+
+  if (!result) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9555 failed\n");
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::IsBq27220Ready() const {
+  return status_.bq27220.init_flag && chip_.bq27220 != nullptr;
+}
+
+bool TDisplayP4Driver::IsXl9535Ready() const {
+  return status_.xl9535.init_flag && chip_.xl9535 != nullptr;
+}
+
+bool TDisplayP4Driver::IsSgm38121Ready() const {
+  return status_.sgm38121.init_flag && chip_.sgm38121 != nullptr;
+}
+
+bool TDisplayP4Driver::IsHi8561Ready() const {
+  return status_.hi8561.init_flag && chip_.hi8561 != nullptr;
+}
+
+bool TDisplayP4Driver::IsHi8561TouchReady() const {
+  return status_.hi8561_touch.init_flag && chip_.hi8561_touch != nullptr;
+}
+
+bool TDisplayP4Driver::IsHi8561BacklightReady() const {
+  return status_.hi8561_backlight.init_flag &&
+         chip_.hi8561_backlight != nullptr;
+}
+
+bool TDisplayP4Driver::IsRm69a10Ready() const {
+  return status_.rm69a10.init_flag && chip_.rm69a10 != nullptr;
+}
+
+bool TDisplayP4Driver::IsGt9895Ready() const {
+  return status_.gt9895.init_flag && chip_.gt9895 != nullptr;
+}
+
+bool TDisplayP4Driver::IsPcf8563Ready() const {
+  return status_.pcf8563.init_flag && chip_.pcf8563 != nullptr;
+}
+
+bool TDisplayP4Driver::IsAw86224Ready() const {
+  return status_.aw86224.init_flag && chip_.aw86224 != nullptr;
+}
+
+bool TDisplayP4Driver::IsEs8311Ready() const {
+  return status_.es8311.init_flag && chip_.es8311 != nullptr;
+}
+
+bool TDisplayP4Driver::IsL76kReady() const {
+  return status_.l76k.init_flag && chip_.l76k != nullptr;
+}
+
+bool TDisplayP4Driver::IsIcm20948Ready() const {
+  return status_.icm20948.init_flag && chip_.icm20948 != nullptr;
+}
+
+bool TDisplayP4Driver::IsSx1262Ready() const {
+  return status_.sx1262.init_flag && chip_.sx1262 != nullptr;
+}
+
+bool TDisplayP4Driver::IsLr2021Ready() const {
+  return status_.lr2021.init_flag && chip_.lr2021 != nullptr;
+}
+
+bool TDisplayP4Driver::IsXl9555Ready() const {
+  return status_.xl9555.init_flag && chip_.xl9555 != nullptr;
+}
+
+bool TDisplayP4Driver::IsTca8418Ready() const {
+  return status_.tca8418.init_flag && chip_.tca8418 != nullptr;
+}
+
+bool TDisplayP4Driver::IsTca8418BacklightReady() const {
+  return status_.tca8418_backlight.init_flag &&
+         chip_.tca8418_backlight != nullptr;
+}
+
+bool TDisplayP4Driver::IsCc1101Ready() const {
+  return status_.cc1101.init_flag && chip_.cc1101 != nullptr;
+}
+
+bool TDisplayP4Driver::IsNrf24l01Ready() const {
+  return status_.nrf24l01.init_flag && chip_.nrf24l01 != nullptr;
+}
+
+bool TDisplayP4Driver::IsScreenReady() const {
+  if (bus_.screen_mipi_bus == nullptr ||
+      bus_.screen_mipi_bus->device_handle() == nullptr) {
+    return false;
+  }
+
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return IsHi8561Ready() && IsHi8561BacklightReady();
+    case device::ScreenType::kRm69a10:
+      return IsRm69a10Ready();
+    default:
+      return false;
+  }
+}
+
+bool TDisplayP4Driver::IsTouchReady() const {
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return IsHi8561TouchReady();
+    case device::ScreenType::kRm69a10:
+      return IsGt9895Ready();
+    default:
+      return false;
+  }
+}
+
+bool TDisplayP4Driver::IsRadioReady() const {
+  switch (radio_type_) {
+    case RadioType::kSx1262:
+      return IsSx1262Ready();
+    case RadioType::kLr2021:
+      return IsLr2021Ready();
+    default:
+      return false;
+  }
+}
+
+bool TDisplayP4Driver::IsSdmmcReady() const {
+  return status_.sd_card.init_flag && sd_card_ != nullptr &&
+         sdmmc_get_status(sd_card_) == ESP_OK;
+}
+
+bool TDisplayP4Driver::SetAw86224Standby() {
+  return !IsAw86224Ready() || chip_.aw86224->StopRamPlaybackWaveform();
+}
+
+bool TDisplayP4Driver::SetEs8311PowerState(Es8311PowerState state) {
+  if (!IsEs8311Ready()) {
+    if (state == Es8311PowerState::kSleep) {
+      return true;
+    }
+    if (!InitEs8311() || !ConfigEs8311()) {
+      return false;
+    }
+  }
+  if (status_.es8311.power_state_valid && status_.es8311.power_state == state) {
+    return true;
+  }
+  status_.es8311.power_state_valid = false;
+
+  const bool playback_enabled = state == Es8311PowerState::kPlayback ||
+                                state == Es8311PowerState::kDuplex;
+  const bool capture_enabled =
+      state == Es8311PowerState::kCapture || state == Es8311PowerState::kDuplex;
+  const bool sleep = state == Es8311PowerState::kSleep;
+  // 该开关控制共享的 OUT_5V 音频电源域。除 NS4150 外，RT9080 也从
+  // OUT_5V 生成 ES8311 模拟 ADC 使用的 AD_3V3，因此仅采集时同样要开启。
+  if (!sleep && !SetAudioPowerEnabled(true)) {
+    return false;
+  }
+  cpp_bus_driver::Es8311::PowerStatus power_status = {
+      .contorl =
+          {
+              .analog_circuits = !sleep,
+              .analog_bias_circuits = !sleep,
+              .analog_adc_bias_circuits = capture_enabled,
+              .analog_adc_reference_circuits = capture_enabled,
+              .analog_dac_reference_circuit = playback_enabled,
+              .internal_reference_circuits = false,
+          },
+      .vmid = sleep
+                  ? cpp_bus_driver::Es8311::Vmid::kPowerDown
+                  : cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
+  };
+
+  bool result = true;
+  if (sleep) {
+    result &= chip_.es8311->SetOutputToHpDrive(false);
+    result &= chip_.es8311->SetPgaPower(false);
+    result &= chip_.es8311->SetAdcPower(false);
+    result &= chip_.es8311->SetDacPower(false);
+    result &= chip_.es8311->SetPowerStatus(power_status);
+  } else {
+    result &= chip_.es8311->SetPowerStatus(power_status);
+    result &= chip_.es8311->SetPgaPower(capture_enabled);
+    result &= chip_.es8311->SetAdcPower(capture_enabled);
+    result &= chip_.es8311->SetDacPower(playback_enabled);
+    result &= chip_.es8311->SetOutputToHpDrive(playback_enabled);
+  }
+  if (sleep) {
+    result &= SetAudioPowerEnabled(false);
+  } else if (!result) {
+    SetAudioPowerEnabled(false);
+  }
+  if (result) {
+    status_.es8311.power_state = state;
+    status_.es8311.power_state_valid = true;
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::SetL76kSleep(bool sleep) {
+  if (!IsL76kReady()) {
+    if (sleep) {
+      return true;
+    }
+    if (!InitL76k()) {
+      return false;
+    }
+  }
+  return chip_.l76k->Sleep(sleep);
+}
+
+bool TDisplayP4Driver::SetIcm20948Sleep(bool sleep) {
+  if (!IsIcm20948Ready()) {
+    if (sleep) {
+      return true;
+    }
+    if (!InitIcm20948()) {
+      return false;
+    }
+  }
+  return chip_.icm20948->SetSleep(sleep);
+}
+
+bool TDisplayP4Driver::SetSx1262PowerState(Sx1262PowerState state) {
+  if (radio_type_ == RadioType::kLr2021) {
+    return false;
+  }
+  if (!IsSx1262Ready()) {
+    if (state == Sx1262PowerState::kSleep) {
+      return true;
+    }
+    if (!InitSx1262()) {
+      return false;
+    }
+  }
+
+  switch (state) {
+    case Sx1262PowerState::kStandby:
+      return chip_.sx1262->Wakeup();
+    case Sx1262PowerState::kSleep:
+      return chip_.sx1262->SetSleep();
+    default:
+      return false;
+  }
+}
+
+bool TDisplayP4Driver::SetLr2021PowerState(Lr2021PowerState state) {
+  if (radio_type_ == RadioType::kSx1262) {
+    return false;
+  }
+  if (!IsLr2021Ready()) {
+    if (state == Lr2021PowerState::kSleep) {
+      return true;
+    }
+    if (!InitLr2021()) {
+      return false;
+    }
+  }
+
+  lr20xx_status_t result = LR20XX_STATUS_ERROR;
+  if (state == Lr2021PowerState::kSleep) {
+    const lr20xx_system_sleep_cfg_t sleep_config = {
+        .is_clk_32k_enabled = false,
+        .is_ram_retention_enabled = true,
+    };
+    result = chip_.lr2021->SetSleep(sleep_config) ? LR20XX_STATUS_OK
+                                                  : LR20XX_STATUS_ERROR;
+  } else if (chip_.lr2021->Wakeup()) {
+    result = chip_.lr2021->Invoke(
+        lr20xx_system_set_standby_mode, LR20XX_SYSTEM_STANDBY_MODE_RC);
+  }
+
+  if (result != LR20XX_STATUS_OK) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "LR2021 power state change failed (error code: %d)\n",
+        static_cast<int>(result));
+    return false;
+  }
+  return true;
+}
+
+bool TDisplayP4Driver::SetCc1101PowerState(Cc1101PowerState state) {
+  if (!IsCc1101Ready()) {
+    return state == Cc1101PowerState::kSleep;
+  }
+  const bool result = state == Cc1101PowerState::kSleep
+                          ? chip_.cc1101->Sleep()
+                          : chip_.cc1101->Wakeup();
+  if (!result) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "CC1101 power state change failed\n");
+    return false;
+  }
+  return true;
+}
+
+bool TDisplayP4Driver::SetNrf24l01PowerState(Nrf24l01PowerState state) {
+  if (!IsNrf24l01Ready()) {
+    return state == Nrf24l01PowerState::kSleep;
+  }
+  const bool result = state == Nrf24l01PowerState::kSleep
+                          ? chip_.nrf24l01->PowerDown()
+                          : chip_.nrf24l01->Standby();
+  if (!result) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "NRF24L01 power state change failed\n");
+    return false;
+  }
+  return true;
+}
+
+bool TDisplayP4Driver::SetEsp32c6PowerEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  const bool result =
+      chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, enabled ? 1 : 0);
+  if (result && enabled) {
+    tool_->DelayMs(20);
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::SetScreenSleep(bool sleep) {
+  if (!IsScreenReady()) {
+    return false;
+  }
+
+  bool result = true;
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      if (sleep) {
+        if (IsHi8561BacklightReady()) {
+          result &= chip_.hi8561_backlight->Stop(0);
+        }
+        result &= chip_.hi8561->SetScreenOff(true);
+        result &= chip_.hi8561->SetSleep(true);
+      } else {
+        result &= chip_.hi8561->SetSleep(false);
+        result &= chip_.hi8561->SetScreenOff(false);
+      }
+      break;
+    case device::ScreenType::kRm69a10:
+      if (sleep) {
+        result &= chip_.rm69a10->SetBrightness(0);
+        result &= chip_.rm69a10->SetScreenOff(true);
+        result &= chip_.rm69a10->SetSleep(true);
+      } else {
+        result &= chip_.rm69a10->SetSleep(false);
+        result &= chip_.rm69a10->SetScreenOff(false);
+      }
+      break;
+    default:
+      return false;
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::SetTouchEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  if (enabled && IsTouchReady()) {
+    return true;
+  }
+
+  bool result = true;
+  if (!enabled) {
+    result &= DeinitTouch();
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
+    return result;
+  }
+
+  return InitTouch();
+}
+
+bool TDisplayP4Driver::SetCameraPowerEnabled(bool enabled) {
+  if (!IsSgm38121Ready()) {
+    return !enabled;
+  }
+
+  const auto status = enabled ? cpp_bus_driver::Sgm38121::Status::kOn
+                              : cpp_bus_driver::Sgm38121::Status::kOff;
+  bool result = true;
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1, status);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710) || \
+    defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1, status);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1, status);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
+#endif
+  if (result && enabled) {
+    tool_->DelayMs(10);
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::SetEthernetPowerEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  const bool result =
+      chip_.xl9535->GpioWrite(gpio::xl9535::kEthernetRst, enabled ? 1 : 0);
+  if (result && enabled) {
+    tool_->DelayMs(20);
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::SetAudioPowerEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  const bool result =
+      chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, enabled ? 1 : 0);
+  if (result && enabled) {
+    tool_->DelayMs(10);
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::SetUsbHostPowerEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  const bool result =
+      chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, enabled ? 1 : 0);
+  if (result && enabled) {
+    tool_->DelayMs(20);
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::SetSdPowerEnabled(bool enabled) {
+  if (!status_.xl9535.init_flag) {
+    return !enabled;
+  }
+  const bool result =
+      chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, enabled ? 0 : 1);
+  if (result && enabled) {
+    tool_->DelayMs(20);
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::SetRadioPowerState(RadioPowerState state) {
+  if (!IsRadioReady()) {
+    if (state == RadioPowerState::kSleep) {
+      return true;
+    }
+    if (!InitRadio()) {
+      return false;
+    }
+  }
+
+  switch (radio_type_) {
+    case RadioType::kSx1262:
+      return SetSx1262PowerState(state == RadioPowerState::kSleep
+                                     ? Sx1262PowerState::kSleep
+                                     : Sx1262PowerState::kStandby);
+    case RadioType::kLr2021:
+      return SetLr2021PowerState(state == RadioPowerState::kSleep
+                                     ? Lr2021PowerState::kSleep
+                                     : Lr2021PowerState::kStandby);
+    default:
+      return state == RadioPowerState::kSleep;
+  }
+}
+
+bool TDisplayP4Driver::SetKeyboardPowerState(PowerState state) {
+  bool result = true;
+
+  switch (state) {
+    case PowerState::kActive:
+      result &= SetCc1101PowerState(Cc1101PowerState::kStandby);
+      result &= SetNrf24l01PowerState(Nrf24l01PowerState::kStandby);
+      break;
+    case PowerState::kSleep:
+      result &= SetCc1101PowerState(Cc1101PowerState::kSleep);
+      result &= SetNrf24l01PowerState(Nrf24l01PowerState::kSleep);
+      if (status_.tca8418_backlight.init_flag) {
+        result &= chip_.tca8418_backlight->Stop(0);
+      }
+      if (status_.xl9555.init_flag) {
+        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1, 1);
+        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2, 1);
+        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3, 1);
+      }
+      break;
+    case PowerState::kOff:
+      result &= DeinitKeyboard();
+      break;
+    default:
+      return false;
+  }
+
+  return result;
+}
+
+bool TDisplayP4Driver::SetPowerState(PowerState state) {
+  if (state == PowerState::kActive) {
+    bool result = SetTouchEnabled(true);
+    result &= SetScreenSleep(false);
+    return result;
+  }
+  if (state != PowerState::kSleep && state != PowerState::kOff) {
+    return false;
+  }
+
+  bool result = true;
+  if (IsScreenReady()) {
+    result &= SetScreenSleep(true);
+  }
+  result &= SetTouchEnabled(false);
+  result &= SetAw86224Standby();
+  result &= SetEs8311PowerState(Es8311PowerState::kSleep);
+  result &= SetIcm20948Sleep(true);
+  result &= SetL76kSleep(true);
+  result &= SetRadioPowerState(RadioPowerState::kSleep);
+  result &= SetCameraPowerEnabled(false);
+  result &= SetEsp32c6PowerEnabled(false);
+  result &= SetEthernetPowerEnabled(false);
+  result &= SetAudioPowerEnabled(false);
+
+  result &= SetKeyboardPowerState(PowerState::kSleep);
+
+  if (state == PowerState::kSleep) {
+    return result;
+  }
+
+  // 卸载文件系统以保证缓存数据已经写回；底层总线由深度睡眠复位。
+  result &= DeinitSdmmc();
+
+  // 深度睡眠会停止并复位 ESP32-P4 内部总线，此处只设置外部芯片和
+  // 电源引脚的最终状态，不再逐个反初始化芯片或释放共享总线。
+  if (status_.xl9535.init_flag) {
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEthernetRst, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 1);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
+  }
+
+  result &= DeinitLdoPower(3);
+  result &= DeinitLdoPower(4);
+  return result;
+}
+
+bool TDisplayP4Driver::SetCc1101RfSwitch(Cc1101RfSwitch rf_switch) {
+  if (!status_.xl9555.init_flag) {
+    LogMessage(
+        LogLevel::kError, __FILE__, __LINE__, "SetCc1101RfSwitch failed\n");
+    return false;
+  }
+
+  bool result = true;
+  switch (rf_switch) {
+    case Cc1101RfSwitch::k315Mhz:
+      result &= chip_.xl9555->GpioWrite(
+          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0, 0);
+      result &= chip_.xl9555->GpioWrite(
+          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1, 1);
+      break;
+    case Cc1101RfSwitch::k434Mhz:
+      result &= chip_.xl9555->GpioWrite(
+          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0, 1);
+      result &= chip_.xl9555->GpioWrite(
+          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1, 1);
+      break;
+    case Cc1101RfSwitch::k868_915Mhz:
+      result &= chip_.xl9555->GpioWrite(
+          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0, 1);
+      result &= chip_.xl9555->GpioWrite(
+          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1, 0);
+      break;
+
+    default:
+      result = false;
+      break;
+  }
+
+  if (!result) {
+    LogMessage(
+        LogLevel::kError, __FILE__, __LINE__, "SetCc1101RfSwitch failed\n");
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::DetectScreenType() {
+  status_.gt9895.init_flag = false;
+
+  if (!status_.xl9535.init_flag ||
+      !chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0)) {
+    return false;
+  }
+  tool_->DelayMs(2);
+  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
+    return false;
+  }
+  tool_->DelayMs(120);
+
+  if (chip_.gt9895 != nullptr && chip_.gt9895->Init()) {
+    screen_info_ = ScreenInfoForType(device::ScreenType::kRm69a10);
+    status_.gt9895.init_flag = true;
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "Auto detected T-Display-P4 screen: %s\n", screen_info_->name);
+    return true;
+  }
+
+  if (bus_.gt9895_i2c_touch_bus != nullptr) {
+    bus_.gt9895_i2c_touch_bus->Deinit(false);
+  }
+  screen_info_ = ScreenInfoForType(device::ScreenType::kHi8561);
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+      "Auto detected T-Display-P4 screen: %s\n", screen_info_->name);
   return true;
 }
 

@@ -233,47 +233,57 @@ class TDisplayP4AirDriver {
     };
   }
 
+  void CreateDrivers();
+
+  bool Init(InitMode mode = InitMode::kSync);
+  bool InitDrivers(InitMode mode = InitMode::kSync);
+  bool InitAxp517();
+  bool InitXl9535();
+  bool InitSgm38121();
+  bool InitBhi260ap();
+  bool InitQmc6310n();
+  bool InitHi8561();
+  bool InitHi8561Touch();
+  bool InitHi8561Backlight();
+  bool InitAw86224();
+  bool InitSt25r3916();
+  bool InitEs8389();
+  bool InitLr1121();
+  bool InitNrf9151();
+  bool InitPower();
+  bool InitScreen();
+  bool InitTouch();
+  bool InitScreenBacklight();
+  bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf);
+  bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
+  bool InitSdspi(const char* base_path, spi_host_device_t host_id,
+      int max_freq_khz = SDMMC_FREQ_DEFAULT);
+
+  bool DeinitEs8389();
+  bool DeinitScreen();
+  bool DeinitTouch();
+  bool DeinitScreenBacklight();
+  bool DeinitSdmmc(bool release_bus = true);
+
+  bool ConfigXl9535();
+  bool ConfigEs8389();
+
   bool IsAxp517Ready() const;
   bool IsXl9535Ready() const;
   bool IsSgm38121Ready() const;
   bool IsBhi260apReady() const;
   bool IsQmc6310nReady() const;
-  bool IsAw86224Ready() const;
-  bool IsSt25r3916Ready() const;
   bool IsHi8561Ready() const;
   bool IsHi8561TouchReady() const;
   bool IsHi8561BacklightReady() const;
+  bool IsAw86224Ready() const;
+  bool IsSt25r3916Ready() const;
   bool IsEs8389Ready() const;
   bool IsLr1121Ready() const;
   bool IsNrf9151Ready() const;
   bool IsScreenReady() const;
+  bool IsSdmmcReady() const;
 
-  void CreateDrivers();
-
-  /**
-   * @brief 初始化已经创建的芯片驱动。
-   * @param mode 初始化模式。
-   * @return 所有必要驱动初始化成功时返回 true，否则返回 false。
-   */
-  bool InitDrivers(InitMode mode = InitMode::kSync);
-
-  /**
-   * @brief 创建并初始化所有板级驱动。
-   * @param mode 初始化模式。
-   * @return 初始化成功时返回 true，否则返回 false。
-   */
-  bool Init(InitMode mode = InitMode::kSync);
-
-  /**
-   * @brief 设置整板运行、休眠或关断状态
-   * @param state 目标电源状态
-   * @return 状态切换成功返回 true，否则返回 false
-   */
-  bool SetPowerState(PowerState state);
-
-  bool SetScreenSleep(bool sleep);
-  bool SetTouchEnabled(bool enabled);
-  bool SetCameraPowerEnabled(bool enabled);
   bool SetBhi260apSleep(bool sleep);
   bool SetQmc6310nSleep(bool sleep);
   bool SetSt25r3916PowerEnabled(bool enabled);
@@ -281,89 +291,28 @@ class TDisplayP4AirDriver {
   bool SetAw86224Standby();
   bool SetEs8389PowerState(Es8389PowerState state);
   bool SetEsp32c5PowerEnabled(bool enabled);
+  bool SetLr1121PowerState(Lr1121PowerState state);
+  bool SetNrf9151PowerEnabled(bool enabled);
+  bool SetScreenSleep(bool sleep);
+  bool SetTouchEnabled(bool enabled);
+  bool SetCameraPowerEnabled(bool enabled);
   bool SetUsbHostPowerEnabled(bool enabled);
   bool SetSdPowerEnabled(bool enabled);
   bool SetLedEnabled(bool enabled);
-  bool SetLr1121PowerState(Lr1121PowerState state);
-  bool SetNrf9151PowerEnabled(bool enabled);
-
-  bool InitPower();
-  bool InitAxp517();
-  bool InitXl9535();
-  bool ConfigXl9535();
+  bool SetPowerState(PowerState state);
 
   /**
    * @brief 使 ESP32-C5 进入下载模式。
    * @return 时序控制成功时返回 true，否则返回 false。
    */
   bool EnterEsp32c5DownloadMode();
+
   /**
    * @brief 切换外部串口连接目标。
    * @param target 串口连接到 ESP32-P4 或 ESP32-C5。
    * @return 串口切换成功时返回 true，否则返回 false。
    */
   bool SetUartTarget(UartTarget target);
-
-  bool InitSgm38121();
-  bool InitBhi260ap();
-  bool InitQmc6310n();
-
-  bool InitScreen();
-  bool DeinitScreen();
-  bool InitTouch();
-  bool DeinitTouch();
-  bool InitScreenBacklight();
-  bool DeinitScreenBacklight();
-
-  bool InitHi8561();
-  bool InitHi8561Touch();
-  bool InitHi8561Backlight();
-  bool InitAw86224();
-  bool InitSt25r3916();
-  bool InitEs8389();
-  bool DeinitEs8389();
-  bool ConfigEs8389();
-  bool InitLr1121();
-  bool InitNrf9151();
-
-  /**
-   * @brief 挂载 SPIFFS 文件系统。
-   * @param base_path 文件系统挂载路径。
-   * @param spiffs_conf 返回挂载时使用的 SPIFFS 配置。
-   * @return SPIFFS 挂载成功时返回 true，否则返回 false。
-   */
-  bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf);
-
-  /**
-   * @brief 通过 SDMMC 主机挂载 SD 卡。
-   * @param base_path SD 卡挂载路径。
-   * @param max_freq_khz SDMMC 总线最大频率，单位为 kHz。
-   * @return SD 卡挂载成功时返回 true，否则返回 false。
-   */
-  bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
-
-  /**
-   * @brief 卸载 SD 卡文件系统并按需释放 SDSPI 总线资源。
-   * @param release_bus 使用 SDSPI 时是否释放 SPI 主机总线。
-   * @return 卸载成功或当前未挂载时返回 true，否则返回 false。
-   */
-  bool DeinitSdmmc(bool release_bus = true);
-
-  /**
-   * @brief 检查已挂载 SD 卡是否仍可响应 SDMMC 命令。
-   * @return SD 卡已挂载且可访问时返回 true，否则返回 false。
-   */
-  bool IsSdmmcReady() const;
-
-  /**
-   * @brief 通过 SDSPI 主机挂载 SD 卡。
-   * @param base_path SD 卡挂载路径。
-   * @param host_id SD 卡使用的 SPI 主机。
-   * @param max_freq_khz SDSPI 总线最大频率，单位为 kHz。
-   * @return SD 卡挂载成功时返回 true，否则返回 false。
-   */
-  bool InitSdspi(const char* base_path, spi_host_device_t host_id,
-      int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
  private:
   std::unique_ptr<cpp_bus_driver::Tool> tool_;
@@ -392,10 +341,5 @@ class TDisplayP4AirDriver {
   TDisplayP4AirDriver(const TDisplayP4AirDriver&) = delete;
   TDisplayP4AirDriver& operator=(const TDisplayP4AirDriver&) = delete;
 };
-
-bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf);
-bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
-bool InitSdspi(const char* base_path, spi_host_device_t host_id,
-    int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
 }  // namespace lilygo_device_driver
