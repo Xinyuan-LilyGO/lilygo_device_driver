@@ -653,9 +653,15 @@ bool TDisplayP4AirDriver::InitAxp517() {
     return false;
   }
 
-  const bool result =
-      chip_.axp517->SetAdcChannel(cpp_bus_driver::Axp517::AdcChannel{}) &&
-      chip_.axp517->SetBoostEnable(false);
+  const cpp_bus_driver::Axp517::AdcChannel adc_channel = {
+      .battery_discharge_current_measure = true,
+      .battery_charge_current_measure = true,
+      .chip_temperature_measure = true,
+      .ts_value_measure = true,
+      .battery_voltage_measure = true,
+  };
+  bool result = chip_.axp517->SetAdcChannel(adc_channel);
+  result &= chip_.axp517->SetBoostEnable(false);
   status_.axp517.init_flag = result;
   if (!result) {
     chip_.axp517->Deinit(false);
