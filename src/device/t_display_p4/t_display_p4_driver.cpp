@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-08-03 16:14:03
+ * @LastEditTime: 2026-08-06 11:52:01
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -789,8 +789,8 @@ bool TDisplayP4Driver::InitSx1262() {
 
   if (!chip_.sx1262->SetSleep()) {
     chip_.sx1262->Deinit(false);
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitSx1262 sleep failed\n");
+    LogMessage(
+        LogLevel::kError, __FILE__, __LINE__, "InitSx1262 sleep failed\n");
     return false;
   }
 

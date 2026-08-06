@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-08-03 16:14:07
+ * @LastEditTime: 2026-08-06 11:51:52
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -213,7 +213,6 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
         es8389_initialized ? SetEs8389PowerState(Es8389PowerState::kSleep)
                            : SetNs4150Enabled(false);
     result &= es8389_initialized && es8389_sleep;
-
   }
 
   return result;
@@ -347,13 +346,13 @@ bool TDisplayP4AirDriver::InitBhi260ap() {
   if (result) {
     struct bhy2_dev* context = chip_.bhi260ap->context();
     uint8_t host_interface_control = 0;
-    result = context != nullptr &&
-             bhy2_get_host_intf_ctrl(&host_interface_control, context) ==
-                 BHY2_OK;
+    result =
+        context != nullptr &&
+        bhy2_get_host_intf_ctrl(&host_interface_control, context) == BHY2_OK;
     if (result) {
       host_interface_control |= BHY2_HIF_CTRL_AP_SUSPENDED;
-      result = bhy2_set_host_intf_ctrl(host_interface_control, context) ==
-               BHY2_OK;
+      result =
+          bhy2_set_host_intf_ctrl(host_interface_control, context) == BHY2_OK;
     }
   }
   status_.bhi260ap.init_flag = result;
