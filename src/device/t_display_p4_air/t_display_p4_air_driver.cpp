@@ -1521,9 +1521,6 @@ bool TDisplayP4AirDriver::SetScreenSleep(bool sleep) {
   }
   bool result = true;
   if (sleep) {
-    if (status_.hi8561_backlight.init_flag) {
-      result &= chip_.hi8561_backlight->Stop(0);
-    }
     result &= chip_.hi8561->SetScreenOff(true);
     result &= chip_.hi8561->SetSleep(true);
   } else {

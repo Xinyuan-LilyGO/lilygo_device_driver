@@ -1936,9 +1936,6 @@ bool TDisplayP4Driver::SetScreenSleep(bool sleep) {
   switch (screen_type()) {
     case device::ScreenType::kHi8561:
       if (sleep) {
-        if (IsHi8561BacklightReady()) {
-          result &= chip_.hi8561_backlight->Stop(0);
-        }
         result &= chip_.hi8561->SetScreenOff(true);
         result &= chip_.hi8561->SetSleep(true);
       } else {
@@ -1948,7 +1945,6 @@ bool TDisplayP4Driver::SetScreenSleep(bool sleep) {
       break;
     case device::ScreenType::kRm69a10:
       if (sleep) {
-        result &= chip_.rm69a10->SetBrightness(0);
         result &= chip_.rm69a10->SetScreenOff(true);
         result &= chip_.rm69a10->SetSleep(true);
       } else {
