@@ -276,12 +276,8 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
   result &= InitXl9535();
   result &= InitPower();
   result &= ConfigXl9535();
-  result &= SetEsp32c6PowerEnabled(false);
-  result &= SetEthernetPowerEnabled(false);
-  result &= SetAudioPowerEnabled(false);
 
   result &= InitSgm38121();
-  result &= SetCameraPowerEnabled(false);
 
   result &= InitBq27220();
 
@@ -292,8 +288,6 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
                      if (self->InitScreen()) {
                        self->InitTouch();
                        self->InitScreenBacklight();
-                       self->SetScreenSleep(true);
-                       self->SetTouchEnabled(false);
                      }
                      vTaskDelete(NULL);
                    },
@@ -302,9 +296,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4Driver*>(arg);
-                     if (self->InitKeyboard()) {
-                       self->SetKeyboardPowerState(PowerState::kSleep);
-                     }
+                     self->InitKeyboard();
                      vTaskDelete(NULL);
                    },
                    "InitKeyboardTask", 4096, this, 3, NULL) == pdPASS);
@@ -320,9 +312,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4Driver*>(arg);
-                     if (self->InitAw86224()) {
-                       self->SetAw86224Standby();
-                     }
+                     self->InitAw86224();
                      vTaskDelete(NULL);
                    },
                    "InitAw86224Task", 4096, this, 3, NULL) == pdPASS);
@@ -340,9 +330,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4Driver*>(arg);
-                     if (self->InitL76k()) {
-                       self->SetL76kSleep(true);
-                     }
+                     self->InitL76k();
                      vTaskDelete(NULL);
                    },
                    "InitL76kTask", 2048, this, 3, NULL) == pdPASS);
@@ -350,9 +338,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4Driver*>(arg);
-                     if (self->InitIcm20948()) {
-                       self->SetIcm20948Sleep(true);
-                     }
+                     self->InitIcm20948();
                      vTaskDelete(NULL);
                    },
                    "InitIcm20948Task", 4096, this, 3, NULL) == pdPASS);
@@ -360,9 +346,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4Driver*>(arg);
-                     if (self->InitRadio()) {
-                       self->SetRadioPowerState(RadioPowerState::kSleep);
-                     }
+                     self->InitRadio();
                      vTaskDelete(NULL);
                    },
                    "InitRadioTask", 4096, this, 3, NULL) == pdPASS);
@@ -380,21 +364,17 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     if (screen_result) {
       result &= InitTouch();
       result &= InitScreenBacklight();
-      result &= SetScreenSleep(true);
-      result &= SetTouchEnabled(false);
     }
 
-    if (InitKeyboard()) {
-      result &= SetKeyboardPowerState(PowerState::kSleep);
-    }
+    InitKeyboard();
 
     result &= InitPcf8563();
-    result &= InitAw86224() && SetAw86224Standby();
+    result &= InitAw86224();
     result &= InitEs8311() && ConfigEs8311() &&
               SetEs8311PowerState(Es8311PowerState::kSleep);
-    result &= InitL76k() && SetL76kSleep(true);
-    result &= InitIcm20948() && SetIcm20948Sleep(true);
-    result &= InitRadio() && SetRadioPowerState(RadioPowerState::kSleep);
+    result &= InitL76k();
+    result &= InitIcm20948();
+    result &= InitRadio();
 
     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
   }
@@ -454,6 +434,12 @@ bool TDisplayP4Driver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+      cpp_bus_driver::Sgm38121::Status::kOff);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
@@ -461,6 +447,15 @@ bool TDisplayP4Driver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3000);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+      cpp_bus_driver::Sgm38121::Status::kOff);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
@@ -468,15 +463,18 @@ bool TDisplayP4Driver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+      cpp_bus_driver::Sgm38121::Status::kOff);
 #endif
 
   status_.sgm38121.init_flag = result;
-  if (result) {
-    // 摄像头默认关闭，进入预览前再按电源时序开启。
-    result = SetCameraPowerEnabled(false);
-    status_.sgm38121.init_flag = result;
-  }
-
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       "InitSgm38121 %s\n", result ? "success" : "failed");
   return result;
@@ -490,16 +488,19 @@ bool TDisplayP4Driver::InitHi8561() {
   }
 
   const auto& screen = screen_info();
-  if (!chip_.hi8561->Init(
-          screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps)) {
-    status_.hi8561.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561 failed\n");
-    return false;
-  } else {
-    status_.hi8561.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitHi8561 success\n");
-    return true;
+  bool result = chip_.hi8561->Init(
+      screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps);
+  if (result) {
+    result &= chip_.hi8561->SetScreenOff(true);
+    result &= chip_.hi8561->SetSleep(true);
   }
+  if (!result) {
+    chip_.hi8561->Deinit();
+  }
+  status_.hi8561.init_flag = result;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitHi8561 success\n" : "InitHi8561 failed\n");
+  return result;
 }
 
 bool TDisplayP4Driver::InitHi8561Touch() {
@@ -569,16 +570,20 @@ bool TDisplayP4Driver::InitRm69a10() {
   }
 
   const auto& screen = screen_info();
-  if (!chip_.rm69a10->Init(
-          screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps)) {
-    status_.rm69a10.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitRm69a10 failed\n");
-    return false;
-  } else {
-    status_.rm69a10.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitRm69a10 success\n");
-    return true;
+  bool result = chip_.rm69a10->Init(
+      screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps);
+  if (result) {
+    result &= chip_.rm69a10->SetBrightness(0);
+    result &= chip_.rm69a10->SetScreenOff(true);
+    result &= chip_.rm69a10->SetSleep(true);
   }
+  if (!result) {
+    chip_.rm69a10->Deinit();
+  }
+  status_.rm69a10.init_flag = result;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitRm69a10 success\n" : "InitRm69a10 failed\n");
+  return result;
 }
 
 bool TDisplayP4Driver::InitGt9895() {
@@ -631,8 +636,14 @@ bool TDisplayP4Driver::InitAw86224() {
         static_cast<unsigned int>(detected_f0 % 10));
   }
 
-  const bool result = chip_.aw86224->InitRamMode(
+  bool result = chip_.aw86224->InitRamMode(
       cpp_bus_driver::Aw862xx::RamWaveformLibrary::kRam12k041230_235);
+  if (result) {
+    result = chip_.aw86224->StopRamPlaybackWaveform();
+  }
+  if (!result) {
+    chip_.aw86224->Deinit(false);
+  }
   status_.aw86224.init_flag = result;
   status_.aw86224.ram_waveform_info =
       cpp_bus_driver::Aw862xx::GetRamWaveformInfo(
@@ -685,6 +696,10 @@ bool TDisplayP4Driver::InitL76k() {
       result &= chip_.l76k->SetUpdateFrequency(
           cpp_bus_driver::L76k::UpdateFreq::kFreq5Hz);
       result &= chip_.l76k->ClearRxBufferData();
+      result &= chip_.l76k->Sleep(true);
+      if (!result) {
+        chip_.l76k->Deinit();
+      }
 
       status_.l76k.init_flag = result;
       if (result) {
@@ -703,6 +718,10 @@ bool TDisplayP4Driver::InitL76k() {
     result &= chip_.l76k->SetUpdateFrequency(
         cpp_bus_driver::L76k::UpdateFreq::kFreq5Hz);
     result &= chip_.l76k->ClearRxBufferData();
+    result &= chip_.l76k->Sleep(true);
+    if (!result) {
+      chip_.l76k->Deinit();
+    }
 
     status_.l76k.init_flag = result;
     if (result) {
@@ -725,15 +744,17 @@ bool TDisplayP4Driver::InitIcm20948() {
   config.magnetometer_mode =
       cpp_bus_driver::Icm20948::MagnetometerMode::kContinuous20Hz;
 
-  if (!chip_.icm20948->Init(config)) {
-    status_.icm20948.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitIcm20948 failed\n");
-    return false;
+  bool result = chip_.icm20948->Init(config);
+  if (result) {
+    result = chip_.icm20948->SetSleep(true);
+    if (!result) {
+      chip_.icm20948->Deinit(false);
+    }
   }
-
-  status_.icm20948.init_flag = true;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitIcm20948 success\n");
-  return true;
+  status_.icm20948.init_flag = result;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitIcm20948 success\n" : "InitIcm20948 failed\n");
+  return result;
 }
 
 bool TDisplayP4Driver::InitSx1262() {
@@ -763,6 +784,13 @@ bool TDisplayP4Driver::InitSx1262() {
     chip_.sx1262->Deinit(false);
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
         "SX1262 chip detection failed, trying LR2021\n");
+    return false;
+  }
+
+  if (!chip_.sx1262->SetSleep()) {
+    chip_.sx1262->Deinit(false);
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitSx1262 sleep failed\n");
     return false;
   }
 
@@ -833,6 +861,10 @@ bool TDisplayP4Driver::InitLr2021() {
           LR20XX_SYSTEM_CALIB_PLL_MASK | LR20XX_SYSTEM_CALIB_AAF_MASK |
           LR20XX_SYSTEM_CALIB_MU_MASK | LR20XX_SYSTEM_CALIB_PA_OFF_MASK);
 
+  const lr20xx_system_sleep_cfg_t sleep_config = {
+      .is_clk_32k_enabled = false,
+      .is_ram_retention_enabled = true,
+  };
   const bool result =
       chip_.lr2021->Invoke(lr20xx_system_set_standby_mode,
           LR20XX_SYSTEM_STANDBY_MODE_RC) == LR20XX_STATUS_OK &&
@@ -860,7 +892,8 @@ bool TDisplayP4Driver::InitLr2021() {
           LR20XX_SYSTEM_DIO_FUNC_IRQ,
           LR20XX_SYSTEM_DIO_DRIVE_NONE) == LR20XX_STATUS_OK &&
       chip_.lr2021->Invoke(lr20xx_system_set_dio_irq_cfg, LR20XX_SYSTEM_DIO_11,
-          static_cast<lr20xx_system_irq_mask_t>(0)) == LR20XX_STATUS_OK;
+          static_cast<lr20xx_system_irq_mask_t>(0)) == LR20XX_STATUS_OK &&
+      chip_.lr2021->SetSleep(sleep_config);
   if (!result) {
     chip_.lr2021->Deinit(false);
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
@@ -936,11 +969,18 @@ bool TDisplayP4Driver::InitCc1101() {
     status_.cc1101.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitCc1101 failed\n");
     return false;
-  } else {
-    status_.cc1101.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitCc1101 success\n");
-    return true;
   }
+
+  if (!chip_.cc1101->Sleep()) {
+    chip_.cc1101->Deinit(false);
+    status_.cc1101.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitCc1101 failed\n");
+    return false;
+  }
+
+  status_.cc1101.init_flag = true;
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitCc1101 success\n");
+  return true;
 }
 
 bool TDisplayP4Driver::InitNrf24l01() {
@@ -949,6 +989,14 @@ bool TDisplayP4Driver::InitNrf24l01() {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitNrf24l01 failed\n");
     return false;
   }
+
+  if (!chip_.nrf24l01->PowerDown()) {
+    chip_.nrf24l01->Deinit(false);
+    status_.nrf24l01.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitNrf24l01 failed\n");
+    return false;
+  }
+
   status_.nrf24l01.init_flag = true;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitNrf24l01 success\n");
   return true;

@@ -136,18 +136,13 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
   result &= InitAxp517();
   result &= InitXl9535();
   result &= ConfigXl9535();
-  result &= SetEsp32c5PowerEnabled(false);
-  result &= SetSdPowerEnabled(false);
   result &= InitSgm38121();
-  result &= SetCameraPowerEnabled(false);
 
   if (mode == InitMode::kAsync) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4AirDriver*>(arg);
-                     if (self->InitBhi260ap()) {
-                       self->SetBhi260apSleep(true);
-                     }
+                     self->InitBhi260ap();
                      vTaskDelete(NULL);
                    },
                    "InitBhi260apTask", 8192, this, 3, NULL) == pdPASS);
@@ -155,9 +150,7 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4AirDriver*>(arg);
-                     if (self->InitQmc6310n()) {
-                       self->SetQmc6310nSleep(true);
-                     }
+                     self->InitQmc6310n();
                      vTaskDelete(NULL);
                    },
                    "InitQmc6310nTask", 4096, this, 3, NULL) == pdPASS);
@@ -165,21 +158,9 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4AirDriver*>(arg);
-                     if (self->InitSt25r3916()) {
-                       self->SetSt25r3916PowerEnabled(false);
-                     }
-                     vTaskDelete(NULL);
-                   },
-                   "InitSt25r3916Task", 4096, this, 3, NULL) == pdPASS);
-
-    result &= (xTaskCreate(
-                   [](void* arg) {
-                     auto self = static_cast<TDisplayP4AirDriver*>(arg);
                      if (self->InitScreen()) {
                        self->InitTouch();
                        self->InitScreenBacklight();
-                       self->SetScreenSleep(true);
-                       self->SetTouchEnabled(false);
                      }
                      vTaskDelete(NULL);
                    },
@@ -188,9 +169,7 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4AirDriver*>(arg);
-                     if (self->InitAw86224()) {
-                       self->SetAw86224Standby();
-                     }
+                     self->InitAw86224();
                      vTaskDelete(NULL);
                    },
                    "InitAw86224Task", 4096, this, 3, NULL) == pdPASS);
@@ -199,7 +178,6 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4AirDriver*>(arg);
                      self->InitLr1121();
-                     self->SetLr1121PowerState(Lr1121PowerState::kSleep);
                      vTaskDelete(NULL);
                    },
                    "InitLr1121Task", 4096, this, 3, NULL) == pdPASS);
@@ -216,47 +194,19 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
                    },
                    "InitConfigEs8389Task", 4096, this, 3, NULL) == pdPASS);
 
-    result &= (xTaskCreate(
-                   [](void* arg) {
-                     auto self = static_cast<TDisplayP4AirDriver*>(arg);
-                     self->SetNrf9151PowerEnabled(true);
-                     self->SetNrf9151PowerEnabled(false);
-                     vTaskDelete(NULL);
-                   },
-                   "InitNrf9151Task", 4096, this, 3, NULL) == pdPASS);
-
   } else {
-    const bool bhi260ap_initialized = InitBhi260ap();
-    result &= bhi260ap_initialized;
-    if (bhi260ap_initialized) {
-      result &= SetBhi260apSleep(true);
-    }
-
-    const bool qmc6310n_initialized = InitQmc6310n();
-    result &= qmc6310n_initialized;
-    if (qmc6310n_initialized) {
-      result &= SetQmc6310nSleep(true);
-    }
-
-    const bool st25r3916_initialized = InitSt25r3916();
-    result &= st25r3916_initialized;
-    if (st25r3916_initialized) {
-      result &= SetSt25r3916PowerEnabled(false);
-    }
+    result &= InitBhi260ap();
+    result &= InitQmc6310n();
 
     const bool screen_initialized = InitScreen();
     result &= screen_initialized;
     if (screen_initialized) {
       result &= InitTouch();
       result &= InitScreenBacklight();
-      result &= SetScreenSleep(true);
-      result &= SetTouchEnabled(false);
     }
 
-    result &= InitAw86224() && SetAw86224Standby();
-    const bool lr1121_initialized = InitLr1121();
-    const bool lr1121_sleep = SetLr1121PowerState(Lr1121PowerState::kSleep);
-    result &= lr1121_initialized && lr1121_sleep;
+    result &= InitAw86224();
+    result &= InitLr1121();
 
     const bool es8389_initialized = InitEs8389() && ConfigEs8389();
     const bool es8389_sleep =
@@ -264,9 +214,6 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
                            : SetNs4150Enabled(false);
     result &= es8389_initialized && es8389_sleep;
 
-    const bool nrf9151_initialized = SetNrf9151PowerEnabled(true);
-    const bool nrf9151_off = SetNrf9151PowerEnabled(false);
-    result &= nrf9151_initialized && nrf9151_off;
   }
 
   return result;
@@ -322,6 +269,12 @@ bool TDisplayP4AirDriver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+      cpp_bus_driver::Sgm38121::Status::kOff);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
@@ -329,6 +282,15 @@ bool TDisplayP4AirDriver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3000);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+      cpp_bus_driver::Sgm38121::Status::kOff);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
@@ -336,6 +298,15 @@ bool TDisplayP4AirDriver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+      cpp_bus_driver::Sgm38121::Status::kOff);
 #endif
 
   status_.sgm38121.init_flag = result;
@@ -373,6 +344,18 @@ bool TDisplayP4AirDriver::InitBhi260ap() {
     result = chip_.bhi260ap->BootFromRam(bhy2_firmware_image,
         static_cast<uint32_t>(sizeof(bhy2_firmware_image)));
   }
+  if (result) {
+    struct bhy2_dev* context = chip_.bhi260ap->context();
+    uint8_t host_interface_control = 0;
+    result = context != nullptr &&
+             bhy2_get_host_intf_ctrl(&host_interface_control, context) ==
+                 BHY2_OK;
+    if (result) {
+      host_interface_control |= BHY2_HIF_CTRL_AP_SUSPENDED;
+      result = bhy2_set_host_intf_ctrl(host_interface_control, context) ==
+               BHY2_OK;
+    }
+  }
   status_.bhi260ap.init_flag = result;
 
   if (result) {
@@ -405,6 +388,9 @@ bool TDisplayP4AirDriver::InitQmc6310n() {
         OperationMode::CONTINUOUS_MEASUREMENT, MagFullScaleRange::FS_8G, 200.0f,
         MagOverSampleRatio::OSR_1, MagDownSampleRatio::DSR_1);
   }
+  if (result) {
+    result = chip_.qmc6310n->setOperationMode(OperationMode::SUSPEND);
+  }
   status_.qmc6310n.init_flag = result;
 
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
@@ -420,16 +406,19 @@ bool TDisplayP4AirDriver::InitHi8561() {
   }
 
   const auto& screen = screen_info();
-  if (!chip_.hi8561->Init(
-          screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps)) {
-    status_.hi8561.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561 failed\n");
-    return false;
+  bool result = chip_.hi8561->Init(
+      screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps);
+  if (result) {
+    result &= chip_.hi8561->SetScreenOff(true);
+    result &= chip_.hi8561->SetSleep(true);
   }
-
-  status_.hi8561.init_flag = true;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitHi8561 success\n");
-  return true;
+  if (!result) {
+    chip_.hi8561->Deinit();
+  }
+  status_.hi8561.init_flag = result;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitHi8561 success\n" : "InitHi8561 failed\n");
+  return result;
 }
 
 bool TDisplayP4AirDriver::InitHi8561Touch() {
@@ -497,8 +486,14 @@ bool TDisplayP4AirDriver::InitAw86224() {
         static_cast<unsigned int>(detected_f0 % 10));
   }
 
-  const bool result = chip_.aw86224->InitRamMode(
+  bool result = chip_.aw86224->InitRamMode(
       cpp_bus_driver::Aw862xx::RamWaveformLibrary::kRam12k041230_235);
+  if (result) {
+    result = chip_.aw86224->StopRamPlaybackWaveform();
+  }
+  if (!result) {
+    chip_.aw86224->Deinit(false);
+  }
   status_.aw86224.init_flag = result;
   status_.aw86224.ram_waveform_info =
       cpp_bus_driver::Aw862xx::GetRamWaveformInfo(
@@ -745,6 +740,10 @@ bool TDisplayP4AirDriver::InitLr1121() {
       .output_power_dbm = 22,
       .ramp_time = LR11XX_RADIO_RAMP_48_US,
   };
+  const lr11xx_system_sleep_cfg_t sleep_config = {
+      .is_warm_start = true,
+      .is_rtc_timeout = false,
+  };
 
   bool result =
       chip_.lr1121->Invoke(lr11xx_system_set_standby,
@@ -767,7 +766,9 @@ bool TDisplayP4AirDriver::InitLr1121() {
           LR11XX_STATUS_OK &&
       chip_.lr1121->Invoke(lr11xx_system_set_dio_as_rf_switch,
           &rf_switch_config) == LR11XX_STATUS_OK &&
-      chip_.lr1121->Configure(lora_config);
+      chip_.lr1121->Configure(lora_config) &&
+      chip_.lr1121->Invoke(lr11xx_system_set_sleep, sleep_config, 0U) ==
+          LR11XX_STATUS_OK;
   if (!result) {
     chip_.lr1121->Deinit();
     chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);

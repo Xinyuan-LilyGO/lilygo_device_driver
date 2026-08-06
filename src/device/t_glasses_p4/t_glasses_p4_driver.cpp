@@ -145,7 +145,6 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
   InitSy6970();
   result &= InitPower();
   InitSgm38121();
-  result &= SetCameraPowerEnabled(false);
 
   if (mode == InitMode::kAsync) {
     result &= (xTaskCreate(
@@ -167,9 +166,7 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TGlassesP4Driver*>(arg);
-                     if (self->InitAw86224()) {
-                       self->SetAw86224Standby();
-                     }
+                     self->InitAw86224();
                      vTaskDelete(nullptr);
                    },
                    "InitAw86224Task", 4096, this, 3, nullptr) == pdPASS);
@@ -187,9 +184,7 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TGlassesP4Driver*>(arg);
-                     if (self->InitSx1262()) {
-                       self->SetSx1262PowerState(Sx1262PowerState::kSleep);
-                     }
+                     self->InitSx1262();
                      vTaskDelete(nullptr);
                    },
                    "InitSx1262Task", 4096, this, 3, nullptr) == pdPASS);
@@ -204,10 +199,10 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
   } else {
     result &= InitScreen();
     InitBq27220();
-    result &= InitAw86224() && SetAw86224Standby();
+    result &= InitAw86224();
     result &= InitEs8311() && ConfigEs8311() &&
               SetEs8311PowerState(Es8311PowerState::kSleep);
-    result &= InitSx1262() && SetSx1262PowerState(Sx1262PowerState::kSleep);
+    result &= InitSx1262();
 
     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
 
@@ -274,6 +269,12 @@ bool TGlassesP4Driver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+      cpp_bus_driver::Sgm38121::Status::kOff);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
@@ -281,6 +282,15 @@ bool TGlassesP4Driver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3000);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+      cpp_bus_driver::Sgm38121::Status::kOff);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
@@ -288,6 +298,15 @@ bool TGlassesP4Driver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+      cpp_bus_driver::Sgm38121::Status::kOff);
 #endif
 
   status_.sgm38121.init_flag = result;
@@ -333,7 +352,13 @@ bool TGlassesP4Driver::InitAw86224() {
   }
 
   cpp_bus_driver::Aw862xx::RamWaveformSelection selection;
-  const bool result = chip_.aw86224->InitRamModeByF0(selection);
+  bool result = chip_.aw86224->InitRamModeByF0(selection);
+  if (result) {
+    result = chip_.aw86224->StopRamPlaybackWaveform();
+  }
+  if (!result) {
+    chip_.aw86224->Deinit(false);
+  }
 
   status_.aw86224.init_flag = result;
   status_.aw86224.ram_waveform_selection =
@@ -376,9 +401,14 @@ bool TGlassesP4Driver::InitSx1262() {
     return false;
   }
 
-  status_.sx1262.init_flag = true;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSx1262 success\n");
-  return true;
+  const bool result = chip_.sx1262->SetSleep();
+  if (!result) {
+    chip_.sx1262->Deinit(false);
+  }
+  status_.sx1262.init_flag = result;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitSx1262 success\n" : "InitSx1262 sleep failed\n");
+  return result;
 }
 
 bool TGlassesP4Driver::InitPower() {
