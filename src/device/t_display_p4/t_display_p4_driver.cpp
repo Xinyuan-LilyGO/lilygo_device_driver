@@ -768,7 +768,8 @@ bool TDisplayP4Driver::SetScreenSleep(bool sleep) {
     case device::ScreenType::kHi8561:
       if (sleep) {
         if (IsHi8561BacklightReady()) {
-          result &= chip_.hi8561_backlight->Stop(0);
+          // 临时熄屏只把占空比设为 0，保留 LEDC 通道配置供唤醒后恢复亮度。
+          result &= chip_.hi8561_backlight->SetDuty(0);
         }
         result &= chip_.hi8561->SetScreenOff(true);
         result &= chip_.hi8561->SetSleep(true);
