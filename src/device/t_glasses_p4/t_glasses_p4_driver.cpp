@@ -372,7 +372,6 @@ bool TGlassesP4Driver::InitAw86224() {
 }
 
 bool TGlassesP4Driver::InitEs8311() {
-  status_.es8311.power_state_valid = false;
   if (!chip_.es8311->Init()) {
     status_.es8311.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8311 failed\n");
@@ -607,9 +606,6 @@ bool TGlassesP4Driver::ConfigEs8311() {
 
   if (!result) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
-  } else {
-    status_.es8311.power_state = Es8311PowerState::kDuplex;
-    status_.es8311.power_state_valid = true;
   }
   return result;
 }
@@ -662,11 +658,6 @@ bool TGlassesP4Driver::SetEs8311PowerState(Es8311PowerState state) {
   if (!status_.es8311.init_flag) {
     return state == Es8311PowerState::kSleep;
   }
-  if (status_.es8311.power_state_valid && status_.es8311.power_state == state) {
-    return true;
-  }
-  status_.es8311.power_state_valid = false;
-
   const bool playback_enabled = state == Es8311PowerState::kPlayback ||
                                 state == Es8311PowerState::kDuplex;
   const bool capture_enabled =
@@ -700,10 +691,6 @@ bool TGlassesP4Driver::SetEs8311PowerState(Es8311PowerState state) {
     result &= chip_.es8311->SetAdcPower(capture_enabled);
     result &= chip_.es8311->SetDacPower(playback_enabled);
     result &= chip_.es8311->SetOutputToHpDrive(playback_enabled);
-  }
-  if (result) {
-    status_.es8311.power_state = state;
-    status_.es8311.power_state_valid = true;
   }
   return result;
 }
@@ -753,32 +740,19 @@ bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
   return result;
 }
 
-bool TGlassesP4Driver::SetPowerState(PowerState state) {
+bool TGlassesP4Driver::PrepareForPowerOff() {
   bool result = true;
-
-  switch (state) {
-    case PowerState::kActive:
-      result &= SetScreenSleep(false);
-      break;
-    case PowerState::kSleep:
-      result &= SetScreenSleep(true);
-      break;
-    case PowerState::kOff:
-      result &= SetAw86224Standby();
-      result &= SetEs8311PowerState(Es8311PowerState::kSleep);
-      result &= SetSx1262PowerState(Sx1262PowerState::kSleep);
-      result &= SetCameraPowerEnabled(false);
-      if (IsSdmmcReady()) {
-        result &= DeinitSdmmc();
-      }
-      result &= DeinitScreen();
-      result &= tool_->GpioWrite(gpio::power::kEn5v0, false);
-      result &= tool_->GpioWrite(gpio::power::kEn3v3, false);
-      break;
-    default:
-      return false;
+  result &= SetScreenSleep(true);
+  result &= SetAw86224Standby();
+  result &= SetEs8311PowerState(Es8311PowerState::kSleep);
+  result &= SetSx1262PowerState(Sx1262PowerState::kSleep);
+  result &= SetCameraPowerEnabled(false);
+  if (IsSdmmcReady()) {
+    result &= DeinitSdmmc();
   }
-
+  result &= DeinitScreen();
+  result &= tool_->GpioWrite(gpio::power::kEn5v0, 0);
+  result &= tool_->GpioWrite(gpio::power::kEn3v3, 0);
   return result;
 }
 

@@ -98,11 +98,6 @@ struct DeviceInfo {
 class TGlassesP4Driver {
  public:
   enum class InitMode { kAsync, kSync };
-  enum class PowerState {
-    kActive,
-    kSleep,
-    kOff,
-  };
 
   enum class Es8311PowerState {
     kSleep,     // 关闭 ADC、DAC 和模拟偏置。
@@ -162,10 +157,6 @@ class TGlassesP4Driver {
 
     struct {
       bool init_flag = false;
-      // 表示 power_state 是否记录了最后一次成功应用的硬件状态。
-      bool power_state_valid = false;
-      // 缓存最后一次成功应用的电源状态，避免重复配置硬件。
-      Es8311PowerState power_state = Es8311PowerState::kSleep;
     } es8311;
 
     struct {
@@ -239,7 +230,7 @@ class TGlassesP4Driver {
   bool SetSx1262PowerState(Sx1262PowerState state);
   bool SetScreenSleep(bool sleep);
   bool SetCameraPowerEnabled(bool enabled);
-  bool SetPowerState(PowerState state);
+  bool PrepareForPowerOff();
 
  private:
   std::unique_ptr<cpp_bus_driver::Tool> tool_;

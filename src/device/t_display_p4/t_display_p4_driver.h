@@ -104,12 +104,6 @@ class TDisplayP4Driver {
  public:
   enum class InitMode { kAsync, kSync };
 
-  enum class PowerState {
-    kActive,
-    kSleep,
-    kOff,
-  };
-
   // SX1262 使用暖启动睡眠，唤醒后保留射频配置。
   enum class Sx1262PowerState {
     kStandby,  // 可立即收发。
@@ -242,10 +236,6 @@ class TDisplayP4Driver {
 
     struct {
       bool init_flag = false;
-      // 表示 power_state 是否记录了最后一次成功应用的硬件状态。
-      bool power_state_valid = false;
-      // 缓存最后一次成功应用的电源状态，避免重复配置硬件。
-      Es8311PowerState power_state = Es8311PowerState::kSleep;
     } es8311;
 
     struct {
@@ -405,7 +395,7 @@ class TDisplayP4Driver {
   bool SetUsbHostPowerEnabled(bool enabled);
   bool SetSdPowerEnabled(bool enabled);
   bool SetRadioPowerState(RadioPowerState state);
-  bool SetPowerState(PowerState state);
+  bool PrepareForPowerOff();
 
   /**
    * @brief 选择 CC1101 RF 开关通路。
@@ -425,8 +415,6 @@ class TDisplayP4Driver {
   t_display_p4::device::RadioType radio_type_ =
       t_display_p4::device::RadioType::kUnknown;
   bool keyboard_connected_ = false;
-
-  bool SetKeyboardPowerState(PowerState state);
 
   /**
    * @brief 通过 GT9895 触摸 ID 检测屏幕类型。

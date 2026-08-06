@@ -659,7 +659,6 @@ bool TDisplayP4Driver::InitAw86224() {
 }
 
 bool TDisplayP4Driver::InitEs8311() {
-  status_.es8311.power_state_valid = false;
   if (!chip_.es8311->Init()) {
     status_.es8311.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8311 failed\n");
@@ -1569,11 +1568,7 @@ bool TDisplayP4Driver::ConfigEs8311() {
   result &= chip_.es8311->SetDacVolume(191);
 
   if (!result) {
-    status_.es8311.power_state_valid = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
-  } else {
-    status_.es8311.power_state = Es8311PowerState::kDuplex;
-    status_.es8311.power_state_valid = true;
   }
   return result;
 }
@@ -1761,11 +1756,6 @@ bool TDisplayP4Driver::SetEs8311PowerState(Es8311PowerState state) {
       return false;
     }
   }
-  if (status_.es8311.power_state_valid && status_.es8311.power_state == state) {
-    return true;
-  }
-  status_.es8311.power_state_valid = false;
-
   const bool playback_enabled = state == Es8311PowerState::kPlayback ||
                                 state == Es8311PowerState::kDuplex;
   const bool capture_enabled =
@@ -1809,10 +1799,6 @@ bool TDisplayP4Driver::SetEs8311PowerState(Es8311PowerState state) {
     result &= SetAudioPowerEnabled(false);
   } else if (!result) {
     SetAudioPowerEnabled(false);
-  }
-  if (result) {
-    status_.es8311.power_state = state;
-    status_.es8311.power_state_valid = true;
   }
   return result;
 }
@@ -2094,72 +2080,26 @@ bool TDisplayP4Driver::SetRadioPowerState(RadioPowerState state) {
   }
 }
 
-bool TDisplayP4Driver::SetKeyboardPowerState(PowerState state) {
-  bool result = true;
-
-  switch (state) {
-    case PowerState::kActive:
-      result &= SetCc1101PowerState(Cc1101PowerState::kStandby);
-      result &= SetNrf24l01PowerState(Nrf24l01PowerState::kStandby);
-      break;
-    case PowerState::kSleep:
-      result &= SetCc1101PowerState(Cc1101PowerState::kSleep);
-      result &= SetNrf24l01PowerState(Nrf24l01PowerState::kSleep);
-      if (status_.tca8418_backlight.init_flag) {
-        result &= chip_.tca8418_backlight->Stop(0);
-      }
-      if (status_.xl9555.init_flag) {
-        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1, 1);
-        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2, 1);
-        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3, 1);
-      }
-      break;
-    case PowerState::kOff:
-      result &= DeinitKeyboard();
-      break;
-    default:
-      return false;
-  }
-
-  return result;
-}
-
-bool TDisplayP4Driver::SetPowerState(PowerState state) {
-  if (state == PowerState::kActive) {
-    bool result = SetTouchEnabled(true);
-    result &= SetScreenSleep(false);
-    return result;
-  }
-  if (state != PowerState::kSleep && state != PowerState::kOff) {
-    return false;
-  }
-
+bool TDisplayP4Driver::PrepareForPowerOff() {
   bool result = true;
   if (IsScreenReady()) {
     result &= SetScreenSleep(true);
   }
-  result &= SetTouchEnabled(false);
   result &= SetAw86224Standby();
   result &= SetEs8311PowerState(Es8311PowerState::kSleep);
   result &= SetIcm20948Sleep(true);
   result &= SetL76kSleep(true);
   result &= SetRadioPowerState(RadioPowerState::kSleep);
+
+  result &= SetTouchEnabled(false);
   result &= SetCameraPowerEnabled(false);
   result &= SetEsp32c6PowerEnabled(false);
   result &= SetEthernetPowerEnabled(false);
   result &= SetAudioPowerEnabled(false);
-
-  result &= SetKeyboardPowerState(PowerState::kSleep);
-
-  if (state == PowerState::kSleep) {
-    return result;
-  }
-
-  // 卸载文件系统以保证缓存数据已经写回；底层总线由深度睡眠复位。
+  result &= DeinitKeyboard();
   result &= DeinitSdmmc();
 
-  // 深度睡眠会停止并复位 ESP32-P4 内部总线，此处只设置外部芯片和
-  // 电源引脚的最终状态，不再逐个反初始化芯片或释放共享总线。
+  // 将外设复位、电源使能及控制引脚设置为关机安全电平。
   if (status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);

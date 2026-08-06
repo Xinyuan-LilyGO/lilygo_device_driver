@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-08-06 11:51:52
+ * @LastEditTime: 2026-08-06 16:08:17
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -538,7 +538,6 @@ bool TDisplayP4AirDriver::InitSt25r3916() {
 }
 
 bool TDisplayP4AirDriver::InitEs8389() {
-  status_.es8389.power_state_valid = false;
   if ((bus_.xl9535_i2c_bus == nullptr) || (bus_.es8389_i2s_bus == nullptr)) {
     status_.es8389.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
@@ -1077,12 +1076,7 @@ bool TDisplayP4AirDriver::InitSdspi(
 
 bool TDisplayP4AirDriver::DeinitEs8389() {
   bool result = true;
-  if (status_.es8389.init_flag && status_.es8389.power_state_valid &&
-      status_.es8389.power_state == Es8389PowerState::kActive) {
-    result &= SetEs8389PowerState(Es8389PowerState::kSleep);
-  } else {
-    result &= SetNs4150Enabled(false);
-  }
+  result &= SetEs8389PowerState(Es8389PowerState::kSleep);
 
   if (es8389_input_codec_dev_ != nullptr) {
     esp_codec_dev_delete(es8389_input_codec_dev_);
@@ -1114,7 +1108,6 @@ bool TDisplayP4AirDriver::DeinitEs8389() {
   }
 
   status_.es8389.init_flag = false;
-  status_.es8389.power_state_valid = false;
   return result;
 }
 
@@ -1304,8 +1297,6 @@ bool TDisplayP4AirDriver::ConfigEs8389() {
 
   status_.es8389.init_flag = result;
   if (result) {
-    status_.es8389.power_state = Es8389PowerState::kActive;
-    status_.es8389.power_state_valid = true;
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "ConfigEs8389 success\n");
   } else {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8389 failed\n");
@@ -1445,10 +1436,6 @@ bool TDisplayP4AirDriver::SetEs8389PowerState(Es8389PowerState state) {
   if (!status_.es8389.init_flag) {
     return state == Es8389PowerState::kSleep && SetNs4150Enabled(false);
   }
-  if (status_.es8389.power_state_valid && status_.es8389.power_state == state) {
-    return true;
-  }
-
   bool result = true;
   if (state == Es8389PowerState::kSleep) {
     result &=
@@ -1464,10 +1451,6 @@ bool TDisplayP4AirDriver::SetEs8389PowerState(Es8389PowerState state) {
     if (!result) {
       SetNs4150Enabled(false);
     }
-  }
-  if (result) {
-    status_.es8389.power_state = state;
-    status_.es8389.power_state_valid = true;
   }
   return result;
 }
@@ -1621,41 +1604,24 @@ bool TDisplayP4AirDriver::SetLedEnabled(bool enabled) {
   return chip_.xl9535->GpioWrite(gpio::xl9535::kLed1, enabled ? 1 : 0);
 }
 
-bool TDisplayP4AirDriver::SetPowerState(PowerState state) {
-  if (state == PowerState::kActive) {
-    bool result = SetTouchEnabled(true);
-    result &= SetScreenSleep(false);
-    return result;
-  }
-  if (state != PowerState::kSleep && state != PowerState::kOff) {
-    return false;
-  }
-
+bool TDisplayP4AirDriver::PrepareForPowerOff() {
   bool result = true;
   if (status_.hi8561.init_flag) {
     result &= SetScreenSleep(true);
   }
-  result &= SetTouchEnabled(false);
   result &= SetBhi260apSleep(true);
   result &= SetQmc6310nSleep(true);
-  result &= SetSt25r3916PowerEnabled(false);
   result &= SetAw86224Standby();
   result &= SetEs8389PowerState(Es8389PowerState::kSleep);
   result &= SetLr1121PowerState(Lr1121PowerState::kSleep);
+  result &= SetTouchEnabled(false);
+  result &= SetSt25r3916PowerEnabled(false);
   result &= SetNrf9151PowerEnabled(false);
   result &= SetCameraPowerEnabled(false);
-  // 休眠状态保留运行期重新挂载能力；关断后即将进入深度睡眠，无需再
-  // 手动释放 SPI 主机总线，但仍需卸载文件系统以避免数据损坏。
-  result &= DeinitSdmmc(state == PowerState::kSleep);
   result &= SetEsp32c5PowerEnabled(false);
-  result &= SetSdPowerEnabled(false);
+  result &= DeinitSdmmc(false);
 
-  if (state == PowerState::kSleep) {
-    return result;
-  }
-
-  // 深度睡眠会停止并复位 ESP32-P4 内部总线，此处只设置外部芯片和
-  // 电源引脚的最终状态，不再逐个反初始化芯片或释放共享总线。
+  // 将外设复位、电源使能及控制引脚设置为关机安全电平。
   if (status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);

@@ -89,11 +89,6 @@ struct DeviceInfo {
 class TDisplayP4AirDriver {
  public:
   enum class InitMode { kAsync, kSync };
-  enum class PowerState {
-    kActive,
-    kSleep,
-    kOff,
-  };
   enum class Lr1121PowerState {
     kStandby,
     kSleep,
@@ -184,10 +179,6 @@ class TDisplayP4AirDriver {
 
     struct {
       bool init_flag = false;
-      // 表示 power_state 是否记录了最后一次成功应用的硬件状态。
-      bool power_state_valid = false;
-      // 缓存最后一次成功应用的电源状态，避免重复配置硬件。
-      Es8389PowerState power_state = Es8389PowerState::kSleep;
     } es8389;
 
     struct {
@@ -299,7 +290,7 @@ class TDisplayP4AirDriver {
   bool SetUsbHostPowerEnabled(bool enabled);
   bool SetSdPowerEnabled(bool enabled);
   bool SetLedEnabled(bool enabled);
-  bool SetPowerState(PowerState state);
+  bool PrepareForPowerOff();
 
   /**
    * @brief 使 ESP32-C5 进入下载模式。
