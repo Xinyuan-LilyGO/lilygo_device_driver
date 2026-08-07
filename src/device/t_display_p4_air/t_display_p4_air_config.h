@@ -299,6 +299,7 @@ inline constexpr const char* kBasePath = "/sdcard";
 namespace nrf9151 {
 inline constexpr int kDefaultBaudRate = 115200;
 inline constexpr uint32_t kDefaultCommandTimeoutMs = 500;
+inline constexpr uint32_t kInitializationTimeoutMs = 3000;
 }  // namespace nrf9151
 }  // namespace device
 }  // namespace lilygo_device_driver::t_display_p4_air

@@ -7,6 +7,8 @@
  */
 #include "t_display_p4_air_driver.h"
 
+#include <algorithm>
+
 #include "driver/gpio.h"
 #include "firmware/bhi260ap/BHI260AP.fw.h"
 #include "sdmmc_cmd.h"
@@ -784,8 +786,39 @@ bool TDisplayP4AirDriver::InitLr1121() {
 }
 
 bool TDisplayP4AirDriver::InitNrf9151() {
-  bool result = chip_.nrf9151->Init(device::nrf9151::kDefaultBaudRate,
-      device::nrf9151::kDefaultCommandTimeoutMs);
+  if (chip_.nrf9151 == nullptr || bus_.nrf9151_uart_bus == nullptr) {
+    status_.nrf9151.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitNrf9151 failed: driver or UART bus is unavailable\n");
+    return false;
+  }
+
+  bool result = bus_.nrf9151_uart_bus->Init(
+      device::nrf9151::kDefaultBaudRate);
+  const int64_t start_time_ms = tool_->GetSystemTimeMs();
+  uint32_t probe_attempts = 0;
+
+  while (result) {
+    const int64_t elapsed_ms = tool_->GetSystemTimeMs() - start_time_ms;
+    if (elapsed_ms >= device::nrf9151::kInitializationTimeoutMs) {
+      result = false;
+      break;
+    }
+
+    const uint32_t remaining_ms = static_cast<uint32_t>(
+        device::nrf9151::kInitializationTimeoutMs - elapsed_ms);
+    const uint32_t command_timeout_ms = std::min(
+        device::nrf9151::kDefaultCommandTimeoutMs, remaining_ms);
+    ++probe_attempts;
+    if (chip_.nrf9151->GetDeviceId(command_timeout_ms)) {
+      break;
+    }
+  }
+
+  if (!result && !chip_.nrf9151->Deinit()) {
+    LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
+        "Release nRF9151 UART after init failure failed\n");
+  }
 
   if (result) {
     cpp_bus_driver::Nrf9151::SerialModemVersion serial_modem_version;
@@ -819,9 +852,15 @@ bool TDisplayP4AirDriver::InitNrf9151() {
 
   status_.nrf9151.init_flag = result;
   if (result) {
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitNrf9151 success\n");
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "InitNrf9151 success (attempts: %u, elapsed: %lld ms)\n",
+        static_cast<unsigned>(probe_attempts),
+        static_cast<long long>(tool_->GetSystemTimeMs() - start_time_ms));
   } else {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitNrf9151 failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitNrf9151 failed (attempts: %u, timeout: %u ms)\n",
+        static_cast<unsigned>(probe_attempts),
+        static_cast<unsigned>(device::nrf9151::kInitializationTimeoutMs));
   }
   return result;
 }
@@ -1509,7 +1548,6 @@ bool TDisplayP4AirDriver::SetNrf9151PowerEnabled(bool enabled) {
   }
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, enabled ? 1 : 0);
   if (result && enabled) {
-    tool_->DelayMs(120);
     result &= InitNrf9151();
   }
   return result;
