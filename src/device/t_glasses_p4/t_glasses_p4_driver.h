@@ -1,5 +1,5 @@
 /*
- * @Description: T-Glasses-P4 板级设备驱动接口
+ * @Description: T-Glasses-P4 设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:58:49
  * @LastEditTime: 2026-08-03 16:14:12
@@ -99,14 +99,14 @@ class TGlassesP4Driver {
  public:
   enum class InitMode { kAsync, kSync };
 
-  enum class Es8311PowerState {
+  enum class Es8311OperatingMode {
     kSleep,     // 关闭 ADC、DAC 和模拟偏置。
     kPlayback,  // 仅开启播放路径。
     kCapture,   // 仅开启采集路径。
     kDuplex,    // 同时开启采集和播放路径。
   };
 
-  enum class Sx1262PowerState {
+  enum class Sx1262OperatingMode {
     kStandby,
     kSleep,
   };
@@ -212,8 +212,9 @@ class TGlassesP4Driver {
       int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
   bool DeinitScreen();
-
-  bool ConfigEs8311();
+  bool DeinitAw86224();
+  bool DeinitEs8311();
+  bool DeinitSx1262();
 
   bool IsSy6970Ready() const;
   bool IsBq27220Ready() const;
@@ -226,9 +227,8 @@ class TGlassesP4Driver {
   bool IsSdmmcReady() const;
 
   bool SetAw86224Standby();
-  bool SetEs8311PowerState(Es8311PowerState state);
-  bool SetSx1262PowerState(Sx1262PowerState state);
-  bool SetScreenSleep(bool sleep);
+  bool SetEs8311OperatingMode(Es8311OperatingMode mode);
+  bool SetSx1262OperatingMode(Sx1262OperatingMode mode);
   bool SetCameraPowerEnabled(bool enabled);
   bool PrepareForPowerOff();
 

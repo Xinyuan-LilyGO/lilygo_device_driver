@@ -1,5 +1,5 @@
 /*
- * @Description: T-Display-P4-Air 板级设备驱动接口
+ * @Description: T-Display-P4-Air 设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
  * @LastEditTime: 2026-08-03 16:14:09
@@ -89,11 +89,11 @@ struct DeviceInfo {
 class TDisplayP4AirDriver {
  public:
   enum class InitMode { kAsync, kSync };
-  enum class Lr1121PowerState {
+  enum class Lr1121OperatingMode {
     kStandby,
     kSleep,
   };
-  enum class Es8389PowerState {
+  enum class Es8389OperatingMode {
     kActive,
     kSleep,
   };
@@ -251,13 +251,16 @@ class TDisplayP4AirDriver {
       int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
   bool DeinitEs8389();
+  bool DeinitBhi260ap();
+  bool DeinitQmc6310n();
+  bool DeinitAw86224();
+  bool DeinitSt25r3916();
+  bool DeinitLr1121();
+  bool DeinitNrf9151();
   bool DeinitScreen();
   bool DeinitTouch();
   bool DeinitScreenBacklight();
   bool DeinitSdmmc(bool release_bus = true);
-
-  bool ConfigXl9535();
-  bool ConfigEs8389();
 
   bool IsAxp517Ready() const;
   bool IsXl9535Ready() const;
@@ -275,21 +278,17 @@ class TDisplayP4AirDriver {
   bool IsScreenReady() const;
   bool IsSdmmcReady() const;
 
+  bool SetLedEnabled(bool enabled);
+
+  bool SetAw86224Standby();
   bool SetBhi260apSleep(bool sleep);
   bool SetQmc6310nSleep(bool sleep);
-  bool SetSt25r3916PowerEnabled(bool enabled);
-  bool SetNs4150Enabled(bool enabled);
-  bool SetAw86224Standby();
-  bool SetEs8389PowerState(Es8389PowerState state);
-  bool SetEsp32c5PowerEnabled(bool enabled);
-  bool SetLr1121PowerState(Lr1121PowerState state);
-  bool SetNrf9151PowerEnabled(bool enabled);
   bool SetScreenSleep(bool sleep);
-  bool SetTouchEnabled(bool enabled);
+  bool SetEs8389OperatingMode(Es8389OperatingMode mode);
+  bool SetLr1121OperatingMode(Lr1121OperatingMode mode);
+  bool SetEsp32c5PowerEnabled(bool enabled);
   bool SetCameraPowerEnabled(bool enabled);
   bool SetUsbHostPowerEnabled(bool enabled);
-  bool SetSdPowerEnabled(bool enabled);
-  bool SetLedEnabled(bool enabled);
   bool PrepareForPowerOff();
 
   /**
@@ -306,6 +305,8 @@ class TDisplayP4AirDriver {
   bool SetUartTarget(UartTarget target);
 
  private:
+  bool SetNs4150Enabled(bool enabled);
+
   std::unique_ptr<cpp_bus_driver::Tool> tool_;
   Bus bus_;
   Chip chip_;
@@ -324,6 +325,7 @@ class TDisplayP4AirDriver {
   const audio_codec_if_t* es8389_codec_if_ = nullptr;
   esp_codec_dev_handle_t es8389_input_codec_dev_ = nullptr;
   esp_codec_dev_handle_t es8389_output_codec_dev_ = nullptr;
+  Es8389OperatingMode es8389_operating_mode_ = Es8389OperatingMode::kSleep;
 
   TDisplayP4AirDriver() = default;
   ~TDisplayP4AirDriver() = default;

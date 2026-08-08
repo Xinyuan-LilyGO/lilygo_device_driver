@@ -174,8 +174,9 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TGlassesP4Driver*>(arg);
-                     if (self->InitEs8311() && self->ConfigEs8311()) {
-                       self->SetEs8311PowerState(Es8311PowerState::kSleep);
+                     if (self->InitEs8311()) {
+                       self->SetEs8311OperatingMode(
+                           Es8311OperatingMode::kSleep);
                      }
                      vTaskDelete(nullptr);
                    },
@@ -200,8 +201,12 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     result &= InitScreen();
     InitBq27220();
     result &= InitAw86224();
-    result &= InitEs8311() && ConfigEs8311() &&
-              SetEs8311PowerState(Es8311PowerState::kSleep);
+    bool es8311_initialized = InitEs8311();
+    if (es8311_initialized) {
+      es8311_initialized =
+          SetEs8311OperatingMode(Es8311OperatingMode::kSleep);
+    }
+    result &= es8311_initialized;
     result &= InitSx1262();
 
     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
@@ -251,13 +256,14 @@ bool TGlassesP4Driver::InitBq27220() {
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitBq27220 success\n");
   } else {
+    chip_.bq27220->Deinit(false);
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBq27220 failed\n");
   }
   return result;
 }
 
 bool TGlassesP4Driver::InitSgm38121() {
-  if (!chip_.sgm38121->Init()) {
+  if (chip_.sgm38121 == nullptr || !chip_.sgm38121->Init()) {
     status_.sgm38121.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSgm38121 failed\n");
     return false;
@@ -310,6 +316,9 @@ bool TGlassesP4Driver::InitSgm38121() {
 #endif
 
   status_.sgm38121.init_flag = result;
+  if (!result) {
+    chip_.sgm38121->Deinit(false);
+  }
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSgm38121 success\n");
   } else {
@@ -336,6 +345,7 @@ bool TGlassesP4Driver::InitS023msafjf10111e1() {
     LogMessage(
         LogLevel::kInfo, __FILE__, __LINE__, "InitS023msafjf10111e1 success\n");
   } else {
+    chip_.s023msafjf10111e1->Deinit(false);
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitS023msafjf10111e1 failed\n");
   }
@@ -343,6 +353,9 @@ bool TGlassesP4Driver::InitS023msafjf10111e1() {
 }
 
 bool TGlassesP4Driver::InitAw86224() {
+  if (IsAw86224Ready()) {
+    return true;
+  }
   if (!chip_.aw86224->Init(500000)) {
     status_.aw86224.init_flag = false;
     status_.aw86224.ram_waveform_selection =
@@ -372,30 +385,72 @@ bool TGlassesP4Driver::InitAw86224() {
 }
 
 bool TGlassesP4Driver::InitEs8311() {
-  if (!chip_.es8311->Init()) {
-    status_.es8311.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8311 failed\n");
-    return false;
+  if (IsEs8311Ready()) {
+    return true;
   }
 
-  if (!chip_.es8311->Init(device::es8311::kMclkMultiple,
+  status_.es8311.init_flag = false;
+  if (chip_.es8311 == nullptr || !chip_.es8311->Init() ||
+      !chip_.es8311->Init(device::es8311::kMclkMultiple,
           device::es8311::kSampleRate, device::es8311::kBitsPerSample)) {
-    status_.es8311.init_flag = false;
+    if (chip_.es8311 != nullptr) {
+      chip_.es8311->Deinit(false);
+    }
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8311 failed\n");
     return false;
   }
 
-  status_.es8311.init_flag = true;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitEs8311 success\n");
-  return true;
+  const cpp_bus_driver::Es8311::PowerStatus power_status = {
+      .contorl =
+          {
+              .analog_circuits = true,
+              .analog_bias_circuits = true,
+              .analog_adc_bias_circuits = true,
+              .analog_adc_reference_circuits = true,
+              .analog_dac_reference_circuit = true,
+              .internal_reference_circuits = false,
+          },
+      .vmid = cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
+  };
+  bool result = true;
+  result &= chip_.es8311->SetPowerStatus(power_status);
+  result &= chip_.es8311->SetPgaPower(true);
+  result &= chip_.es8311->SetAdcPower(true);
+  result &= chip_.es8311->SetDacPower(true);
+  result &= chip_.es8311->SetOutputToHpDrive(true);
+  result &= chip_.es8311->SetAdcOffsetFreeze(
+      cpp_bus_driver::Es8311::AdcOffsetFreeze::kDynamicHpf);
+  result &= chip_.es8311->SetAdcHpfStage2Coeff(10);
+  result &= chip_.es8311->SetDacEqualizer(false);
+  result &= chip_.es8311->SetMic(
+      cpp_bus_driver::Es8311::MicType::kAnalogMic,
+      cpp_bus_driver::Es8311::MicInput::kMic1p1n);
+  result &= chip_.es8311->SetAdcAutoVolumeControl(false);
+  result &= chip_.es8311->SetAdcGain(
+      cpp_bus_driver::Es8311::AdcGain::kGain18db);
+  result &= chip_.es8311->SetAdcPgaGain(
+      cpp_bus_driver::Es8311::AdcPgaGain::kGain30db);
+  result &= chip_.es8311->SetAdcVolume(191);
+  result &= chip_.es8311->SetDacVolume(191);
+  if (!result) {
+    chip_.es8311->Deinit(false);
+  }
+  status_.es8311.init_flag = result;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitEs8311 success\n" : "InitEs8311 failed\n");
+  return result;
 }
 
 bool TGlassesP4Driver::InitSx1262() {
+  if (IsSx1262Ready()) {
+    return true;
+  }
   if (!tool_->SetGpioMode(gpio::sx1262::kRst,
           cpp_bus_driver::Tool::GpioMode::kOutput,
           cpp_bus_driver::Tool::GpioStatus::kPullup) ||
       !chip_.sx1262->Init(10000000)) {
     status_.sx1262.init_flag = false;
+    tool_->GpioWrite(gpio::sx1262::kRst, 0);
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSx1262 failed\n");
     return false;
   }
@@ -403,6 +458,7 @@ bool TGlassesP4Driver::InitSx1262() {
   const bool result = chip_.sx1262->SetSleep();
   if (!result) {
     chip_.sx1262->Deinit(false);
+    tool_->GpioWrite(gpio::sx1262::kRst, 0);
   }
   status_.sx1262.init_flag = result;
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
@@ -411,17 +467,30 @@ bool TGlassesP4Driver::InitSx1262() {
 }
 
 bool TGlassesP4Driver::InitPower() {
-  bool result = true;
-  result &= InitLdoPower(4, 3300);
-  result &= InitLdoPower(3, 2500);
-  result &= tool_->SetGpioMode(
+  if (!InitLdoPower(4, 3300)) {
+    return false;
+  }
+  if (!InitLdoPower(3, 2500)) {
+    DeinitLdoPower(4);
+    return false;
+  }
+
+  bool gpio_initialized = true;
+  gpio_initialized &= tool_->SetGpioMode(
       gpio::power::kEn5v0, cpp_bus_driver::Tool::GpioMode::kOutput);
-  result &= tool_->SetGpioMode(
+  gpio_initialized &= tool_->SetGpioMode(
       gpio::power::kEn3v3, cpp_bus_driver::Tool::GpioMode::kOutput);
-  result &= tool_->GpioWrite(gpio::power::kEn5v0, true);
-  result &= tool_->GpioWrite(gpio::power::kEn3v3, true);
+  gpio_initialized &= tool_->GpioWrite(gpio::power::kEn5v0, true);
+  gpio_initialized &= tool_->GpioWrite(gpio::power::kEn3v3, true);
+  if (!gpio_initialized) {
+    tool_->GpioWrite(gpio::power::kEn5v0, false);
+    tool_->GpioWrite(gpio::power::kEn3v3, false);
+    DeinitLdoPower(3);
+    DeinitLdoPower(4);
+    return false;
+  }
   tool_->DelayMs(200);
-  return result;
+  return true;
 }
 
 bool TGlassesP4Driver::InitScreen() {
@@ -435,13 +504,18 @@ bool TGlassesP4Driver::InitScreen() {
   status_.s023msafjf10111e1.init_flag = false;
 
   bool result = InitS023msafjf10111e1();
-  result &= bus_.screen_mipi_bus->Init(
-      screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps);
-  result &= bus_.screen_mipi_bus->StartTransmit();
+  if (result) {
+    result = bus_.screen_mipi_bus->Init(
+        screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps);
+  }
+  if (result) {
+    result = bus_.screen_mipi_bus->StartTransmit();
+  }
 
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitScreen success\n");
   } else {
+    DeinitScreen();
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitScreen failed\n");
   }
   return result;
@@ -549,6 +623,38 @@ bool TGlassesP4Driver::InitSdspi(
   return true;
 }
 
+bool TGlassesP4Driver::DeinitAw86224() {
+  bool result = true;
+  if (status_.aw86224.init_flag && chip_.aw86224 != nullptr) {
+    result &= chip_.aw86224->StopRamPlaybackWaveform();
+    result &= chip_.aw86224->Deinit(false);
+  }
+  status_.aw86224.init_flag = false;
+  status_.aw86224.ram_waveform_selection = {};
+  return result;
+}
+
+bool TGlassesP4Driver::DeinitEs8311() {
+  bool result = true;
+  if (status_.es8311.init_flag && chip_.es8311 != nullptr) {
+    result &= SetEs8311OperatingMode(Es8311OperatingMode::kSleep);
+    result &= chip_.es8311->Deinit(false);
+  }
+  status_.es8311.init_flag = false;
+  return result;
+}
+
+bool TGlassesP4Driver::DeinitSx1262() {
+  bool result = true;
+  if (status_.sx1262.init_flag && chip_.sx1262 != nullptr) {
+    result &= chip_.sx1262->SetSleep();
+    result &= chip_.sx1262->Deinit(false);
+    result &= tool_->GpioWrite(gpio::sx1262::kRst, 0);
+  }
+  status_.sx1262.init_flag = false;
+  return result;
+}
+
 bool TGlassesP4Driver::DeinitScreen() {
   bool result = true;
 
@@ -558,55 +664,10 @@ bool TGlassesP4Driver::DeinitScreen() {
   }
 
   if (status_.s023msafjf10111e1.init_flag) {
-    result &= chip_.s023msafjf10111e1->Deinit();
+    result &= chip_.s023msafjf10111e1->Deinit(false);
     status_.s023msafjf10111e1.init_flag = false;
   }
 
-  return result;
-}
-
-bool TGlassesP4Driver::ConfigEs8311() {
-  if (!status_.es8311.init_flag) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
-    return false;
-  }
-
-  cpp_bus_driver::Es8311::PowerStatus ps = {
-      .contorl =
-          {
-              .analog_circuits = true,                // 模拟电路
-              .analog_bias_circuits = true,           // 模拟偏置电路
-              .analog_adc_bias_circuits = true,       // ADC 偏置电路
-              .analog_adc_reference_circuits = true,  // ADC 参考电路
-              .analog_dac_reference_circuit = true,   // DAC 参考电路
-              .internal_reference_circuits = false,   // 内部参考电路
-          },
-      .vmid = cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
-  };
-
-  bool result = true;
-  result &= chip_.es8311->SetPowerStatus(ps);
-  result &= chip_.es8311->SetPgaPower(true);
-  result &= chip_.es8311->SetAdcPower(true);
-  result &= chip_.es8311->SetDacPower(true);
-  result &= chip_.es8311->SetOutputToHpDrive(true);
-  result &= chip_.es8311->SetAdcOffsetFreeze(
-      cpp_bus_driver::Es8311::AdcOffsetFreeze::kDynamicHpf);
-  result &= chip_.es8311->SetAdcHpfStage2Coeff(10);
-  result &= chip_.es8311->SetDacEqualizer(false);
-  result &= chip_.es8311->SetMic(cpp_bus_driver::Es8311::MicType::kAnalogMic,
-      cpp_bus_driver::Es8311::MicInput::kMic1p1n);
-  result &= chip_.es8311->SetAdcAutoVolumeControl(false);
-  result &=
-      chip_.es8311->SetAdcGain(cpp_bus_driver::Es8311::AdcGain::kGain18db);
-  result &= chip_.es8311->SetAdcPgaGain(
-      cpp_bus_driver::Es8311::AdcPgaGain::kGain30db);
-  result &= chip_.es8311->SetAdcVolume(191);
-  result &= chip_.es8311->SetDacVolume(191);
-
-  if (!result) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigEs8311 failed\n");
-  }
   return result;
 }
 
@@ -651,18 +712,19 @@ bool TGlassesP4Driver::IsSdmmcReady() const {
 }
 
 bool TGlassesP4Driver::SetAw86224Standby() {
-  return !status_.aw86224.init_flag || chip_.aw86224->StopRamPlaybackWaveform();
+  return !IsAw86224Ready() || chip_.aw86224->StopRamPlaybackWaveform();
 }
 
-bool TGlassesP4Driver::SetEs8311PowerState(Es8311PowerState state) {
+bool TGlassesP4Driver::SetEs8311OperatingMode(Es8311OperatingMode mode) {
   if (!status_.es8311.init_flag) {
-    return state == Es8311PowerState::kSleep;
+    return mode == Es8311OperatingMode::kSleep;
   }
-  const bool playback_enabled = state == Es8311PowerState::kPlayback ||
-                                state == Es8311PowerState::kDuplex;
+  const bool playback_enabled = mode == Es8311OperatingMode::kPlayback ||
+                                mode == Es8311OperatingMode::kDuplex;
   const bool capture_enabled =
-      state == Es8311PowerState::kCapture || state == Es8311PowerState::kDuplex;
-  const bool sleep = state == Es8311PowerState::kSleep;
+      mode == Es8311OperatingMode::kCapture ||
+      mode == Es8311OperatingMode::kDuplex;
+  const bool sleep = mode == Es8311OperatingMode::kSleep;
   cpp_bus_driver::Es8311::PowerStatus power_status = {
       .contorl =
           {
@@ -695,22 +757,12 @@ bool TGlassesP4Driver::SetEs8311PowerState(Es8311PowerState state) {
   return result;
 }
 
-bool TGlassesP4Driver::SetSx1262PowerState(Sx1262PowerState state) {
+bool TGlassesP4Driver::SetSx1262OperatingMode(Sx1262OperatingMode mode) {
   if (!status_.sx1262.init_flag) {
-    return state == Sx1262PowerState::kSleep;
+    return mode == Sx1262OperatingMode::kSleep;
   }
-  return state == Sx1262PowerState::kSleep ? chip_.sx1262->SetSleep()
+  return mode == Sx1262OperatingMode::kSleep ? chip_.sx1262->SetSleep()
                                            : chip_.sx1262->Wakeup();
-}
-
-bool TGlassesP4Driver::SetScreenSleep(bool sleep) {
-  if (sleep) {
-    return DeinitScreen();
-  }
-  if (IsScreenReady()) {
-    return true;
-  }
-  return InitScreen();
 }
 
 bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
@@ -739,15 +791,14 @@ bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
 
 bool TGlassesP4Driver::PrepareForPowerOff() {
   bool result = true;
-  result &= SetScreenSleep(true);
-  result &= SetAw86224Standby();
-  result &= SetEs8311PowerState(Es8311PowerState::kSleep);
-  result &= SetSx1262PowerState(Sx1262PowerState::kSleep);
+  result &= DeinitScreen();
+  result &= DeinitAw86224();
+  result &= DeinitEs8311();
+  result &= DeinitSx1262();
   result &= SetCameraPowerEnabled(false);
   if (IsSdmmcReady()) {
     result &= DeinitSdmmc();
   }
-  result &= DeinitScreen();
   result &= tool_->GpioWrite(gpio::power::kEn5v0, 0);
   result &= tool_->GpioWrite(gpio::power::kEn3v3, 0);
   return result;

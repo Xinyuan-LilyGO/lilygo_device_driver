@@ -1,5 +1,5 @@
 /*
- * @Description: T-Display-P4 板级设备驱动接口
+ * @Description: T-Display-P4 设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
  * @LastEditTime: 2026-08-03 16:14:05
@@ -105,33 +105,33 @@ class TDisplayP4Driver {
   enum class InitMode { kAsync, kSync };
 
   // SX1262 使用暖启动睡眠，唤醒后保留射频配置。
-  enum class Sx1262PowerState {
+  enum class Sx1262OperatingMode {
     kStandby,  // 可立即收发。
     kSleep,    // 保留配置的低功耗状态。
   };
 
-  enum class Lr2021PowerState {
+  enum class Lr2021OperatingMode {
     kStandby,
     kSleep,
   };
 
-  enum class RadioPowerState {
+  enum class RadioOperatingMode {
     kStandby,
     kSleep,
   };
 
-  enum class Cc1101PowerState {
+  enum class Cc1101OperatingMode {
     kStandby,
     kSleep,
   };
 
-  enum class Nrf24l01PowerState {
+  enum class Nrf24l01OperatingMode {
     kStandby,
     kSleep,
   };
 
-  // ES8311 按实际音频路径分别供电，避免仅用启用/禁用表达不清。
-  enum class Es8311PowerState {
+  // ES8311 按实际音频路径区分工作模式。
+  enum class Es8311OperatingMode {
     kSleep,     // 关闭 ADC、DAC 和模拟偏置。
     kPlayback,  // 仅打开 DAC 和耳机驱动。
     kCapture,   // 仅打开 PGA 和 ADC。
@@ -346,12 +346,15 @@ class TDisplayP4Driver {
   bool DeinitScreen();
   bool DeinitTouch();
   bool DeinitScreenBacklight();
+  bool DeinitAw86224();
+  bool DeinitEs8311();
+  bool DeinitL76k();
+  bool DeinitIcm20948();
+  bool DeinitSx1262();
+  bool DeinitLr2021();
+  bool DeinitRadio();
   bool DeinitKeyboard();
   bool DeinitSdmmc();
-
-  bool ConfigXl9535();
-  bool ConfigEs8311();
-  bool ConfigXl9555();
 
   bool IsBq27220Ready() const;
   bool IsXl9535Ready() const;
@@ -379,22 +382,19 @@ class TDisplayP4Driver {
   bool IsSdmmcReady() const;
 
   bool SetAw86224Standby();
-  bool SetEs8311PowerState(Es8311PowerState state);
   bool SetL76kSleep(bool sleep);
   bool SetIcm20948Sleep(bool sleep);
-  bool SetSx1262PowerState(Sx1262PowerState state);
-  bool SetLr2021PowerState(Lr2021PowerState state);
-  bool SetCc1101PowerState(Cc1101PowerState state);
-  bool SetNrf24l01PowerState(Nrf24l01PowerState state);
-  bool SetEsp32c6PowerEnabled(bool enabled);
   bool SetScreenSleep(bool sleep);
-  bool SetTouchEnabled(bool enabled);
+  bool SetEs8311OperatingMode(Es8311OperatingMode mode);
+  bool SetSx1262OperatingMode(Sx1262OperatingMode mode);
+  bool SetLr2021OperatingMode(Lr2021OperatingMode mode);
+  bool SetCc1101OperatingMode(Cc1101OperatingMode mode);
+  bool SetNrf24l01OperatingMode(Nrf24l01OperatingMode mode);
+  bool SetRadioOperatingMode(RadioOperatingMode mode);
+  bool SetEsp32c6PowerEnabled(bool enabled);
   bool SetCameraPowerEnabled(bool enabled);
   bool SetEthernetPowerEnabled(bool enabled);
-  bool SetAudioPowerEnabled(bool enabled);
   bool SetUsbHostPowerEnabled(bool enabled);
-  bool SetSdPowerEnabled(bool enabled);
-  bool SetRadioPowerState(RadioPowerState state);
   bool PrepareForPowerOff();
 
   /**
