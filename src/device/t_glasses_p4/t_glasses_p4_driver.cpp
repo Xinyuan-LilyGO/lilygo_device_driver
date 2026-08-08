@@ -265,23 +265,33 @@ bool TGlassesP4Driver::InitSgm38121() {
 
   bool result = true;
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
-  result &= chip_.sgm38121->SetOutputVoltage(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
-  result &= chip_.sgm38121->SetOutputVoltage(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kAvdd1,
       cpp_bus_driver::Sgm38121::Status::kOff);
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2,
       cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetOutputVoltage(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
+  result &= chip_.sgm38121->SetOutputVoltage(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+      cpp_bus_driver::Sgm38121::Status::kOff);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3000);
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1,
       cpp_bus_driver::Sgm38121::Status::kOff);
@@ -291,22 +301,12 @@ bool TGlassesP4Driver::InitSgm38121() {
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2,
       cpp_bus_driver::Sgm38121::Status::kOff);
-#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
-      cpp_bus_driver::Sgm38121::Status::kOff);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
-      cpp_bus_driver::Sgm38121::Status::kOff);
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
-      cpp_bus_driver::Sgm38121::Status::kOff);
 #endif
 
   status_.sgm38121.init_flag = result;
