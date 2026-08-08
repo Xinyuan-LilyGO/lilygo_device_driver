@@ -430,14 +430,14 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
-  tool_->DelayMs(2);
+  tool_->DelayMs(10);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0)) {
     status_.hi8561_touch.init_flag = false;
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
-  tool_->DelayMs(120);
+  tool_->DelayMs(10);
 
   if (!chip_.hi8561_touch->Init()) {
     status_.hi8561_touch.init_flag = false;
@@ -882,7 +882,7 @@ bool TDisplayP4AirDriver::InitScreen() {
       !chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1)) {
     return false;
   }
-  tool_->DelayMs(2);
+  tool_->DelayMs(10);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0)) {
     return false;
   }
@@ -1459,12 +1459,8 @@ bool TDisplayP4AirDriver::SetNs4150Enabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, enabled ? 1 : 0);
-  if (result && enabled) {
-    tool_->DelayMs(10);
-  }
-  return result;
+  return chip_.xl9535->GpioWrite(
+      gpio::xl9535::kNs4150En, enabled ? 1 : 0);
 }
 
 bool TDisplayP4AirDriver::SetAw86224Standby() {
@@ -1498,12 +1494,8 @@ bool TDisplayP4AirDriver::SetEsp32c5PowerEnabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, enabled ? 1 : 0);
-  if (result && enabled) {
-    tool_->DelayMs(120);
-  }
-  return result;
+  return chip_.xl9535->GpioWrite(
+      gpio::xl9535::kEsp32c5En, enabled ? 1 : 0);
 }
 
 bool TDisplayP4AirDriver::SetLr1121PowerState(Lr1121PowerState state) {
@@ -1607,9 +1599,6 @@ bool TDisplayP4AirDriver::SetCameraPowerEnabled(bool enabled) {
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
 #endif
-  if (result && enabled) {
-    tool_->DelayMs(10);
-  }
   return result;
 }
 
@@ -1624,12 +1613,8 @@ bool TDisplayP4AirDriver::SetSdPowerEnabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, enabled ? 1 : 0);
-  if (result && enabled) {
-    tool_->DelayMs(20);
-  }
-  return result;
+  return chip_.xl9535->GpioWrite(
+      gpio::xl9535::kSdPowerEn, enabled ? 1 : 0);
 }
 
 bool TDisplayP4AirDriver::SetLedEnabled(bool enabled) {
@@ -1691,8 +1676,6 @@ bool TDisplayP4AirDriver::EnterEsp32c5DownloadMode() {
   bool result = true;
 
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 0);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 1);
-  tool_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);
   tool_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 1);

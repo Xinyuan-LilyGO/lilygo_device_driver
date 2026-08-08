@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-08-06 11:52:01
+ * @LastEditTime: 2026-08-08 09:24:11
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -213,19 +213,9 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.lr2021 = std::make_unique<usp_cpp_bus_driver::Lr20xx>(
       bus_.radio_spi_bus, gpio::radio::kBusy, gpio::radio::kCs,
       [this](bool released) {
-        if (chip_.xl9535 == nullptr || tool_ == nullptr) {
-          return false;
-        }
-        if (!released) {
-          bool result = chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 1);
-          tool_->DelayMs(10);
-          result &= chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
-          tool_->DelayMs(9);
-          return result;
-        }
-        const bool result = chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 1);
-        tool_->DelayMs(10);
-        return result;
+        return chip_.xl9535 != nullptr &&
+               chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst,
+                   static_cast<uint8_t>(released));
       });
 
   bus_.xl9555_i2c_bus = std::make_shared<cpp_bus_driver::SoftwareI2c>(
@@ -511,14 +501,14 @@ bool TDisplayP4Driver::InitHi8561Touch() {
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
-  tool_->DelayMs(2);
+  tool_->DelayMs(10);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
     status_.hi8561_touch.init_flag = false;
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
-  tool_->DelayMs(120);
+  tool_->DelayMs(10);
 
   if (chip_.hi8561_touch == nullptr) {
     status_.hi8561_touch.init_flag = false;
@@ -587,6 +577,20 @@ bool TDisplayP4Driver::InitRm69a10() {
 }
 
 bool TDisplayP4Driver::InitGt9895() {
+  if (!status_.xl9535.init_flag ||
+      !chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0)) {
+    status_.gt9895.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
+    return false;
+  }
+  tool_->DelayMs(10);
+  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
+    status_.gt9895.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
+    return false;
+  }
+  tool_->DelayMs(10);
+
   if (chip_.gt9895 == nullptr) {
     status_.gt9895.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
@@ -1013,7 +1017,7 @@ bool TDisplayP4Driver::InitScreen() {
       !chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0)) {
     return false;
   }
-  tool_->DelayMs(2);
+  tool_->DelayMs(10);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1)) {
     return false;
   }
@@ -1463,7 +1467,12 @@ bool TDisplayP4Driver::ConfigXl9535() {
   // XL9535 上电后输出寄存器默认为高电平。先预装安全状态，再切换输出方向，
   // 避免电源、复位和唤醒信号在配置过程中被短暂拉高。
   bool result = true;
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 1);
+  // 特殊说明：T-Display-P4 v1.0 版本不能关闭 kPowerEn3v3，否则可能导致
+  // 部分芯片复位异常，或者使 ESP32-P4 主芯片锁定在下载模式。因此该电源在
+  // 运行和关机准备期间始终保持开启。
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 0);
+  tool_->DelayMs(500);
+  
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSky13453Vctl, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
@@ -1518,14 +1527,6 @@ bool TDisplayP4Driver::ConfigXl9535() {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
     return false;
   }
-
-  // 先关闭 kPowerEn3v3 并等待负载电容放电，再只执行一次上电。
-  tool_->DelayMs(500);
-  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 0)) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "ConfigXl9535 failed\n");
-    return false;
-  }
-  tool_->DelayMs(10);
   return true;
 }
 
@@ -1605,8 +1606,6 @@ bool TDisplayP4Driver::ConfigXl9555() {
 
   result &= SetCc1101RfSwitch(Cc1101RfSwitch::k868_915Mhz);
 
-  result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 1);
-  tool_->DelayMs(10);
   result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
   tool_->DelayMs(10);
   result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 1);
@@ -1919,12 +1918,8 @@ bool TDisplayP4Driver::SetEsp32c6PowerEnabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, enabled ? 1 : 0);
-  if (result && enabled) {
-    tool_->DelayMs(20);
-  }
-  return result;
+  return chip_.xl9535->GpioWrite(
+      gpio::xl9535::kEsp32c6En, enabled ? 1 : 0);
 }
 
 bool TDisplayP4Driver::SetScreenSleep(bool sleep) {
@@ -1998,9 +1993,6 @@ bool TDisplayP4Driver::SetCameraPowerEnabled(bool enabled) {
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
 #endif
-  if (result && enabled) {
-    tool_->DelayMs(10);
-  }
   return result;
 }
 
@@ -2008,48 +2000,32 @@ bool TDisplayP4Driver::SetEthernetPowerEnabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kEthernetRst, enabled ? 1 : 0);
-  if (result && enabled) {
-    tool_->DelayMs(20);
-  }
-  return result;
+  return chip_.xl9535->GpioWrite(
+      gpio::xl9535::kEthernetRst, enabled ? 1 : 0);
 }
 
 bool TDisplayP4Driver::SetAudioPowerEnabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, enabled ? 1 : 0);
-  if (result && enabled) {
-    tool_->DelayMs(10);
-  }
-  return result;
+  return chip_.xl9535->GpioWrite(
+      gpio::xl9535::kAudioPowerEn, enabled ? 1 : 0);
 }
 
 bool TDisplayP4Driver::SetUsbHostPowerEnabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, enabled ? 1 : 0);
-  if (result && enabled) {
-    tool_->DelayMs(20);
-  }
-  return result;
+  return chip_.xl9535->GpioWrite(
+      gpio::xl9535::kUsbPhyPowerEn, enabled ? 1 : 0);
 }
 
 bool TDisplayP4Driver::SetSdPowerEnabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, enabled ? 0 : 1);
-  if (result && enabled) {
-    tool_->DelayMs(20);
-  }
-  return result;
+  return chip_.xl9535->GpioWrite(
+      gpio::xl9535::kSdPowerEn, enabled ? 0 : 1);
 }
 
 bool TDisplayP4Driver::SetRadioPowerState(RadioPowerState state) {
@@ -2103,7 +2079,7 @@ bool TDisplayP4Driver::PrepareForPowerOff() {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEthernetRst, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kPowerEn3v3, 1);
+    // T-Display-P4 v1.0 版本 kPowerEn3v3 按硬件限制保持开启，详见 ConfigXl9535() 中的特殊说明。
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
   }
 
@@ -2159,11 +2135,11 @@ bool TDisplayP4Driver::DetectScreenType() {
       !chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0)) {
     return false;
   }
-  tool_->DelayMs(2);
+  tool_->DelayMs(10);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
     return false;
   }
-  tool_->DelayMs(120);
+  tool_->DelayMs(10);
 
   if (chip_.gt9895 != nullptr && chip_.gt9895->Init()) {
     screen_info_ = ScreenInfoForType(device::ScreenType::kRm69a10);

@@ -734,9 +734,6 @@ bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
 #endif
-  if (result && enabled) {
-    tool_->DelayMs(10);
-  }
   return result;
 }
 
