@@ -148,7 +148,7 @@ driver.chip().sx1262;
 
 ## 日志配置
 
-`lilygo_device_driver` 提供可配置日志等级，用于控制调试信息、普通信息、警告信息和错误信息输出。
+`lilygo_device_driver` 提供库级最低日志等级，用于控制调试信息、普通信息、警告信息和错误信息输出。
 
 在 ESP-IDF 工程中可以通过：
 
@@ -156,7 +156,15 @@ driver.chip().sx1262;
 idf.py menuconfig
 ```
 
-进入 `lilygo_device_driver configuration`，选择需要的日志等级。
+进入 `lilygo_device_driver configuration`，选择启动时使用的默认日志等级。应用也可以通过线程安全的运行时接口动态调整等级：
+
+```cpp
+lilygo_device_driver::SetMinimumLogLevel(
+    lilygo_device_driver::LogLevel::kWarning);
+const auto level = lilygo_device_driver::GetMinimumLogLevel();
+```
+
+设置为 `kNone` 会禁止全部日志。需要在构造开销较高的日志参数前主动判断时，可以调用 `ShouldLog()`。
 
 ## 开发说明
 

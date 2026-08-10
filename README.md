@@ -148,7 +148,7 @@ driver.chip().sx1262;
 
 ## Log Configuration
 
-`lilygo_device_driver` provides selectable log levels for debug information, normal information, warning messages, and error messages.
+`lilygo_device_driver` provides a library-wide minimum log level for debug information, normal information, warning messages, and error messages.
 
 In ESP-IDF projects, run:
 
@@ -156,7 +156,15 @@ In ESP-IDF projects, run:
 idf.py menuconfig
 ```
 
-Then open `lilygo_device_driver configuration` and select the log level you need.
+Then open `lilygo_device_driver configuration` and select the default log level used at startup. The application can also change the level at runtime through the thread-safe API:
+
+```cpp
+lilygo_device_driver::SetMinimumLogLevel(
+    lilygo_device_driver::LogLevel::kWarning);
+const auto level = lilygo_device_driver::GetMinimumLogLevel();
+```
+
+Setting the level to `kNone` disables all logs. Call `ShouldLog()` before constructing expensive log arguments when needed.
 
 ## Development Notes
 
