@@ -502,9 +502,23 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
 }
 
 bool TDisplayP4AirDriver::InitHi8561Backlight() {
-  if (!chip_.hi8561_backlight->Init(ledc_timer_t::LEDC_TIMER_0,
-          ledc_channel_t::LEDC_CHANNEL_0, 2000, 0,
-          ledc_mode_t::LEDC_LOW_SPEED_MODE)) {
+  if (chip_.hi8561_backlight != nullptr &&
+      chip_.hi8561_backlight->IsInitialized()) {
+    status_.hi8561_backlight.init_flag = true;
+    return true;
+  }
+  if (chip_.hi8561_backlight == nullptr) {
+    status_.hi8561_backlight.init_flag = false;
+    LogMessage(
+        LogLevel::kError, __FILE__, __LINE__, "InitHi8561Backlight failed\n");
+    return false;
+  }
+
+  cpp_bus_driver::Pwm::Config config;
+  config.timer = LEDC_TIMER_0;
+  config.channel = LEDC_CHANNEL_0;
+  config.frequency_hz = 2000;
+  if (!chip_.hi8561_backlight->Init(config)) {
     status_.hi8561_backlight.init_flag = false;
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Backlight failed\n");
@@ -1465,12 +1479,15 @@ bool TDisplayP4AirDriver::DeinitTouch() {
 }
 
 bool TDisplayP4AirDriver::DeinitScreenBacklight() {
-  if (!status_.hi8561_backlight.init_flag) {
+  if (chip_.hi8561_backlight == nullptr ||
+      !chip_.hi8561_backlight->IsInitialized()) {
+    status_.hi8561_backlight.init_flag = false;
     return true;
   }
 
-  const bool result = chip_.hi8561_backlight->Stop(0);
-  status_.hi8561_backlight.init_flag = !result;
+  const bool result = chip_.hi8561_backlight->Deinit();
+  status_.hi8561_backlight.init_flag =
+      chip_.hi8561_backlight->IsInitialized();
   return result;
 }
 
@@ -1545,7 +1562,8 @@ bool TDisplayP4AirDriver::IsHi8561TouchReady() const {
 
 bool TDisplayP4AirDriver::IsHi8561BacklightReady() const {
   return status_.hi8561_backlight.init_flag &&
-         chip_.hi8561_backlight != nullptr;
+         chip_.hi8561_backlight != nullptr &&
+         chip_.hi8561_backlight->IsInitialized();
 }
 
 bool TDisplayP4AirDriver::IsAw86224Ready() const {

@@ -591,6 +591,11 @@ bool TDisplayP4Driver::InitHi8561Touch() {
 }
 
 bool TDisplayP4Driver::InitHi8561Backlight() {
+  if (chip_.hi8561_backlight != nullptr &&
+      chip_.hi8561_backlight->IsInitialized()) {
+    status_.hi8561_backlight.init_flag = true;
+    return true;
+  }
   if (chip_.hi8561_backlight == nullptr) {
     status_.hi8561_backlight.init_flag = false;
     LogMessage(
@@ -598,18 +603,21 @@ bool TDisplayP4Driver::InitHi8561Backlight() {
     return false;
   }
 
-  if (!chip_.hi8561_backlight->Init(
-          ledc_timer_t::LEDC_TIMER_0, ledc_channel_t::LEDC_CHANNEL_0, 2000)) {
+  cpp_bus_driver::Pwm::Config config;
+  config.timer = LEDC_TIMER_0;
+  config.channel = LEDC_CHANNEL_0;
+  config.frequency_hz = 2000;
+  if (!chip_.hi8561_backlight->Init(config)) {
     status_.hi8561_backlight.init_flag = false;
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Backlight failed\n");
     return false;
-  } else {
-    status_.hi8561_backlight.init_flag = true;
-    LogMessage(
-        LogLevel::kInfo, __FILE__, __LINE__, "InitHi8561Backlight success\n");
-    return true;
   }
+
+  status_.hi8561_backlight.init_flag = true;
+  LogMessage(
+      LogLevel::kInfo, __FILE__, __LINE__, "InitHi8561Backlight success\n");
+  return true;
 }
 
 bool TDisplayP4Driver::InitRm69a10() {
@@ -1158,20 +1166,34 @@ bool TDisplayP4Driver::InitTca8418() {
 }
 
 bool TDisplayP4Driver::InitTca8418Backlight() {
-  if (!chip_.tca8418_backlight->Init(ledc_timer_t::LEDC_TIMER_1,
-          ledc_channel_t::LEDC_CHANNEL_1, 1000000, 0,
-          ledc_mode_t::LEDC_LOW_SPEED_MODE,
-          ledc_timer_bit_t ::LEDC_TIMER_5_BIT)) {
+  if (chip_.tca8418_backlight != nullptr &&
+      chip_.tca8418_backlight->IsInitialized()) {
+    status_.tca8418_backlight.init_flag = true;
+    return true;
+  }
+  if (chip_.tca8418_backlight == nullptr) {
     status_.tca8418_backlight.init_flag = false;
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitTca8418Backlight failed\n");
     return false;
-  } else {
-    status_.tca8418_backlight.init_flag = true;
-    LogMessage(
-        LogLevel::kInfo, __FILE__, __LINE__, "InitTca8418Backlight success\n");
-    return true;
   }
+
+  cpp_bus_driver::Pwm::Config config;
+  config.timer = LEDC_TIMER_1;
+  config.channel = LEDC_CHANNEL_1;
+  config.frequency_hz = 1000000;
+  config.resolution = LEDC_TIMER_5_BIT;
+  if (!chip_.tca8418_backlight->Init(config)) {
+    status_.tca8418_backlight.init_flag = false;
+    LogMessage(
+        LogLevel::kError, __FILE__, __LINE__, "InitTca8418Backlight failed\n");
+    return false;
+  }
+
+  status_.tca8418_backlight.init_flag = true;
+  LogMessage(
+      LogLevel::kInfo, __FILE__, __LINE__, "InitTca8418Backlight success\n");
+  return true;
 }
 
 bool TDisplayP4Driver::InitCc1101() {
@@ -1684,21 +1706,15 @@ bool TDisplayP4Driver::DeinitTouch() {
 }
 
 bool TDisplayP4Driver::DeinitScreenBacklight() {
-  bool result = true;
-
-  switch (screen_type()) {
-    case device::ScreenType::kHi8561:
-      if (status_.hi8561_backlight.init_flag) {
-        result &= chip_.hi8561_backlight->Stop(0);
-        status_.hi8561_backlight.init_flag = false;
-      }
-      break;
-    case device::ScreenType::kRm69a10:
-      break;
-    default:
-      break;
+  if (chip_.hi8561_backlight == nullptr ||
+      !chip_.hi8561_backlight->IsInitialized()) {
+    status_.hi8561_backlight.init_flag = false;
+    return true;
   }
 
+  const bool result = chip_.hi8561_backlight->Deinit();
+  status_.hi8561_backlight.init_flag =
+      chip_.hi8561_backlight->IsInitialized();
   return result;
 }
 
@@ -1793,10 +1809,13 @@ bool TDisplayP4Driver::DeinitRadio() {
 bool TDisplayP4Driver::DeinitKeyboard() {
   bool result = true;
 
-  if (status_.tca8418_backlight.init_flag) {
-    result &= chip_.tca8418_backlight->Stop(0);
-    status_.tca8418_backlight.init_flag = false;
+  if (chip_.tca8418_backlight != nullptr &&
+      chip_.tca8418_backlight->IsInitialized()) {
+    result &= chip_.tca8418_backlight->Deinit();
   }
+  status_.tca8418_backlight.init_flag =
+      chip_.tca8418_backlight != nullptr &&
+      chip_.tca8418_backlight->IsInitialized();
   if (status_.tca8418.init_flag) {
     result &= chip_.tca8418->Deinit(false);
     status_.tca8418.init_flag = false;
@@ -1877,7 +1896,8 @@ bool TDisplayP4Driver::IsHi8561TouchReady() const {
 
 bool TDisplayP4Driver::IsHi8561BacklightReady() const {
   return status_.hi8561_backlight.init_flag &&
-         chip_.hi8561_backlight != nullptr;
+         chip_.hi8561_backlight != nullptr &&
+         chip_.hi8561_backlight->IsInitialized();
 }
 
 bool TDisplayP4Driver::IsRm69a10Ready() const {
@@ -1926,7 +1946,8 @@ bool TDisplayP4Driver::IsTca8418Ready() const {
 
 bool TDisplayP4Driver::IsTca8418BacklightReady() const {
   return status_.tca8418_backlight.init_flag &&
-         chip_.tca8418_backlight != nullptr;
+         chip_.tca8418_backlight != nullptr &&
+         chip_.tca8418_backlight->IsInitialized();
 }
 
 bool TDisplayP4Driver::IsCc1101Ready() const {
