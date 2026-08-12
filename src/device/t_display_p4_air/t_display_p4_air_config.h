@@ -187,6 +187,7 @@ inline constexpr int kScreenMipiDsiVfp = 200;
 inline constexpr int kScreenDataLaneNum = 2;
 inline constexpr int kScreenLaneBitRateMbps = 1000;
 inline constexpr uint8_t kTouchI2cAddress = 0x68;
+inline constexpr int32_t kI2cFrequencyHz = 400000;
 
 inline constexpr int kWidth = kScreenWidth;
 inline constexpr int kHeight = kScreenHeight;
@@ -221,6 +222,7 @@ inline constexpr uint8_t kI2cAddress = 0x34;
 
 namespace aw86224 {
 inline constexpr uint8_t kI2cAddress = 0x58;
+inline constexpr int32_t kI2cFrequencyHz = 500000;
 }  // namespace aw86224
 
 namespace es8389 {

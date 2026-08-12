@@ -228,6 +228,7 @@ inline constexpr int kChannel = 2;
 
 namespace aw86224 {
 inline constexpr uint8_t kI2cAddress = 0x58;
+inline constexpr int32_t kI2cFrequencyHz = 500000;
 }  // namespace aw86224
 
 namespace sgm38121 {
@@ -309,6 +310,7 @@ inline constexpr int kScreenMipiDsiVfp = 200;
 inline constexpr int kScreenDataLaneNum = 2;
 inline constexpr int kScreenLaneBitRateMbps = 1000;
 inline constexpr uint8_t kTouchI2cAddress = 0x68;
+inline constexpr int32_t kI2cFrequencyHz = 400000;
 }  // namespace hi8561
 
 namespace rm69a10 {
@@ -327,12 +329,9 @@ inline constexpr int kScreenLaneBitRateMbps = 1000;
 
 namespace gt9895 {
 inline constexpr uint8_t kI2cAddress = 0x5D;
-inline constexpr int kMaxXSize = 1060;
-inline constexpr int kMaxYSize = 2400;
-inline constexpr float kXScaleFactor =
-    static_cast<float>(rm69a10::kScreenWidth) / static_cast<float>(kMaxXSize);
-inline constexpr float kYScaleFactor =
-    static_cast<float>(rm69a10::kScreenHeight) / static_cast<float>(kMaxYSize);
+inline constexpr int32_t kI2cFrequencyHz = 400000;
+inline constexpr uint16_t kRawCoordinateWidth = 1060;
+inline constexpr uint16_t kRawCoordinateHeight = 2400;
 }  // namespace gt9895
 
 namespace sd {

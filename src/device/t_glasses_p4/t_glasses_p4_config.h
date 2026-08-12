@@ -198,6 +198,7 @@ inline constexpr uint8_t kI2cAddress = 0x28;
 
 namespace aw86224 {
 inline constexpr uint8_t kI2cAddress = 0x58;
+inline constexpr int32_t kI2cFrequencyHz = 500000;
 }  // namespace aw86224
 
 namespace bmm350 {

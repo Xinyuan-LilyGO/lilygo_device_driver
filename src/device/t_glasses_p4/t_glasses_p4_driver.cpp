@@ -356,7 +356,7 @@ bool TGlassesP4Driver::InitAw86224() {
   if (IsAw86224Ready()) {
     return true;
   }
-  if (!chip_.aw86224->Init(500000)) {
+  if (!chip_.aw86224->Init(device::aw86224::kI2cFrequencyHz)) {
     status_.aw86224.init_flag = false;
     status_.aw86224.ram_waveform_selection =
         cpp_bus_driver::Aw862xx::RamWaveformSelection();

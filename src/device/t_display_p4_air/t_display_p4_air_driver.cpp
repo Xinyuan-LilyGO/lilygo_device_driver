@@ -468,6 +468,7 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
     return false;
   }
   bool reset_pin_initialized = true;
+  // Air 板的触摸复位信号经过反相，低电平为释放状态。
   reset_pin_initialized &=
       chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
   reset_pin_initialized &= chip_.xl9535->SetGpioMode(
@@ -485,9 +486,9 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
-  tool_->DelayMs(10);
+  tool_->DelayMs(100);
 
-  if (!chip_.hi8561_touch->Init()) {
+  if (!chip_.hi8561_touch->Init(device::hi8561::kI2cFrequencyHz)) {
     chip_.hi8561_touch->Deinit(false);
     chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
     status_.hi8561_touch.init_flag = false;
@@ -535,7 +536,7 @@ bool TDisplayP4AirDriver::InitAw86224() {
   if (IsAw86224Ready()) {
     return true;
   }
-  if (!chip_.aw86224->Init(500000)) {
+  if (!chip_.aw86224->Init(device::aw86224::kI2cFrequencyHz)) {
     status_.aw86224.init_flag = false;
     status_.aw86224.ram_waveform_info =
         cpp_bus_driver::Aw862xx::RamWaveformInfo();

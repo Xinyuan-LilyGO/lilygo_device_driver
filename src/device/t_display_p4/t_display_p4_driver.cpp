@@ -181,9 +181,18 @@ void TDisplayP4Driver::CreateDrivers() {
 
   bus_.gt9895_i2c_touch_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
-  chip_.gt9895 = std::make_unique<cpp_bus_driver::Gt9895>(
-      bus_.gt9895_i2c_touch_bus, device::gt9895::kI2cAddress, -1,
-      device::gt9895::kXScaleFactor, device::gt9895::kYScaleFactor);
+  cpp_bus_driver::TouchCoordinateTransform gt9895_coordinate_transform;
+  gt9895_coordinate_transform.source_width =
+      device::gt9895::kRawCoordinateWidth;
+  gt9895_coordinate_transform.source_height =
+      device::gt9895::kRawCoordinateHeight;
+  gt9895_coordinate_transform.target_width =
+      static_cast<uint16_t>(device::rm69a10::kScreenWidth);
+  gt9895_coordinate_transform.target_height =
+      static_cast<uint16_t>(device::rm69a10::kScreenHeight);
+  chip_.gt9895 =
+      std::make_unique<cpp_bus_driver::Gt9895>(bus_.gt9895_i2c_touch_bus,
+          device::gt9895::kI2cAddress, -1, -1, gt9895_coordinate_transform);
 
   chip_.pcf8563 = std::make_unique<cpp_bus_driver::Pcf8563x>(
       bus_.pcf8563_i2c_bus, device::pcf8563::kI2cAddress);
@@ -565,7 +574,7 @@ bool TDisplayP4Driver::InitHi8561Touch() {
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
-  tool_->DelayMs(10);
+  tool_->DelayMs(100);
 
   if (chip_.hi8561_touch == nullptr) {
     chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
@@ -575,7 +584,7 @@ bool TDisplayP4Driver::InitHi8561Touch() {
     return false;
   }
 
-  if (!chip_.hi8561_touch->Init()) {
+  if (!chip_.hi8561_touch->Init(device::hi8561::kI2cFrequencyHz)) {
     chip_.hi8561_touch->Deinit(false);
     chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
     status_.hi8561_touch.init_flag = false;
@@ -660,13 +669,13 @@ bool TDisplayP4Driver::InitGt9895() {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
     return false;
   }
-  tool_->DelayMs(10);
+  tool_->DelayMs(30);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
     status_.gt9895.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
     return false;
   }
-  tool_->DelayMs(10);
+  tool_->DelayMs(100);
 
   if (chip_.gt9895 == nullptr) {
     chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
@@ -675,7 +684,7 @@ bool TDisplayP4Driver::InitGt9895() {
     return false;
   }
 
-  if (!chip_.gt9895->Init()) {
+  if (!chip_.gt9895->Init(device::gt9895::kI2cFrequencyHz)) {
     chip_.gt9895->Deinit(false);
     chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
     status_.gt9895.init_flag = false;
@@ -704,7 +713,7 @@ bool TDisplayP4Driver::InitAw86224() {
   if (IsAw86224Ready()) {
     return true;
   }
-  if (!chip_.aw86224->Init(500000)) {
+  if (!chip_.aw86224->Init(device::aw86224::kI2cFrequencyHz)) {
     status_.aw86224.init_flag = false;
     status_.aw86224.ram_waveform_info =
         cpp_bus_driver::Aw862xx::RamWaveformInfo();
@@ -2372,13 +2381,14 @@ bool TDisplayP4Driver::DetectScreenType() {
   if (!reset_pin_initialized) {
     return false;
   }
-  tool_->DelayMs(10);
+  tool_->DelayMs(30);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
     return false;
   }
-  tool_->DelayMs(10);
+  tool_->DelayMs(100);
 
-  if (chip_.gt9895 != nullptr && chip_.gt9895->Init()) {
+  if (chip_.gt9895 != nullptr &&
+      chip_.gt9895->Init(device::gt9895::kI2cFrequencyHz)) {
     screen_info_ = ScreenInfoForType(device::ScreenType::kRm69a10);
     status_.gt9895.init_flag = true;
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
