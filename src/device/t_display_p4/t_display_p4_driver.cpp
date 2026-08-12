@@ -550,8 +550,8 @@ bool TDisplayP4Driver::InitHi8561() {
 }
 
 bool TDisplayP4Driver::InitHi8561Touch() {
+  status_.hi8561_touch.init_flag = false;
   if (!status_.xl9535.init_flag) {
-    status_.hi8561_touch.init_flag = false;
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
@@ -562,14 +562,12 @@ bool TDisplayP4Driver::InitHi8561Touch() {
   reset_pin_initialized &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   if (!reset_pin_initialized) {
-    status_.hi8561_touch.init_flag = false;
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
   tool_->DelayMs(10);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
-    status_.hi8561_touch.init_flag = false;
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
@@ -578,25 +576,22 @@ bool TDisplayP4Driver::InitHi8561Touch() {
 
   if (chip_.hi8561_touch == nullptr) {
     chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
-    status_.hi8561_touch.init_flag = false;
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
 
   if (!chip_.hi8561_touch->Init(device::hi8561::kI2cFrequencyHz)) {
-    chip_.hi8561_touch->Deinit(false);
     chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
-    status_.hi8561_touch.init_flag = false;
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
-  } else {
-    status_.hi8561_touch.init_flag = true;
-    LogMessage(
-        LogLevel::kInfo, __FILE__, __LINE__, "InitHi8561Touch success\n");
-    return true;
   }
+
+  status_.hi8561_touch.init_flag = true;
+  LogMessage(
+      LogLevel::kInfo, __FILE__, __LINE__, "InitHi8561Touch success\n");
+  return true;
 }
 
 bool TDisplayP4Driver::InitHi8561Backlight() {
@@ -654,8 +649,8 @@ bool TDisplayP4Driver::InitRm69a10() {
 }
 
 bool TDisplayP4Driver::InitGt9895() {
+  status_.gt9895.init_flag = false;
   if (!status_.xl9535.init_flag) {
-    status_.gt9895.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
     return false;
   }
@@ -665,13 +660,11 @@ bool TDisplayP4Driver::InitGt9895() {
   reset_pin_initialized &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   if (!reset_pin_initialized) {
-    status_.gt9895.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
     return false;
   }
   tool_->DelayMs(30);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
-    status_.gt9895.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
     return false;
   }
@@ -679,22 +672,19 @@ bool TDisplayP4Driver::InitGt9895() {
 
   if (chip_.gt9895 == nullptr) {
     chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
-    status_.gt9895.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
     return false;
   }
 
   if (!chip_.gt9895->Init(device::gt9895::kI2cFrequencyHz)) {
-    chip_.gt9895->Deinit(false);
     chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
-    status_.gt9895.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
     return false;
-  } else {
-    status_.gt9895.init_flag = true;
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitGt9895 success\n");
-    return true;
   }
+
+  status_.gt9895.init_flag = true;
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitGt9895 success\n");
+  return true;
 }
 
 bool TDisplayP4Driver::InitPcf8563() {

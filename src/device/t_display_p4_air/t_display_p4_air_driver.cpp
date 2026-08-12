@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-08-06 16:08:17
+ * @LastEditTime: 2026-08-12 11:10:23
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -143,10 +143,19 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     result &= (xTaskCreate(
                    [](void* arg) {
                      auto self = static_cast<TDisplayP4AirDriver*>(arg);
+                     const bool screen_initialized = self->InitScreen();
+
+                     if (screen_initialized) {
+                       self->InitTouch();
+                       self->InitScreenBacklight();
+                     }
+
+                     // BHI260AP 与触摸控制器共享 I2C，两个初始化流程
+                     // 必须依次完成，避免并发占用同一条总线。
                      self->InitBhi260ap();
                      vTaskDelete(NULL);
                    },
-                   "InitBhi260apTask", 8192, this, 3, NULL) == pdPASS);
+                   "InitScreenImuTask", 8192, this, 3, NULL) == pdPASS);
 
     result &= (xTaskCreate(
                    [](void* arg) {
@@ -155,17 +164,6 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
                      vTaskDelete(NULL);
                    },
                    "InitQmc6310nTask", 4096, this, 3, NULL) == pdPASS);
-
-    result &= (xTaskCreate(
-                   [](void* arg) {
-                     auto self = static_cast<TDisplayP4AirDriver*>(arg);
-                     if (self->InitScreen()) {
-                       self->InitTouch();
-                       self->InitScreenBacklight();
-                     }
-                     vTaskDelete(NULL);
-                   },
-                   "ScreenTask", 4096, this, 3, NULL) == pdPASS);
 
     result &= (xTaskCreate(
                    [](void* arg) {
@@ -194,15 +192,15 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
                    "InitEs8389Task", 4096, this, 3, NULL) == pdPASS);
 
   } else {
-    result &= InitBhi260ap();
-    result &= InitQmc6310n();
-
     const bool screen_initialized = InitScreen();
     result &= screen_initialized;
     if (screen_initialized) {
       result &= InitTouch();
       result &= InitScreenBacklight();
     }
+
+    result &= InitBhi260ap();
+    result &= InitQmc6310n();
 
     result &= InitAw86224();
     result &= InitLr1121();
@@ -461,45 +459,48 @@ bool TDisplayP4AirDriver::InitHi8561() {
 }
 
 bool TDisplayP4AirDriver::InitHi8561Touch() {
-  if (!status_.xl9535.init_flag) {
-    status_.hi8561_touch.init_flag = false;
+  if (IsHi8561TouchReady()) {
+    return true;
+  }
+
+  status_.hi8561_touch.init_flag = false;
+  if (!status_.xl9535.init_flag || chip_.hi8561_touch == nullptr ||
+      bus_.hi8561_i2c_touch_bus == nullptr) {
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
-  bool reset_pin_initialized = true;
-  // Air 板的触摸复位信号经过反相，低电平为释放状态。
-  reset_pin_initialized &=
-      chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
-  reset_pin_initialized &= chip_.xl9535->SetGpioMode(
+
+  bool reset_result = true;
+  // Air 板的触摸复位信号经过反相，高电平为复位状态。
+  reset_result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
+  reset_result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  if (!reset_pin_initialized) {
-    status_.hi8561_touch.init_flag = false;
+  if (!reset_result) {
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
   tool_->DelayMs(10);
+
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0)) {
-    status_.hi8561_touch.init_flag = false;
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
   tool_->DelayMs(100);
 
-  if (!chip_.hi8561_touch->Init(device::hi8561::kI2cFrequencyHz)) {
-    chip_.hi8561_touch->Deinit(false);
-    chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
-    status_.hi8561_touch.init_flag = false;
+  if (chip_.hi8561_touch->Init(device::hi8561::kI2cFrequencyHz)) {
+    status_.hi8561_touch.init_flag = true;
     LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
-    return false;
+        LogLevel::kInfo, __FILE__, __LINE__, "InitHi8561Touch success\n");
+    return true;
   }
 
-  status_.hi8561_touch.init_flag = true;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitHi8561Touch success\n");
-  return true;
+  chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
+  LogMessage(
+      LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
+  return false;
 }
 
 bool TDisplayP4AirDriver::InitHi8561Backlight() {
