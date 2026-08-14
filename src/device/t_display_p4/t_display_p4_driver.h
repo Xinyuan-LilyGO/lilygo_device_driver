@@ -308,10 +308,8 @@ class TDisplayP4Driver {
 
   bool keyboard_connected() const { return keyboard_connected_; }
 
-  void CreateDrivers();
-
   bool Init(InitMode mode = InitMode::kSync);
-  bool InitDrivers(InitMode mode = InitMode::kSync);
+  bool InitMinimal();
   bool InitBq27220();
   bool InitXl9535();
   bool InitSgm38121();
@@ -395,7 +393,7 @@ class TDisplayP4Driver {
   bool SetCameraPowerEnabled(bool enabled);
   bool SetEthernetPowerEnabled(bool enabled);
   bool SetUsbHostPowerEnabled(bool enabled);
-  bool PrepareForPowerOff();
+  bool PrepareDriversForPowerOff();
 
   /**
    * @brief 选择 CC1101 RF 开关通路。
@@ -405,6 +403,10 @@ class TDisplayP4Driver {
   bool SetCc1101RfSwitch(Cc1101RfSwitch rf_switch);
 
  private:
+  void CreateDrivers();
+  bool InitDrivers(InitMode mode);
+  bool InitMinimalDrivers();
+
   std::unique_ptr<cpp_bus_driver::Tool> tool_;
   Bus bus_;
   Chip chip_;
@@ -414,6 +416,7 @@ class TDisplayP4Driver {
   const t_display_p4::device::ScreenInfo* screen_info_ = nullptr;
   t_display_p4::device::RadioType radio_type_ =
       t_display_p4::device::RadioType::kUnknown;
+  bool minimal_drivers_initialized_ = false;
   bool keyboard_connected_ = false;
 
   /**

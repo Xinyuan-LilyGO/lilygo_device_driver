@@ -127,6 +127,9 @@ device::ScreenType TDisplayP4Driver::screen_type() const {
 }
 
 void TDisplayP4Driver::CreateDrivers() {
+  if (tool_ != nullptr) {
+    return;
+  }
   tool_ = std::make_unique<cpp_bus_driver::Tool>();
   radio_type_ = RadioType::kUnknown;
   status_.sx1262.init_flag = false;
@@ -269,15 +272,27 @@ bool TDisplayP4Driver::Init(InitMode mode) {
   return result;
 }
 
-bool TDisplayP4Driver::InitDrivers(InitMode mode) {
-  bool result = true;
+bool TDisplayP4Driver::InitMinimal() {
+  CreateDrivers();
+  return InitMinimalDrivers();
+}
 
+bool TDisplayP4Driver::InitMinimalDrivers() {
+  if (minimal_drivers_initialized_) {
+    return true;
+  }
+
+  bool result = true;
   result &= InitXl9535();
   result &= InitPower();
-
   result &= InitSgm38121();
-
   result &= InitBq27220();
+  minimal_drivers_initialized_ = result;
+  return result;
+}
+
+bool TDisplayP4Driver::InitDrivers(InitMode mode) {
+  bool result = InitMinimalDrivers();
 
   if (mode == InitMode::kAsync) {
     result &= (xTaskCreate(
@@ -2284,7 +2299,7 @@ bool TDisplayP4Driver::SetUsbHostPowerEnabled(bool enabled) {
       gpio::xl9535::kUsbPhyPowerEn, enabled ? 1 : 0);
 }
 
-bool TDisplayP4Driver::PrepareForPowerOff() {
+bool TDisplayP4Driver::PrepareDriversForPowerOff() {
   bool result = true;
   result &= DeinitScreenBacklight();
   result &= DeinitTouch();
@@ -2314,6 +2329,7 @@ bool TDisplayP4Driver::PrepareForPowerOff() {
 
   result &= DeinitLdoPower(3);
   result &= DeinitLdoPower(4);
+  minimal_drivers_initialized_ = false;
   return result;
 }
 

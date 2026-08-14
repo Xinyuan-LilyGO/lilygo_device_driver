@@ -194,10 +194,8 @@ class TGlassesP4Driver {
     };
   }
 
-  void CreateDrivers();
-
   bool Init(InitMode mode = InitMode::kSync);
-  bool InitDrivers(InitMode mode = InitMode::kSync);
+  bool InitMinimal();
   bool InitSy6970();
   bool InitBq27220();
   bool InitSgm38121();
@@ -230,15 +228,20 @@ class TGlassesP4Driver {
   bool SetEs8311OperatingMode(Es8311OperatingMode mode);
   bool SetSx1262OperatingMode(Sx1262OperatingMode mode);
   bool SetCameraPowerEnabled(bool enabled);
-  bool PrepareForPowerOff();
+  bool PrepareDriversForPowerOff();
 
  private:
+  void CreateDrivers();
+  bool InitDrivers(InitMode mode);
+  bool InitMinimalDrivers();
+
   std::unique_ptr<cpp_bus_driver::Tool> tool_;
   Bus bus_;
   Chip chip_;
   Status status_;
   sdmmc_card_t* sd_card_ = nullptr;
   const t_glasses_p4::device::ScreenInfo* screen_info_ = nullptr;
+  bool minimal_drivers_initialized_ = false;
 
   TGlassesP4Driver() = default;
   ~TGlassesP4Driver() = default;

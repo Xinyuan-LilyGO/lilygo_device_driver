@@ -53,6 +53,9 @@ const device::ScreenInfo& TDisplayP4AirDriver::screen_info() const {
 }
 
 void TDisplayP4AirDriver::CreateDrivers() {
+  if (tool_ != nullptr) {
+    return;
+  }
   tool_ = std::make_unique<cpp_bus_driver::Tool>();
 
   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
@@ -131,11 +134,28 @@ bool TDisplayP4AirDriver::Init(InitMode mode) {
   return result;
 }
 
-bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
-  bool result = true;
+bool TDisplayP4AirDriver::InitMinimal() {
+  CreateDrivers();
+  if (InitMinimalDrivers()) {
+    return true;
+  }
+  PrepareMinimalDriversForPowerOff();
+  return false;
+}
 
-  result &= InitPower();
-  result &= InitAxp517();
+bool TDisplayP4AirDriver::InitMinimalDrivers() {
+  if (minimal_drivers_initialized_) {
+    return true;
+  }
+  if (!InitPower() || !InitAxp517()) {
+    return false;
+  }
+  minimal_drivers_initialized_ = true;
+  return true;
+}
+
+bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
+  bool result = InitMinimalDrivers();
   result &= InitXl9535();
   result &= InitSgm38121();
 
@@ -212,6 +232,9 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
 }
 
 bool TDisplayP4AirDriver::InitAxp517() {
+  if (IsAxp517Ready()) {
+    return true;
+  }
   if (!chip_.axp517->Init()) {
     status_.axp517.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAxp517 failed\n");
@@ -1060,6 +1083,9 @@ bool TDisplayP4AirDriver::InitNrf9151() {
 }
 
 bool TDisplayP4AirDriver::InitPower() {
+  if (power_initialized_) {
+    return true;
+  }
   bool power_enabled = true;
   power_enabled &= tool_->SetGpioMode(
       gpio::power::kEnable3v3, cpp_bus_driver::Tool::GpioMode::kOutput);
@@ -1076,6 +1102,7 @@ bool TDisplayP4AirDriver::InitPower() {
     tool_->GpioWrite(gpio::power::kEnable3v3, 0);
     return false;
   }
+  power_initialized_ = true;
   return true;
 }
 
@@ -1452,6 +1479,17 @@ bool TDisplayP4AirDriver::DeinitEs8389() {
   return result;
 }
 
+bool TDisplayP4AirDriver::DeinitPower() {
+  bool result = true;
+  result &= DeinitLdoPower(3);
+  result &= DeinitLdoPower(4);
+  if (tool_ != nullptr) {
+    result &= tool_->GpioWrite(gpio::power::kEnable3v3, 0);
+  }
+  power_initialized_ = false;
+  return result;
+}
+
 bool TDisplayP4AirDriver::DeinitScreen() {
   bool result = true;
   if (status_.hi8561.init_flag) {
@@ -1777,7 +1815,20 @@ bool TDisplayP4AirDriver::SetUsbHostPowerEnabled(bool enabled) {
   return chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, enabled ? 1 : 0);
 }
 
-bool TDisplayP4AirDriver::PrepareForPowerOff() {
+bool TDisplayP4AirDriver::PrepareMinimalDriversForPowerOff() {
+  bool result = true;
+  if (status_.axp517.init_flag && chip_.axp517 != nullptr) {
+    result &= chip_.axp517->Deinit(false);
+    status_.axp517.init_flag = false;
+  }
+
+  result &= DeinitPower();
+
+  minimal_drivers_initialized_ = false;
+  return result;
+}
+
+bool TDisplayP4AirDriver::PrepareDriversForPowerOff() {
   bool result = true;
   result &= DeinitScreenBacklight();
   result &= DeinitTouch();
@@ -1811,10 +1862,7 @@ bool TDisplayP4AirDriver::PrepareForPowerOff() {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, 0);
   }
 
-  result &= DeinitLdoPower(3);
-  result &= DeinitLdoPower(4);
-
-  result &= tool_->GpioWrite(gpio::power::kEnable3v3, 0);
+  result &= DeinitPower();
   return result;
 }
 

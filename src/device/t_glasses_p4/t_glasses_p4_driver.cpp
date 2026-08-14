@@ -78,6 +78,9 @@ device::ScreenType TGlassesP4Driver::screen_type() const {
 }
 
 void TGlassesP4Driver::CreateDrivers() {
+  if (tool_ != nullptr) {
+    return;
+  }
   tool_ = std::make_unique<cpp_bus_driver::Tool>();
   screen_info_ = kDefaultScreenInfo;
 
@@ -139,12 +142,26 @@ bool TGlassesP4Driver::Init(InitMode mode) {
   return result;
 }
 
-bool TGlassesP4Driver::InitDrivers(InitMode mode) {
-  bool result = true;
+bool TGlassesP4Driver::InitMinimal() {
+  CreateDrivers();
+  return InitMinimalDrivers();
+}
 
-  InitSy6970();
+bool TGlassesP4Driver::InitMinimalDrivers() {
+  if (minimal_drivers_initialized_) {
+    return true;
+  }
+
+  bool result = true;
+  result &= InitSy6970();
   result &= InitPower();
-  InitSgm38121();
+  result &= InitSgm38121();
+  minimal_drivers_initialized_ = result;
+  return result;
+}
+
+bool TGlassesP4Driver::InitDrivers(InitMode mode) {
+  bool result = InitMinimalDrivers();
 
   if (mode == InitMode::kAsync) {
     result &= (xTaskCreate(
@@ -789,7 +806,7 @@ bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
   return result;
 }
 
-bool TGlassesP4Driver::PrepareForPowerOff() {
+bool TGlassesP4Driver::PrepareDriversForPowerOff() {
   bool result = true;
   result &= DeinitScreen();
   result &= DeinitAw86224();
@@ -801,6 +818,7 @@ bool TGlassesP4Driver::PrepareForPowerOff() {
   }
   result &= tool_->GpioWrite(gpio::power::kEn5v0, 0);
   result &= tool_->GpioWrite(gpio::power::kEn3v3, 0);
+  minimal_drivers_initialized_ = false;
   return result;
 }
 

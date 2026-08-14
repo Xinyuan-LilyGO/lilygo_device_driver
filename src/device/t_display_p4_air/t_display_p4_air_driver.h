@@ -224,10 +224,8 @@ class TDisplayP4AirDriver {
     };
   }
 
-  void CreateDrivers();
-
   bool Init(InitMode mode = InitMode::kSync);
-  bool InitDrivers(InitMode mode = InitMode::kSync);
+  bool InitMinimal();
   bool InitAxp517();
   bool InitXl9535();
   bool InitSgm38121();
@@ -257,6 +255,7 @@ class TDisplayP4AirDriver {
   bool DeinitSt25r3916();
   bool DeinitLr1121();
   bool DeinitNrf9151();
+  bool DeinitPower();
   bool DeinitScreen();
   bool DeinitTouch();
   bool DeinitScreenBacklight();
@@ -289,7 +288,8 @@ class TDisplayP4AirDriver {
   bool SetEsp32c5PowerEnabled(bool enabled);
   bool SetCameraPowerEnabled(bool enabled);
   bool SetUsbHostPowerEnabled(bool enabled);
-  bool PrepareForPowerOff();
+  bool PrepareMinimalDriversForPowerOff();
+  bool PrepareDriversForPowerOff();
 
   /**
    * @brief 使 ESP32-C5 进入下载模式。
@@ -305,6 +305,9 @@ class TDisplayP4AirDriver {
   bool SetUartTarget(UartTarget target);
 
  private:
+  void CreateDrivers();
+  bool InitDrivers(InitMode mode);
+  bool InitMinimalDrivers();
   bool SetNs4150Enabled(bool enabled);
 
   std::unique_ptr<cpp_bus_driver::Tool> tool_;
@@ -315,6 +318,8 @@ class TDisplayP4AirDriver {
   std::string sd_card_base_path_;
   // 当前挂载是否使用 SDSPI 主机
   bool sd_card_uses_spi_ = false;
+  bool minimal_drivers_initialized_ = false;
+  bool power_initialized_ = false;
   // 当前 SDSPI 主机编号
   spi_host_device_t sd_card_spi_host_id_ = SPI2_HOST;
   const t_display_p4_air::device::ScreenInfo* screen_info_ = nullptr;
