@@ -311,6 +311,8 @@ inline constexpr int kScreenDataLaneNum = 2;
 inline constexpr int kScreenLaneBitRateMbps = 1000;
 inline constexpr uint8_t kTouchI2cAddress = 0x68;
 inline constexpr int32_t kI2cFrequencyHz = 400000;
+// PT4103 的 EN 引脚受内部软启动限制，直接 PWM 调光频率不得超过 1 kHz。
+inline constexpr uint32_t kBacklightPwmFrequencyHz = 1000;
 }  // namespace hi8561
 
 namespace rm69a10 {

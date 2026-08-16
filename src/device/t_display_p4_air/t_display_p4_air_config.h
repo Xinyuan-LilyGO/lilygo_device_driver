@@ -188,18 +188,8 @@ inline constexpr int kScreenDataLaneNum = 2;
 inline constexpr int kScreenLaneBitRateMbps = 1000;
 inline constexpr uint8_t kTouchI2cAddress = 0x68;
 inline constexpr int32_t kI2cFrequencyHz = 400000;
-
-inline constexpr int kWidth = kScreenWidth;
-inline constexpr int kHeight = kScreenHeight;
-inline constexpr int kMipiDsiDpiClkMhz = kScreenMipiDsiDpiClkMhz;
-inline constexpr int kMipiDsiHsync = kScreenMipiDsiHsync;
-inline constexpr int kMipiDsiHbp = kScreenMipiDsiHbp;
-inline constexpr int kMipiDsiHfp = kScreenMipiDsiHfp;
-inline constexpr int kMipiDsiVsync = kScreenMipiDsiVsync;
-inline constexpr int kMipiDsiVbp = kScreenMipiDsiVbp;
-inline constexpr int kMipiDsiVfp = kScreenMipiDsiVfp;
-inline constexpr int kDataLaneNum = kScreenDataLaneNum;
-inline constexpr int kLaneBitRateMbps = kScreenLaneBitRateMbps;
+// SY7200A 的 EN/PWM 引脚推荐使用 20 kHz～1 MHz 调光频率。
+inline constexpr uint32_t kBacklightPwmFrequencyHz = 20000;
 }  // namespace hi8561
 
 namespace screen {

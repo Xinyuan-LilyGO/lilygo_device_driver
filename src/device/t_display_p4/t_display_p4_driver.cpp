@@ -625,7 +625,7 @@ bool TDisplayP4Driver::InitHi8561Backlight() {
   cpp_bus_driver::Pwm::Config config;
   config.timer = LEDC_TIMER_0;
   config.channel = LEDC_CHANNEL_0;
-  config.frequency_hz = 2000;
+  config.frequency_hz = device::hi8561::kBacklightPwmFrequencyHz;
   if (!chip_.hi8561_backlight->Init(config)) {
     status_.hi8561_backlight.init_flag = false;
     LogMessage(
