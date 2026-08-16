@@ -1094,8 +1094,7 @@ bool TDisplayP4Driver::InitLr2021() {
                  LR20XX_SYSTEM_DIO_11, LR20XX_SYSTEM_DIO_FUNC_IRQ,
                  LR20XX_SYSTEM_DIO_DRIVE_NONE) == LR20XX_STATUS_OK);
   result &= (chip_.lr2021->Invoke(lr20xx_system_set_dio_irq_cfg,
-                 LR20XX_SYSTEM_DIO_11,
-                 static_cast<lr20xx_system_irq_mask_t>(0)) ==
+                 LR20XX_SYSTEM_DIO_11, LR20XX_SYSTEM_IRQ_NONE) ==
              LR20XX_STATUS_OK);
   result &= chip_.lr2021->SetSleep(sleep_config);
   if (!result) {

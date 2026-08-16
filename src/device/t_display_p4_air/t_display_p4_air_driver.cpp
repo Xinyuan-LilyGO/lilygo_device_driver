@@ -889,11 +889,11 @@ bool TDisplayP4AirDriver::InitLr1121() {
   }
 
   const lr11xx_system_rfswitch_cfg_t rf_switch_config = {
-      .enable = 0x03,
+      .enable = LR11XX_SYSTEM_RFSW0_HIGH | LR11XX_SYSTEM_RFSW1_HIGH,
       .standby = 0x00,
-      .rx = 0x02,
+      .rx = LR11XX_SYSTEM_RFSW1_HIGH,
       .tx = 0x00,
-      .tx_hp = 0x01,
+      .tx_hp = LR11XX_SYSTEM_RFSW0_HIGH,
       .tx_hf = 0x00,
       .gnss = 0x00,
       .wifi = 0x00,
