@@ -172,6 +172,9 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
 
                      // BHI260AP 与触摸控制器共享 I2C，两个初始化流程
                      // 必须依次完成，避免并发占用同一条总线。
+                     // 屏幕已可用后降低任务优先级，避免上传传感器固件时
+                     // 抢占界面刷新并造成启动动画停顿。
+                     vTaskPrioritySet(nullptr, tskIDLE_PRIORITY);
                      self->InitBhi260ap();
                      vTaskDelete(NULL);
                    },
