@@ -15,6 +15,7 @@
 #include "SensorQMC6310.hpp"
 #include "bhi2xy_sensorapi_cpp_bus_driver_library.h"
 #include "cpp_bus_driver_library.h"
+#include "device/common/async_init_manager.h"
 #include "esp32p4_driver.h"
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
@@ -310,6 +311,7 @@ class TDisplayP4AirDriver {
   bool InitMinimalDrivers();
   bool SetNs4150Enabled(bool enabled);
 
+  AsyncInitManager async_init_manager_;
   std::unique_ptr<cpp_bus_driver::Tool> tool_;
   Bus bus_;
   Chip chip_;

@@ -44,6 +44,7 @@ constexpr ScreenInfo kS023msafjf10111e1ScreenInfo = {
 };
 
 constexpr const ScreenInfo* kDefaultScreenInfo = &kS023msafjf10111e1ScreenInfo;
+constexpr uint32_t kInitializationShutdownTimeoutMs = 5 * 1000;
 
 /**
  * @brief 将屏幕像素位宽转换为 MIPI 颜色格式。
@@ -162,58 +163,71 @@ bool TGlassesP4Driver::InitMinimalDrivers() {
 
 bool TGlassesP4Driver::InitDrivers(InitMode mode) {
   bool result = InitMinimalDrivers();
+  async_init_manager_.Reset();
 
   if (mode == InitMode::kAsync) {
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TGlassesP4Driver*>(arg);
-                     self->InitScreen();
-                     vTaskDelete(nullptr);
+                     auto* self = static_cast<TGlassesP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested()) {
+                       self->InitScreen();
+                     }
+                     self->async_init_manager_.FinishTask();
                    },
-                   "ScreenTask", 4096, this, 3, nullptr) == pdPASS);
+                   "ScreenTask", 4096, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TGlassesP4Driver*>(arg);
-                     self->InitBq27220();
-                     vTaskDelete(nullptr);
+                     auto* self = static_cast<TGlassesP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested()) {
+                       self->InitBq27220();
+                     }
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitBq27220Task", 2048, this, 3, nullptr) == pdPASS);
+                   "InitBq27220Task", 2048, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TGlassesP4Driver*>(arg);
-                     self->InitAw86224();
-                     vTaskDelete(nullptr);
+                     auto* self = static_cast<TGlassesP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested()) {
+                       self->InitAw86224();
+                     }
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitAw86224Task", 4096, this, 3, nullptr) == pdPASS);
+                   "InitAw86224Task", 4096, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TGlassesP4Driver*>(arg);
-                     if (self->InitEs8311()) {
+                     auto* self = static_cast<TGlassesP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested() &&
+                         self->InitEs8311()) {
                        self->SetEs8311OperatingMode(
                            Es8311OperatingMode::kSleep);
                      }
-                     vTaskDelete(nullptr);
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitEs8311Task", 4096, this, 3, nullptr) == pdPASS);
+                   "InitEs8311Task", 4096, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TGlassesP4Driver*>(arg);
-                     self->InitSx1262();
-                     vTaskDelete(nullptr);
+                     auto* self = static_cast<TGlassesP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested()) {
+                       self->InitSx1262();
+                     }
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitSx1262Task", 4096, this, 3, nullptr) == pdPASS);
+                   "InitSx1262Task", 4096, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TGlassesP4Driver*>(arg);
-                     self->InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
-                     vTaskDelete(nullptr);
+                     auto* self = static_cast<TGlassesP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested()) {
+                       self->InitSdmmc(
+                           device::sd::kBasePath, SDMMC_FREQ_52M);
+                     }
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitSdmmcTask", 4096, this, 3, nullptr) == pdPASS);
+                   "InitSdmmcTask", 4096, this, 3);
   } else {
     result &= InitScreen();
     InitBq27220();
@@ -807,6 +821,12 @@ bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
 }
 
 bool TGlassesP4Driver::PrepareDriversForPowerOff() {
+  if (!async_init_manager_.StopAndWait(kInitializationShutdownTimeoutMs)) {
+    LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
+        "Wait for asynchronous initialization before power off timed out\n");
+    return false;
+  }
+
   bool result = true;
   result &= DeinitScreen();
   result &= DeinitAw86224();

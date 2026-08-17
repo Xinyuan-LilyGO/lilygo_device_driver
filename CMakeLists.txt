@@ -10,6 +10,7 @@ if(CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4)
             src_dirs
             "./src/"
             "./src/chip/esp32p4/"
+            "./src/device/common/"
             "./src/device/t_glasses_p4/"
     )
     list(APPEND requires
@@ -20,6 +21,7 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR)
             src_dirs
             "./src/"
             "./src/chip/esp32p4/"
+            "./src/device/common/"
             "./src/device/t_display_p4_air/"
         )
     list(APPEND requires
@@ -46,6 +48,7 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
             src_dirs
             "./src/"
             "./src/chip/esp32p4/"
+            "./src/device/common/"
             "./src/device/t_display_p4/"
         )
     list(APPEND requires

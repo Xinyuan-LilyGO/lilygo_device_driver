@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "cpp_bus_driver_library.h"
+#include "device/common/async_init_manager.h"
 #include "driver/sdmmc_host.h"
 #include "driver/spi_common.h"
 #include "esp32p4_driver.h"
@@ -235,6 +236,7 @@ class TGlassesP4Driver {
   bool InitDrivers(InitMode mode);
   bool InitMinimalDrivers();
 
+  AsyncInitManager async_init_manager_;
   std::unique_ptr<cpp_bus_driver::Tool> tool_;
   Bus bus_;
   Chip chip_;

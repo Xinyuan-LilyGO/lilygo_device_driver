@@ -26,6 +26,7 @@ constexpr std::array<uint8_t, 6> kSx1262VersionPrefix = {
     'S', 'X', '1', '2', '6', '1'};
 constexpr uint8_t kLr2021ExpectedVersionMajor = 0x01;
 constexpr uint8_t kLr2021ExpectedVersionMinor = 0x18;
+constexpr uint32_t kInitializationShutdownTimeoutMs = 5 * 1000;
 
 constexpr ScreenInfo kHi8561ScreenInfo = {
     .type = ScreenType::kHi8561,
@@ -293,85 +294,103 @@ bool TDisplayP4Driver::InitMinimalDrivers() {
 
 bool TDisplayP4Driver::InitDrivers(InitMode mode) {
   bool result = InitMinimalDrivers();
+  async_init_manager_.Reset();
 
   if (mode == InitMode::kAsync) {
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TDisplayP4Driver*>(arg);
-                     if (self->InitScreen()) {
+                     auto* self = static_cast<TDisplayP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested() &&
+                         self->InitScreen()) {
                        self->InitTouch();
                        self->InitScreenBacklight();
                      }
-                     vTaskDelete(NULL);
+                     self->async_init_manager_.FinishTask();
                    },
-                   "ScreenTask", 4096, this, 3, NULL) == pdPASS);
+                   "ScreenTask", 4096, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TDisplayP4Driver*>(arg);
-                     self->InitKeyboard();
-                     vTaskDelete(NULL);
+                     auto* self = static_cast<TDisplayP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested()) {
+                       self->InitKeyboard();
+                     }
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitKeyboardTask", 4096, this, 3, NULL) == pdPASS);
+                   "InitKeyboardTask", 4096, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TDisplayP4Driver*>(arg);
-                     self->InitPcf8563();
-                     vTaskDelete(NULL);
+                     auto* self = static_cast<TDisplayP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested()) {
+                       self->InitPcf8563();
+                     }
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitPcf8563Task", 2048, this, 3, NULL) == pdPASS);
+                   "InitPcf8563Task", 2048, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TDisplayP4Driver*>(arg);
-                     self->InitAw86224();
-                     vTaskDelete(NULL);
+                     auto* self = static_cast<TDisplayP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested()) {
+                       self->InitAw86224();
+                     }
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitAw86224Task", 4096, this, 3, NULL) == pdPASS);
+                   "InitAw86224Task", 4096, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TDisplayP4Driver*>(arg);
-                     if (self->InitEs8311()) {
+                     auto* self = static_cast<TDisplayP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested() &&
+                         self->InitEs8311()) {
                        self->SetEs8311OperatingMode(
                            Es8311OperatingMode::kSleep);
                      }
-                     vTaskDelete(NULL);
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitEs8311Task", 4096, this, 3, NULL) == pdPASS);
+                   "InitEs8311Task", 4096, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TDisplayP4Driver*>(arg);
-                     self->InitL76k();
-                     vTaskDelete(NULL);
+                     auto* self = static_cast<TDisplayP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested()) {
+                       self->InitL76k();
+                     }
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitL76kTask", 2048, this, 3, NULL) == pdPASS);
+                   "InitL76kTask", 2048, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TDisplayP4Driver*>(arg);
-                     self->InitIcm20948();
-                     vTaskDelete(NULL);
+                     auto* self = static_cast<TDisplayP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested()) {
+                       self->InitIcm20948();
+                     }
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitIcm20948Task", 4096, this, 3, NULL) == pdPASS);
+                   "InitIcm20948Task", 4096, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TDisplayP4Driver*>(arg);
-                     self->InitRadio();
-                     vTaskDelete(NULL);
+                     auto* self = static_cast<TDisplayP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested()) {
+                       self->InitRadio();
+                     }
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitRadioTask", 4096, this, 3, NULL) == pdPASS);
+                   "InitRadioTask", 4096, this, 3);
 
-    result &= (xTaskCreate(
+    result &= async_init_manager_.StartTask(
                    [](void* arg) {
-                     auto self = static_cast<TDisplayP4Driver*>(arg);
-                     self->InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
-                     vTaskDelete(NULL);
+                     auto* self = static_cast<TDisplayP4Driver*>(arg);
+                     if (!self->async_init_manager_.stop_requested()) {
+                       self->InitSdmmc(
+                           device::sd::kBasePath, SDMMC_FREQ_52M);
+                     }
+                     self->async_init_manager_.FinishTask();
                    },
-                   "InitSdmmcTask", 4096, this, 3, NULL) == pdPASS);
+                   "InitSdmmcTask", 4096, this, 3);
   } else {
     const bool screen_result = InitScreen();
     result &= screen_result;
@@ -2299,6 +2318,12 @@ bool TDisplayP4Driver::SetUsbHostPowerEnabled(bool enabled) {
 }
 
 bool TDisplayP4Driver::PrepareDriversForPowerOff() {
+  if (!async_init_manager_.StopAndWait(kInitializationShutdownTimeoutMs)) {
+    LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
+        "Wait for asynchronous initialization before power off timed out\n");
+    return false;
+  }
+
   bool result = true;
   result &= DeinitScreenBacklight();
   result &= DeinitTouch();

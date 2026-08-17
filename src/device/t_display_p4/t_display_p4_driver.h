@@ -13,6 +13,7 @@
 #include <string>
 
 #include "cpp_bus_driver_library.h"
+#include "device/common/async_init_manager.h"
 #include "esp32p4_driver.h"
 #include "t_display_p4_keyboard_config.h"
 #include "usp_cpp_bus_driver_library.h"
@@ -407,6 +408,7 @@ class TDisplayP4Driver {
   bool InitDrivers(InitMode mode);
   bool InitMinimalDrivers();
 
+  AsyncInitManager async_init_manager_;
   std::unique_ptr<cpp_bus_driver::Tool> tool_;
   Bus bus_;
   Chip chip_;
