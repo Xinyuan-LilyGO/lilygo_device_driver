@@ -181,7 +181,7 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
       bus_.hi8561_i2c_touch_bus, device::hi8561::kTouchI2cAddress);
   chip_.hi8561_backlight =
-      std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBacklight);
+      std::make_unique<cpp_bus_driver::Pwm>(gpio::pt4103::kEn);
 
   bus_.gt9895_i2c_touch_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
@@ -246,7 +246,7 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.tca8418 = std::make_unique<cpp_bus_driver::Tca8418>(
       bus_.tca8418_i2c_bus, keyboard_device::tca8418::kI2cAddress);
   chip_.tca8418_backlight =
-      std::make_unique<cpp_bus_driver::Pwm>(keyboard_gpio::tca8418::kBl);
+      std::make_unique<cpp_bus_driver::Pwm>(keyboard_gpio::sy7200a::kEn);
 
   chip_.cc1101 = std::make_unique<cpp_bus_driver::Cc1101>(bus_.cc1101_spi_bus,
       keyboard_gpio::t_mix_rf::cc1101::kCs,
@@ -644,7 +644,7 @@ bool TDisplayP4Driver::InitHi8561Backlight() {
   cpp_bus_driver::Pwm::Config config;
   config.timer = LEDC_TIMER_0;
   config.channel = LEDC_CHANNEL_0;
-  config.frequency_hz = device::hi8561::kBacklightPwmFrequencyHz;
+  config.frequency_hz = device::pt4103::kPwmFrequencyHz;
   if (!chip_.hi8561_backlight->Init(config)) {
     status_.hi8561_backlight.init_flag = false;
     LogMessage(
@@ -970,7 +970,8 @@ bool TDisplayP4Driver::InitSx1262() {
       chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
   reset_pin_initialized &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kRadioRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  if (!reset_pin_initialized || !chip_.sx1262->Init(10000000)) {
+  if (!reset_pin_initialized ||
+      !chip_.sx1262->Init(device::sx1262::kSpiFrequencyHz)) {
     chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
     LogMessage(
         LogLevel::kInfo, __FILE__, __LINE__, "SX1262 transport probe failed\n");
@@ -1025,7 +1026,8 @@ bool TDisplayP4Driver::InitLr2021() {
       chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
   reset_pin_initialized &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kRadioRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  if (!reset_pin_initialized || !chip_.lr2021->Init(10000000)) {
+  if (!reset_pin_initialized ||
+      !chip_.lr2021->Init(device::lr2021::kSpiFrequencyHz)) {
     chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitLr2021 transport failed\n");
@@ -1213,7 +1215,7 @@ bool TDisplayP4Driver::InitTca8418Backlight() {
   cpp_bus_driver::Pwm::Config config;
   config.timer = LEDC_TIMER_1;
   config.channel = LEDC_CHANNEL_1;
-  config.frequency_hz = 1000000;
+  config.frequency_hz = keyboard_device::sy7200a::kPwmFrequencyHz;
   config.resolution = LEDC_TIMER_5_BIT;
   if (!chip_.tca8418_backlight->Init(config)) {
     status_.tca8418_backlight.init_flag = false;

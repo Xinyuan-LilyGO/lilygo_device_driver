@@ -76,11 +76,14 @@ inline constexpr auto kNs4150En = cpp_bus_driver::Xl95x5::Pin::kIo17;
 }  // namespace xl9535
 
 namespace hi8561 {
-inline constexpr int kScreenBacklight = 50;
 inline constexpr int kTouchSda = i2c::kPort2Sda;
 inline constexpr int kTouchScl = i2c::kPort2Scl;
 inline constexpr int kTouchInt = 52;
 }  // namespace hi8561
+
+namespace sy7200a {
+inline constexpr int kEn = 50;
+}  // namespace sy7200a
 
 namespace axp517 {
 inline constexpr int kSda = i2c::kPort1Sda;
@@ -188,9 +191,12 @@ inline constexpr int kScreenDataLaneNum = 2;
 inline constexpr int kScreenLaneBitRateMbps = 1000;
 inline constexpr uint8_t kTouchI2cAddress = 0x68;
 inline constexpr int32_t kI2cFrequencyHz = 400000;
-// SY7200A 的 EN/PWM 引脚推荐使用 20 kHz～1 MHz 调光频率。
-inline constexpr uint32_t kBacklightPwmFrequencyHz = 20000;
 }  // namespace hi8561
+
+namespace sy7200a {
+// EN/PWM 引脚推荐使用 20 kHz～1 MHz 调光频率。
+inline constexpr uint32_t kPwmFrequencyHz = 20000;
+}  // namespace sy7200a
 
 namespace screen {
 inline constexpr int kRotationDirection = 0;
@@ -235,6 +241,10 @@ namespace qmc6310n {
 inline constexpr uint8_t kI2cAddress = 0x3C;
 }  // namespace qmc6310n
 
+namespace lr1121 {
+inline constexpr int32_t kSpiFrequencyHz = 10000000;
+}  // namespace lr1121
+
 namespace sgm38121 {
 inline constexpr uint8_t kI2cAddress = 0x28;
 }  // namespace sgm38121
@@ -278,11 +288,6 @@ inline constexpr int kBufferCount = 2;
 namespace st25r3916 {
 inline constexpr uint8_t kI2cAddress = 0x50;
 }  // namespace st25r3916
-
-namespace infrared {
-inline constexpr int kResolutionHz = 1000000;
-inline constexpr int kNecDecodeMargin = 200;
-}  // namespace infrared
 
 namespace sd {
 inline constexpr const char* kBasePath = "/sdcard";

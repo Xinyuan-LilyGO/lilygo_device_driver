@@ -110,7 +110,7 @@ void TDisplayP4AirDriver::CreateDrivers() {
       bus_.bhi260ap_i2c_bus, device::bhi260ap::kI2cAddress);
   chip_.qmc6310n = std::make_unique<SensorQMC6310>();
   chip_.hi8561_backlight =
-      std::make_unique<cpp_bus_driver::Pwm>(gpio::hi8561::kScreenBacklight);
+      std::make_unique<cpp_bus_driver::Pwm>(gpio::sy7200a::kEn);
   chip_.nrf9151 =
       std::make_unique<cpp_bus_driver::Nrf9151>(bus_.nrf9151_uart_bus);
   chip_.lr1121 =
@@ -561,7 +561,7 @@ bool TDisplayP4AirDriver::InitHi8561Backlight() {
   cpp_bus_driver::Pwm::Config config;
   config.timer = LEDC_TIMER_0;
   config.channel = LEDC_CHANNEL_0;
-  config.frequency_hz = device::hi8561::kBacklightPwmFrequencyHz;
+  config.frequency_hz = device::sy7200a::kPwmFrequencyHz;
   if (!chip_.hi8561_backlight->Init(config)) {
     status_.hi8561_backlight.init_flag = false;
     LogMessage(
@@ -887,7 +887,8 @@ bool TDisplayP4AirDriver::InitLr1121() {
       gpio::lr1121::kRst, cpp_bus_driver::Tool::GpioMode::kOutput);
   transport_initialized &= tool_->SetGpioMode(
       gpio::lr1121::kInt, cpp_bus_driver::Tool::GpioMode::kInput);
-  if (!transport_initialized || !chip_.lr1121->Init(10000000)) {
+  if (!transport_initialized ||
+      !chip_.lr1121->Init(device::lr1121::kSpiFrequencyHz)) {
     tool_->GpioWrite(gpio::lr1121::kRst, 0);
     chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
     LogMessage(

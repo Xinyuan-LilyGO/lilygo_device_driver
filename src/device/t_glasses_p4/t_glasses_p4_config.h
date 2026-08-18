@@ -205,6 +205,10 @@ namespace bmm350 {
 inline constexpr uint8_t kI2cAddress = 0x14;
 }  // namespace bmm350
 
+namespace sx1262 {
+inline constexpr int32_t kSpiFrequencyHz = 10000000;
+}  // namespace sx1262
+
 namespace sd {
 inline constexpr const char* kBasePath = "/sdcard";
 }  // namespace sd

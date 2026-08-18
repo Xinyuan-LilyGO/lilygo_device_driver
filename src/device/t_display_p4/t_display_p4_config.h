@@ -120,10 +120,13 @@ inline constexpr int kScl = i2c::kPort2Scl;
 }  // namespace icm20948
 
 namespace hi8561 {
-inline constexpr int kScreenBacklight = 51;
 inline constexpr int kTouchSda = i2c::kPort1Sda;
 inline constexpr int kTouchScl = i2c::kPort1Scl;
 }  // namespace hi8561
+
+namespace pt4103 {
+inline constexpr int kEn = 51;
+}  // namespace pt4103
 
 namespace gt9895 {
 inline constexpr int kSda = i2c::kPort1Sda;
@@ -247,6 +250,14 @@ namespace icm20948 {
 inline constexpr uint8_t kI2cAddress = 0x68;
 }  // namespace icm20948
 
+namespace sx1262 {
+inline constexpr int32_t kSpiFrequencyHz = 10000000;
+}  // namespace sx1262
+
+namespace lr2021 {
+inline constexpr int32_t kSpiFrequencyHz = 10000000;
+}  // namespace lr2021
+
 namespace screen {
 inline constexpr int kRotationDirection = 0;
 
@@ -311,9 +322,12 @@ inline constexpr int kScreenDataLaneNum = 2;
 inline constexpr int kScreenLaneBitRateMbps = 1000;
 inline constexpr uint8_t kTouchI2cAddress = 0x68;
 inline constexpr int32_t kI2cFrequencyHz = 400000;
-// PT4103 的 EN 引脚受内部软启动限制，直接 PWM 调光频率不得超过 1 kHz。
-inline constexpr uint32_t kBacklightPwmFrequencyHz = 1000;
 }  // namespace hi8561
+
+namespace pt4103 {
+// EN 引脚受内部软启动限制，直接 PWM 调光频率不得超过 1 kHz。
+inline constexpr uint32_t kPwmFrequencyHz = 1000;
+}  // namespace pt4103
 
 namespace rm69a10 {
 inline constexpr int kScreenWidth = 568;

@@ -36,16 +36,13 @@ inline constexpr auto kTca8418Rst = cpp_bus_driver::Xl95x5::Pin::kIo6;
 }  // namespace xl9555
 
 namespace sy7200a {
-inline constexpr int kPwmEn = base_gpio::ext::k1x4P1Io47;
+inline constexpr int kEn = base_gpio::ext::k1x4P1Io47;
 }  // namespace sy7200a
-
-inline constexpr int kKeyboardBacklight = sy7200a::kPwmEn;
 
 namespace tca8418 {
 inline constexpr int kSda = i2c::kPort3Sda;
 inline constexpr int kScl = i2c::kPort3Scl;
 inline constexpr int kInt = base_gpio::ext::k1x4P1Io48;
-inline constexpr int kBl = kKeyboardBacklight;
 }  // namespace tca8418
 
 namespace t_mix_rf {
@@ -104,6 +101,10 @@ constexpr const std::string kMap[] = {"F1", "F2", "F3", "F4", "F5", "F6", "F7",
     "Left", "Down", "F11", "9", "Del", "Enter", "Record", "Enter", "0",
     "Right"};
 }  // namespace tca8418
+
+namespace sy7200a {
+inline constexpr uint32_t kPwmFrequencyHz = 20000;
+}  // namespace sy7200a
 }  // namespace device
 }  // namespace keyboard
 }  // namespace lilygo_device_driver::t_display_p4

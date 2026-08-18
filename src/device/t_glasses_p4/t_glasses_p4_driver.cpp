@@ -479,7 +479,7 @@ bool TGlassesP4Driver::InitSx1262() {
   if (!tool_->SetGpioMode(gpio::sx1262::kRst,
           cpp_bus_driver::Tool::GpioMode::kOutput,
           cpp_bus_driver::Tool::GpioStatus::kPullup) ||
-      !chip_.sx1262->Init(10000000)) {
+      !chip_.sx1262->Init(device::sx1262::kSpiFrequencyHz)) {
     status_.sx1262.init_flag = false;
     tool_->GpioWrite(gpio::sx1262::kRst, 0);
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSx1262 failed\n");
