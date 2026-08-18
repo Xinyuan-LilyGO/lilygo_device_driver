@@ -264,7 +264,12 @@ bool TDisplayP4AirDriver::InitAxp517() {
   };
   bool result = true;
   result &= chip_.axp517->SetAdcChannel(adc_channel);
+  result &= chip_.axp517->SetBoostVoltage(5000);
+  result &= chip_.axp517->SetForceRbfetEnable(false);
   result &= chip_.axp517->SetBoostEnable(false);
+  result &= chip_.axp517->SetTypeCDetectEnable(true);
+  result &= chip_.axp517->SetVbusDetectEnable(true);
+  result &= chip_.axp517->SetPdRole(false, false);
   status_.axp517.init_flag = result;
   if (!result) {
     chip_.axp517->Deinit(false);
