@@ -15,7 +15,8 @@
 #include "cpp_bus_driver_library.h"
 #include "device/common/async_init_manager.h"
 #include "esp32p4_driver.h"
-#include "t_display_p4_keyboard_config.h"
+#include "stsw_st25rfal002_cpp_bus_driver_library.h"
+#include "t_display_p4_keyboard_expansion_config.h"
 #include "usp_cpp_bus_driver_library.h"
 
 namespace lilygo_device_driver {
@@ -131,6 +132,16 @@ class TDisplayP4Driver {
     kSleep,
   };
 
+  enum class St25r3916OperatingMode {
+    kActive,
+    kSleep,
+  };
+
+  enum class KeyboardExpansionOperatingMode {
+    kActive,
+    kSleep,
+  };
+
   // ES8311 按实际音频路径区分工作模式。
   enum class Es8311OperatingMode {
     kSleep,     // 关闭 ADC、DAC 和模拟偏置。
@@ -166,6 +177,7 @@ class TDisplayP4Driver {
 
     std::shared_ptr<cpp_bus_driver::HardwareSpi> cc1101_spi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> nrf24l01_spi_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareSpi> st25r3916_spi_bus;
   };
 
   struct Chip {
@@ -181,16 +193,17 @@ class TDisplayP4Driver {
     std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
     std::unique_ptr<cpp_bus_driver::Hi8561> hi8561;
     std::unique_ptr<cpp_bus_driver::Hi8561Touch> hi8561_touch;
-    std::unique_ptr<cpp_bus_driver::Pwm> hi8561_backlight;
+    std::unique_ptr<cpp_bus_driver::Pwm> pt4103;
     std::unique_ptr<cpp_bus_driver::Rm69a10> rm69a10;
     std::unique_ptr<cpp_bus_driver::Gt9895> gt9895;
 
     std::unique_ptr<cpp_bus_driver::Xl95x5> xl9555;
     std::unique_ptr<cpp_bus_driver::Tca8418> tca8418;
-    std::unique_ptr<cpp_bus_driver::Pwm> tca8418_backlight;
+    std::unique_ptr<cpp_bus_driver::Pwm> sy7200a;
 
     std::unique_ptr<cpp_bus_driver::Cc1101> cc1101;
     std::unique_ptr<cpp_bus_driver::Nrf24l01x> nrf24l01;
+    std::unique_ptr<stsw_st25rfal002_cpp_bus_driver::St25r3916x> st25r3916;
   };
 
   struct Status {
@@ -212,7 +225,7 @@ class TDisplayP4Driver {
 
     struct {
       bool init_flag = false;
-    } hi8561_backlight;
+    } pt4103;
 
     struct {
       bool init_flag = false;
@@ -265,7 +278,7 @@ class TDisplayP4Driver {
 
     struct {
       bool init_flag = false;
-    } tca8418_backlight;
+    } sy7200a;
 
     struct {
       bool init_flag = false;
@@ -274,6 +287,10 @@ class TDisplayP4Driver {
     struct {
       bool init_flag = false;
     } nrf24l01;
+
+    struct {
+      bool init_flag = false;
+    } st25r3916;
 
     struct {
       bool init_flag = false;
@@ -307,8 +324,6 @@ class TDisplayP4Driver {
     };
   }
 
-  bool keyboard_connected() const { return keyboard_connected_; }
-
   bool Init(InitMode mode = InitMode::kSync);
   bool InitMinimal();
   bool InitBq27220();
@@ -316,7 +331,7 @@ class TDisplayP4Driver {
   bool InitSgm38121();
   bool InitHi8561();
   bool InitHi8561Touch();
-  bool InitHi8561Backlight();
+  bool InitPt4103();
   bool InitRm69a10();
   bool InitGt9895();
   bool InitPcf8563();
@@ -328,15 +343,16 @@ class TDisplayP4Driver {
   bool InitLr2021();
   bool InitXl9555();
   bool InitTca8418();
-  bool InitTca8418Backlight();
+  bool InitSy7200a();
   bool InitCc1101();
   bool InitNrf24l01();
+  bool InitSt25r3916();
   bool InitPower();
   bool InitScreen();
   bool InitTouch();
   bool InitScreenBacklight();
   bool InitRadio();
-  bool InitKeyboard();
+  bool InitKeyboardExpansion();
   bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf);
   bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
   bool InitSdspi(const char* base_path, spi_host_device_t host_id,
@@ -352,7 +368,8 @@ class TDisplayP4Driver {
   bool DeinitSx1262();
   bool DeinitLr2021();
   bool DeinitRadio();
-  bool DeinitKeyboard();
+  bool DeinitSt25r3916();
+  bool DeinitKeyboardExpansion();
   bool DeinitSdmmc();
 
   bool IsBq27220Ready() const;
@@ -360,7 +377,7 @@ class TDisplayP4Driver {
   bool IsSgm38121Ready() const;
   bool IsHi8561Ready() const;
   bool IsHi8561TouchReady() const;
-  bool IsHi8561BacklightReady() const;
+  bool IsPt4103Ready() const;
   bool IsRm69a10Ready() const;
   bool IsGt9895Ready() const;
   bool IsPcf8563Ready() const;
@@ -372,9 +389,10 @@ class TDisplayP4Driver {
   bool IsLr2021Ready() const;
   bool IsXl9555Ready() const;
   bool IsTca8418Ready() const;
-  bool IsTca8418BacklightReady() const;
+  bool IsSy7200aReady() const;
   bool IsCc1101Ready() const;
   bool IsNrf24l01Ready() const;
+  bool IsSt25r3916Ready() const;
   bool IsScreenReady() const;
   bool IsTouchReady() const;
   bool IsRadioReady() const;
@@ -389,6 +407,9 @@ class TDisplayP4Driver {
   bool SetLr2021OperatingMode(Lr2021OperatingMode mode);
   bool SetCc1101OperatingMode(Cc1101OperatingMode mode);
   bool SetNrf24l01OperatingMode(Nrf24l01OperatingMode mode);
+  bool SetSt25r3916OperatingMode(St25r3916OperatingMode mode);
+  bool SetKeyboardExpansionOperatingMode(
+      KeyboardExpansionOperatingMode mode);
   bool SetRadioOperatingMode(RadioOperatingMode mode);
   bool SetEsp32c6PowerEnabled(bool enabled);
   bool SetCameraPowerEnabled(bool enabled);
@@ -405,6 +426,8 @@ class TDisplayP4Driver {
 
  private:
   void CreateDrivers();
+  void CreateKeyboardExpansionDrivers();
+  void DestroyKeyboardExpansionDrivers();
   bool InitDrivers(InitMode mode);
   bool InitMinimalDrivers();
 
@@ -419,8 +442,6 @@ class TDisplayP4Driver {
   t_display_p4::device::RadioType radio_type_ =
       t_display_p4::device::RadioType::kUnknown;
   bool minimal_drivers_initialized_ = false;
-  bool keyboard_connected_ = false;
-
   /**
    * @brief 通过 GT9895 触摸 ID 检测屏幕类型。
    * @return 检测流程完成时返回 true，否则返回 false。

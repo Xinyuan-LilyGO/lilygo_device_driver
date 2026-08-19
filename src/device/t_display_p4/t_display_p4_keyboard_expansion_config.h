@@ -1,5 +1,5 @@
 /*
- * @Description: T-Display-P4 外接键盘硬件配置
+ * @Description: T-Display-P4 键盘扩展硬件配置
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
  * @LastEditTime: 2026-05-18 18:29:34
@@ -12,7 +12,7 @@
 #include "t_display_p4_config.h"
 
 namespace lilygo_device_driver::t_display_p4 {
-namespace keyboard {
+namespace keyboard_expansion {
 namespace base_gpio = ::lilygo_device_driver::t_display_p4::gpio;
 
 namespace gpio {
@@ -106,5 +106,5 @@ namespace sy7200a {
 inline constexpr uint32_t kPwmFrequencyHz = 20000;
 }  // namespace sy7200a
 }  // namespace device
-}  // namespace keyboard
+}  // namespace keyboard_expansion
 }  // namespace lilygo_device_driver::t_display_p4

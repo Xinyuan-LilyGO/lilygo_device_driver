@@ -53,7 +53,8 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
         )
     list(APPEND requires
             "cpp_bus_driver"
-            "usp_cpp_bus_driver")
+            "usp_cpp_bus_driver"
+            "stsw-st25rfal002_cpp_bus_driver")
 endif()
 
 idf_component_register(

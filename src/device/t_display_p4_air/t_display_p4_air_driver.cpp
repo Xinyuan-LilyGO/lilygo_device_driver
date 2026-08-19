@@ -109,7 +109,7 @@ void TDisplayP4AirDriver::CreateDrivers() {
   chip_.bhi260ap = std::make_unique<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy>(
       bus_.bhi260ap_i2c_bus, device::bhi260ap::kI2cAddress);
   chip_.qmc6310n = std::make_unique<SensorQMC6310>();
-  chip_.hi8561_backlight =
+  chip_.sy7200a =
       std::make_unique<cpp_bus_driver::Pwm>(gpio::sy7200a::kEn);
   chip_.nrf9151 =
       std::make_unique<cpp_bus_driver::Nrf9151>(bus_.nrf9151_uart_bus);
@@ -545,16 +545,15 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
   return false;
 }
 
-bool TDisplayP4AirDriver::InitHi8561Backlight() {
-  if (chip_.hi8561_backlight != nullptr &&
-      chip_.hi8561_backlight->IsInitialized()) {
-    status_.hi8561_backlight.init_flag = true;
+bool TDisplayP4AirDriver::InitSy7200a() {
+  if (chip_.sy7200a != nullptr && chip_.sy7200a->IsInitialized()) {
+    status_.sy7200a.init_flag = true;
     return true;
   }
-  if (chip_.hi8561_backlight == nullptr) {
-    status_.hi8561_backlight.init_flag = false;
+  if (chip_.sy7200a == nullptr) {
+    status_.sy7200a.init_flag = false;
     LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "InitHi8561Backlight failed\n");
+        LogLevel::kError, __FILE__, __LINE__, "InitSy7200a failed\n");
     return false;
   }
 
@@ -562,16 +561,16 @@ bool TDisplayP4AirDriver::InitHi8561Backlight() {
   config.timer = LEDC_TIMER_0;
   config.channel = LEDC_CHANNEL_0;
   config.frequency_hz = device::sy7200a::kPwmFrequencyHz;
-  if (!chip_.hi8561_backlight->Init(config)) {
-    status_.hi8561_backlight.init_flag = false;
+  if (!chip_.sy7200a->Init(config)) {
+    status_.sy7200a.init_flag = false;
     LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "InitHi8561Backlight failed\n");
+        LogLevel::kError, __FILE__, __LINE__, "InitSy7200a failed\n");
     return false;
   }
 
-  status_.hi8561_backlight.init_flag = true;
+  status_.sy7200a.init_flag = true;
   LogMessage(
-      LogLevel::kInfo, __FILE__, __LINE__, "InitHi8561Backlight success\n");
+      LogLevel::kInfo, __FILE__, __LINE__, "InitSy7200a success\n");
   return true;
 }
 
@@ -1175,7 +1174,7 @@ bool TDisplayP4AirDriver::InitScreen() {
 bool TDisplayP4AirDriver::InitTouch() { return InitHi8561Touch(); }
 
 bool TDisplayP4AirDriver::InitScreenBacklight() {
-  return InitHi8561Backlight();
+  return InitSy7200a();
 }
 
 bool TDisplayP4AirDriver::InitSpiffs(
@@ -1539,15 +1538,13 @@ bool TDisplayP4AirDriver::DeinitTouch() {
 }
 
 bool TDisplayP4AirDriver::DeinitScreenBacklight() {
-  if (chip_.hi8561_backlight == nullptr ||
-      !chip_.hi8561_backlight->IsInitialized()) {
-    status_.hi8561_backlight.init_flag = false;
+  if (chip_.sy7200a == nullptr || !chip_.sy7200a->IsInitialized()) {
+    status_.sy7200a.init_flag = false;
     return true;
   }
 
-  const bool result = chip_.hi8561_backlight->Deinit();
-  status_.hi8561_backlight.init_flag =
-      chip_.hi8561_backlight->IsInitialized();
+  const bool result = chip_.sy7200a->Deinit();
+  status_.sy7200a.init_flag = chip_.sy7200a->IsInitialized();
   return result;
 }
 
@@ -1620,10 +1617,9 @@ bool TDisplayP4AirDriver::IsHi8561TouchReady() const {
   return status_.hi8561_touch.init_flag && chip_.hi8561_touch != nullptr;
 }
 
-bool TDisplayP4AirDriver::IsHi8561BacklightReady() const {
-  return status_.hi8561_backlight.init_flag &&
-         chip_.hi8561_backlight != nullptr &&
-         chip_.hi8561_backlight->IsInitialized();
+bool TDisplayP4AirDriver::IsSy7200aReady() const {
+  return status_.sy7200a.init_flag && chip_.sy7200a != nullptr &&
+         chip_.sy7200a->IsInitialized();
 }
 
 bool TDisplayP4AirDriver::IsAw86224Ready() const {
@@ -1652,7 +1648,7 @@ bool TDisplayP4AirDriver::IsNrf9151Ready() const {
 bool TDisplayP4AirDriver::IsScreenReady() const {
   return bus_.screen_mipi_bus != nullptr &&
          bus_.screen_mipi_bus->device_handle() != nullptr && IsHi8561Ready() &&
-         IsHi8561BacklightReady();
+         IsSy7200aReady();
 }
 
 bool TDisplayP4AirDriver::IsSdmmcReady() const {
