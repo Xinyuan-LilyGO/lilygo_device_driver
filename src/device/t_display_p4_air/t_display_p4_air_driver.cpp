@@ -7,8 +7,6 @@
  */
 #include "t_display_p4_air_driver.h"
 
-#include <algorithm>
-
 #include "driver/gpio.h"
 #include "firmware/bhi260ap/BHI260AP.fw.h"
 #include "sdmmc_cmd.h"
@@ -1023,33 +1021,10 @@ bool TDisplayP4AirDriver::InitNrf9151() {
     return false;
   }
 
-  bool result = bus_.nrf9151_uart_bus->Init(
-      device::nrf9151::kDefaultBaudRate);
-  const int64_t start_time_ms = tool_->GetSystemTimeMs();
-  uint32_t probe_attempts = 0;
-
-  while (result) {
-    const int64_t elapsed_ms = tool_->GetSystemTimeMs() - start_time_ms;
-    if (elapsed_ms >= device::nrf9151::kInitializationTimeoutMs) {
-      result = false;
-      break;
-    }
-
-    const uint32_t remaining_ms = static_cast<uint32_t>(
-        device::nrf9151::kInitializationTimeoutMs - elapsed_ms);
-    const uint32_t command_timeout_ms = std::min(
-        device::nrf9151::kDefaultCommandTimeoutMs, remaining_ms);
-    ++probe_attempts;
-    if (chip_.nrf9151->GetChipId(command_timeout_ms)) {
-      break;
-    }
-  }
+  const bool result =
+      chip_.nrf9151->Init(device::nrf9151::kDefaultBaudRate);
 
   if (!result) {
-    if (!chip_.nrf9151->Deinit()) {
-      LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
-          "Release nRF9151 UART after init failure failed\n");
-    }
     if (!chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0)) {
       LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
           "Disable nRF9151 power after init failure failed\n");
@@ -1059,7 +1034,8 @@ bool TDisplayP4AirDriver::InitNrf9151() {
   if (result) {
     cpp_bus_driver::Nrf9151::SerialModemVersion serial_modem_version;
     if (chip_.nrf9151->GetSerialModemVersion(
-            &serial_modem_version, device::nrf9151::kDefaultCommandTimeoutMs)) {
+            &serial_modem_version,
+            cpp_bus_driver::Nrf9151::kDefaultCommandTimeoutMs)) {
       LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
           "Nrf9151 Serial Modem version: %s, NCS version: %s\n",
           serial_modem_version.application.c_str(),
@@ -1076,7 +1052,7 @@ bool TDisplayP4AirDriver::InitNrf9151() {
 
     std::string modem_firmware_version;
     if (chip_.nrf9151->GetModemFirmwareVersion(&modem_firmware_version,
-            device::nrf9151::kDefaultCommandTimeoutMs)) {
+            cpp_bus_driver::Nrf9151::kDefaultCommandTimeoutMs)) {
       LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
           "Nrf9151 modem firmware version: %s\n",
           modem_firmware_version.c_str());
@@ -1088,15 +1064,9 @@ bool TDisplayP4AirDriver::InitNrf9151() {
 
   status_.nrf9151.init_flag = result;
   if (result) {
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-        "InitNrf9151 success (attempts: %u, elapsed: %lld ms)\n",
-        static_cast<unsigned>(probe_attempts),
-        static_cast<long long>(tool_->GetSystemTimeMs() - start_time_ms));
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitNrf9151 success\n");
   } else {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitNrf9151 failed (attempts: %u, timeout: %u ms)\n",
-        static_cast<unsigned>(probe_attempts),
-        static_cast<unsigned>(device::nrf9151::kInitializationTimeoutMs));
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitNrf9151 failed\n");
   }
   return result;
 }
