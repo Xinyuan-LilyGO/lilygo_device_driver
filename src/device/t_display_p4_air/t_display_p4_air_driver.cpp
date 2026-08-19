@@ -1040,7 +1040,7 @@ bool TDisplayP4AirDriver::InitNrf9151() {
     const uint32_t command_timeout_ms = std::min(
         device::nrf9151::kDefaultCommandTimeoutMs, remaining_ms);
     ++probe_attempts;
-    if (chip_.nrf9151->GetDeviceId(command_timeout_ms)) {
+    if (chip_.nrf9151->GetChipId(command_timeout_ms)) {
       break;
     }
   }
