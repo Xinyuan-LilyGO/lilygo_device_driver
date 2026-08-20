@@ -128,10 +128,10 @@ enum class KeyCode : uint8_t {
 struct KeyMapping {
   KeyCode key = KeyCode::kUnknown;
   char character = '\0';
-  char shifted_character = '\0';
+  char function_character = '\0';
 };
 
-// 按 TCA8418 事件编号排列的实体键盘主键值与 Shift 二级键值。
+// 按 TCA8418 事件编号排列的实体键盘主键值与 Fn 二级键值。
 inline constexpr std::array<KeyMapping, kKeyCount> kMap = {{
     {KeyCode::kF1},
     {KeyCode::kF2},
@@ -153,31 +153,31 @@ inline constexpr std::array<KeyMapping, kKeyCount> kMap = {{
     {KeyCode::kCharacter, '6', '^'},
     {KeyCode::kCharacter, '7', '&'},
     {KeyCode::kCharacter, '8', '*'},
-    {KeyCode::kCharacter, 'q', '`'},
-    {KeyCode::kCharacter, 'w', '-'},
-    {KeyCode::kCharacter, 'e', '_'},
+    {KeyCode::kCharacter, 'q', '\''},
+    {KeyCode::kCharacter, 'w', '_'},
+    {KeyCode::kCharacter, 'e', '-'},
     {KeyCode::kCharacter, 'r', '+'},
     {KeyCode::kCharacter, 't', '='},
     {KeyCode::kCharacter, 'y', '\\'},
     {KeyCode::kCharacter, 'u', '|'},
-    {KeyCode::kCharacter, 'i', ':'},
-    {KeyCode::kCharacter, 'o', ';'},
-    {KeyCode::kCharacter, 'p', 'P'},
+    {KeyCode::kCharacter, 'i', ';'},
+    {KeyCode::kCharacter, 'o', ':'},
+    {KeyCode::kCharacter, 'p', '"'},
     {KeyCode::kCapsLock},
     {KeyCode::kCharacter, 'a', '~'},
     {KeyCode::kCharacter, 's', '['},
     {KeyCode::kCharacter, 'd', ']'},
     {KeyCode::kCharacter, 'f', '{'},
     {KeyCode::kCharacter, 'g', '}'},
-    {KeyCode::kCharacter, 'h', '\''},
-    {KeyCode::kCharacter, 'j', ','},
+    {KeyCode::kCharacter, 'h', ','},
+    {KeyCode::kCharacter, 'j', '`'},
     {KeyCode::kCharacter, 'k', '/'},
     {KeyCode::kCharacter, 'l', '?'},
     {KeyCode::kAlt},
-    {KeyCode::kCharacter, 'z', 'Z'},
-    {KeyCode::kCharacter, 'x', 'X'},
-    {KeyCode::kCharacter, 'c', 'C'},
-    {KeyCode::kCharacter, 'v', 'V'},
+    {KeyCode::kCharacter, 'z'},
+    {KeyCode::kCharacter, 'x'},
+    {KeyCode::kCharacter, 'c'},
+    {KeyCode::kCharacter, 'v'},
     {KeyCode::kCharacter, 'b', '.'},
     {KeyCode::kCharacter, 'n', '<'},
     {KeyCode::kCharacter, 'm', '>'},
