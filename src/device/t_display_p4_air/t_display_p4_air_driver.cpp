@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-08-12 11:10:23
+ * @LastEditTime: 2026-08-20 16:13:11
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -39,6 +39,8 @@ constexpr ScreenInfo kHi8561ScreenInfo = {
 
 constexpr const ScreenInfo* kDefaultScreenInfo = &kHi8561ScreenInfo;
 constexpr uint32_t kInitializationShutdownTimeoutMs = 5 * 1000;
+constexpr int kEs8389DacMiscControl2Register = 0x45;
+constexpr int kEs8389Dac1OutputInvertMask = 1 << 6;
 
 }  // namespace
 
@@ -828,6 +830,7 @@ bool TDisplayP4AirDriver::InitEs8389() {
           ESP_CODEC_DEV_OK;
   bool result = output_opened && input_opened;
   if (result) {
+    result &= ConfigureEs8389OutputPolarity();
     result &= (esp_codec_dev_set_out_vol(es8389_output_codec_dev_, 100) ==
                ESP_CODEC_DEV_OK);
     result &= (esp_codec_dev_set_in_gain(es8389_input_codec_dev_, 20.0f) ==
@@ -1721,7 +1724,8 @@ bool TDisplayP4AirDriver::SetEs8389OperatingMode(Es8389OperatingMode mode) {
         output_opened &&
         esp_codec_dev_open(es8389_input_codec_dev_, &input_sample_info) ==
             ESP_CODEC_DEV_OK;
-    result = output_opened && input_opened && SetNs4150Enabled(true);
+    result = output_opened && input_opened &&
+             ConfigureEs8389OutputPolarity() && SetNs4150Enabled(true);
     if (!result) {
       if (input_opened) {
         esp_codec_dev_close(es8389_input_codec_dev_);
@@ -1736,6 +1740,28 @@ bool TDisplayP4AirDriver::SetEs8389OperatingMode(Es8389OperatingMode mode) {
     es8389_operating_mode_ = mode;
   }
   return result;
+}
+
+bool TDisplayP4AirDriver::ConfigureEs8389OutputPolarity() {
+  if (es8389_ctrl_if_ == nullptr || es8389_ctrl_if_->read_reg == nullptr ||
+      es8389_ctrl_if_->write_reg == nullptr) {
+    return false;
+  }
+
+  int register_value = 0;
+  if (es8389_ctrl_if_->read_reg(es8389_ctrl_if_,
+          kEs8389DacMiscControl2Register, 1, &register_value, 1) !=
+      ESP_CODEC_DEV_OK) {
+    return false;
+  }
+
+  // T-Display-P4-Air V1.0 的 DAC 输出声道采用不同极性：左声道为
+  // 负极性，右声道为正极性。因此必须反转左声道的输出极性，
+  // 否则两个扬声器的声学相位不一致，输出声音会失真。
+  register_value |= kEs8389Dac1OutputInvertMask;
+  return es8389_ctrl_if_->write_reg(es8389_ctrl_if_,
+             kEs8389DacMiscControl2Register, 1, &register_value, 1) ==
+         ESP_CODEC_DEV_OK;
 }
 
 bool TDisplayP4AirDriver::SetLr1121OperatingMode(Lr1121OperatingMode mode) {

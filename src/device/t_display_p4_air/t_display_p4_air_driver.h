@@ -310,6 +310,7 @@ class TDisplayP4AirDriver {
   bool InitDrivers(InitMode mode);
   bool InitMinimalDrivers();
   bool SetNs4150Enabled(bool enabled);
+  bool ConfigureEs8389OutputPolarity();
 
   AsyncInitManager async_init_manager_;
   std::unique_ptr<cpp_bus_driver::Tool> tool_;
