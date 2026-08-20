@@ -1900,45 +1900,70 @@ bool TDisplayP4Driver::DeinitSt25r3916() {
   return result;
 }
 
-bool TDisplayP4Driver::DeinitKeyboardExpansion() {
+bool TDisplayP4Driver::DeinitKeyboardExpansion(
+    KeyboardExpansionDeinitMode mode) {
   bool result = true;
 
-  result &= DeinitSt25r3916();
+  if (mode == KeyboardExpansionDeinitMode::kNormal) {
+    result &= DeinitSt25r3916();
 
-  if (chip_.nrf24l01 != nullptr) {
-    result &= chip_.nrf24l01->Deinit(false);
-  }
-  status_.nrf24l01.init_flag = false;
-
-  if (chip_.cc1101 != nullptr) {
-    result &= chip_.cc1101->Deinit(false);
-  }
-  status_.cc1101.init_flag = false;
-
-  if (chip_.sy7200a != nullptr && chip_.sy7200a->IsInitialized()) {
-    result &= chip_.sy7200a->DisableOutput(
-        cpp_bus_driver::Pwm::IdleLevel::kLow);
-    result &= chip_.sy7200a->Deinit();
-  }
-  status_.sy7200a.init_flag = false;
-
-  if (chip_.tca8418 != nullptr) {
-    result &= chip_.tca8418->Deinit(false);
-  }
-  status_.tca8418.init_flag = false;
-
-  if (chip_.xl9555 != nullptr) {
-    if (status_.xl9555.init_flag) {
-      result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1, 1);
-      result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2, 1);
-      result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3, 1);
-      result &=
-          chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn, 0);
-      result &=
-          chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
+    if (chip_.nrf24l01 != nullptr) {
+      result &= chip_.nrf24l01->Deinit(false);
     }
-    result &= chip_.xl9555->Deinit(false);
+    if (chip_.cc1101 != nullptr) {
+      result &= chip_.cc1101->Deinit(false);
+    }
+    if (chip_.sy7200a != nullptr && chip_.sy7200a->IsInitialized()) {
+      result &= chip_.sy7200a->DisableOutput(
+          cpp_bus_driver::Pwm::IdleLevel::kLow);
+      result &= chip_.sy7200a->Deinit();
+    }
+    if (chip_.tca8418 != nullptr) {
+      result &= chip_.tca8418->Deinit(false);
+    }
+    if (chip_.xl9555 != nullptr) {
+      if (status_.xl9555.init_flag) {
+        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1, 1);
+        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2, 1);
+        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3, 1);
+        result &=
+            chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn, 0);
+        result &=
+            chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
+      }
+      result &= chip_.xl9555->Deinit(false);
+    }
+  } else {
+    // 扩展芯片无法通信时不再发送芯片命令，但仍必须注销主控侧的
+    // SPI/I2C device handle，否则反复连接会耗尽 SPI 设备槽。
+    if (chip_.st25r3916 != nullptr) {
+      result &=
+          chip_.st25r3916->DeinitLocalResources(false) == RFAL_ERR_NONE;
+    }
+    if (chip_.nrf24l01 != nullptr) {
+      result &= chip_.nrf24l01->DeinitLocalResources(false);
+    }
+    if (chip_.cc1101 != nullptr) {
+      result &= chip_.cc1101->DeinitLocalResources(false);
+    }
+    if (chip_.sy7200a != nullptr && chip_.sy7200a->IsInitialized()) {
+      result &= chip_.sy7200a->DisableOutput(
+          cpp_bus_driver::Pwm::IdleLevel::kLow);
+      result &= chip_.sy7200a->Deinit();
+    }
+    if (chip_.tca8418 != nullptr) {
+      result &= chip_.tca8418->Deinit(false);
+    }
+    if (chip_.xl9555 != nullptr) {
+      result &= chip_.xl9555->Deinit(false);
+    }
   }
+
+  status_.st25r3916.init_flag = false;
+  status_.nrf24l01.init_flag = false;
+  status_.cc1101.init_flag = false;
+  status_.sy7200a.init_flag = false;
+  status_.tca8418.init_flag = false;
   status_.xl9555.init_flag = false;
 
   if (tool_ != nullptr) {

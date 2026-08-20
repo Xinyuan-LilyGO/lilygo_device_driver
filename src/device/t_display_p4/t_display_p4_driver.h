@@ -142,6 +142,11 @@ class TDisplayP4Driver {
     kSleep,
   };
 
+  enum class KeyboardExpansionDeinitMode {
+    kNormal,
+    kForced,
+  };
+
   enum class KeyboardExpansionLed {
     kLed1,
     kLed2,
@@ -375,7 +380,9 @@ class TDisplayP4Driver {
   bool DeinitLr2021();
   bool DeinitRadio();
   bool DeinitSt25r3916();
-  bool DeinitKeyboardExpansion();
+  bool DeinitKeyboardExpansion(
+      KeyboardExpansionDeinitMode mode =
+          KeyboardExpansionDeinitMode::kNormal);
   bool DeinitSdmmc();
 
   bool IsBq27220Ready() const;
