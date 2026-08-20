@@ -2366,6 +2366,10 @@ bool TDisplayP4Driver::SetKeyboardExpansionOperatingMode(
 
   if (mode == KeyboardExpansionOperatingMode::kSleep) {
     bool result = true;
+    // 低功耗状态下关闭全部指示灯，避免屏幕熄灭后继续耗电和发光。
+    result &= SetKeyboardExpansionLed(KeyboardExpansionLed::kLed1, false);
+    result &= SetKeyboardExpansionLed(KeyboardExpansionLed::kLed2, false);
+    result &= SetKeyboardExpansionLed(KeyboardExpansionLed::kLed3, false);
     if (IsSy7200aReady()) {
       result &= chip_.sy7200a->DisableOutput(
           cpp_bus_driver::Pwm::IdleLevel::kLow);
