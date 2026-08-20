@@ -2517,6 +2517,31 @@ bool TDisplayP4Driver::SetCc1101RfSwitch(Cc1101RfSwitch rf_switch) {
   return result;
 }
 
+bool TDisplayP4Driver::SetKeyboardExpansionLed(
+    KeyboardExpansionLed led, bool enabled) {
+  if (!IsXl9555Ready()) {
+    return false;
+  }
+
+  cpp_bus_driver::Xl95x5::Pin pin = keyboard_gpio::xl9555::kLed1;
+  switch (led) {
+    case KeyboardExpansionLed::kLed1:
+      pin = keyboard_gpio::xl9555::kLed1;
+      break;
+    case KeyboardExpansionLed::kLed2:
+      pin = keyboard_gpio::xl9555::kLed2;
+      break;
+    case KeyboardExpansionLed::kLed3:
+      pin = keyboard_gpio::xl9555::kLed3;
+      break;
+    default:
+      return false;
+  }
+
+  // 键盘扩展指示灯为低电平点亮。
+  return chip_.xl9555->GpioWrite(pin, enabled ? 0 : 1);
+}
+
 bool TDisplayP4Driver::DetectScreenType() {
   status_.gt9895.init_flag = false;
 

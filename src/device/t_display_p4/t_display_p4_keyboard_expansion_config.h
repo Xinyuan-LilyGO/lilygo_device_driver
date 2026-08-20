@@ -6,8 +6,9 @@
  */
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
-#include <string>
 
 #include "t_display_p4_config.h"
 
@@ -91,15 +92,116 @@ namespace tca8418 {
 inline constexpr uint8_t kI2cAddress = 0x34;
 inline constexpr int kKeypadScanWidth = 10;
 inline constexpr int kKeypadScanHeight = 7;
+inline constexpr std::size_t kKeyCount = 68;
 
-// TCA8418 键值映射表。
-constexpr const std::string kMap[] = {"F1", "F2", "F3", "F4", "F5", "F6", "F7",
-    "F8", "F9", "F10", "Esc", "Esc", "1", "2", "3", "4", "5", "6", "7", "8",
-    "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "Caps", "a", "s", "d",
-    "f", "g", "h", "j", "k", "l", "Alt", "z", "x", "c", "v", "b", "n", "m",
-    "Ctrl", "Up", "Fn", "Win", "Shift", "Tab", "Space", "Space", "Space", "Fn",
-    "Left", "Down", "F11", "9", "Del", "Enter", "Record", "Enter", "0",
-    "Right"};
+enum class KeyCode : uint8_t {
+  kUnknown,
+  kCharacter,
+  kEscape,
+  kBackspace,
+  kEnter,
+  kTab,
+  kUp,
+  kDown,
+  kLeft,
+  kRight,
+  kCapsLock,
+  kShift,
+  kControl,
+  kAlt,
+  kMeta,
+  kFunction,
+  kRecord,
+  kF1,
+  kF2,
+  kF3,
+  kF4,
+  kF5,
+  kF6,
+  kF7,
+  kF8,
+  kF9,
+  kF10,
+  kF11,
+};
+
+struct KeyMapping {
+  KeyCode key = KeyCode::kUnknown;
+  char character = '\0';
+  char shifted_character = '\0';
+};
+
+// 按 TCA8418 事件编号排列的实体键盘主键值与 Shift 二级键值。
+inline constexpr std::array<KeyMapping, kKeyCount> kMap = {{
+    {KeyCode::kF1},
+    {KeyCode::kF2},
+    {KeyCode::kF3},
+    {KeyCode::kF4},
+    {KeyCode::kF5},
+    {KeyCode::kF6},
+    {KeyCode::kF7},
+    {KeyCode::kF8},
+    {KeyCode::kF9},
+    {KeyCode::kF10},
+    {KeyCode::kEscape},
+    {KeyCode::kEscape},
+    {KeyCode::kCharacter, '1', '!'},
+    {KeyCode::kCharacter, '2', '@'},
+    {KeyCode::kCharacter, '3', '#'},
+    {KeyCode::kCharacter, '4', '$'},
+    {KeyCode::kCharacter, '5', '%'},
+    {KeyCode::kCharacter, '6', '^'},
+    {KeyCode::kCharacter, '7', '&'},
+    {KeyCode::kCharacter, '8', '*'},
+    {KeyCode::kCharacter, 'q', '`'},
+    {KeyCode::kCharacter, 'w', '-'},
+    {KeyCode::kCharacter, 'e', '_'},
+    {KeyCode::kCharacter, 'r', '+'},
+    {KeyCode::kCharacter, 't', '='},
+    {KeyCode::kCharacter, 'y', '\\'},
+    {KeyCode::kCharacter, 'u', '|'},
+    {KeyCode::kCharacter, 'i', ':'},
+    {KeyCode::kCharacter, 'o', ';'},
+    {KeyCode::kCharacter, 'p', 'P'},
+    {KeyCode::kCapsLock},
+    {KeyCode::kCharacter, 'a', '~'},
+    {KeyCode::kCharacter, 's', '['},
+    {KeyCode::kCharacter, 'd', ']'},
+    {KeyCode::kCharacter, 'f', '{'},
+    {KeyCode::kCharacter, 'g', '}'},
+    {KeyCode::kCharacter, 'h', '\''},
+    {KeyCode::kCharacter, 'j', ','},
+    {KeyCode::kCharacter, 'k', '/'},
+    {KeyCode::kCharacter, 'l', '?'},
+    {KeyCode::kAlt},
+    {KeyCode::kCharacter, 'z', 'Z'},
+    {KeyCode::kCharacter, 'x', 'X'},
+    {KeyCode::kCharacter, 'c', 'C'},
+    {KeyCode::kCharacter, 'v', 'V'},
+    {KeyCode::kCharacter, 'b', '.'},
+    {KeyCode::kCharacter, 'n', '<'},
+    {KeyCode::kCharacter, 'm', '>'},
+    {KeyCode::kControl},
+    {KeyCode::kUp},
+    {KeyCode::kFunction},
+    {KeyCode::kMeta},
+    {KeyCode::kShift},
+    {KeyCode::kTab},
+    {KeyCode::kCharacter, ' ', ' '},
+    {KeyCode::kCharacter, ' ', ' '},
+    {KeyCode::kCharacter, ' ', ' '},
+    {KeyCode::kFunction},
+    {KeyCode::kLeft},
+    {KeyCode::kDown},
+    {KeyCode::kF11},
+    {KeyCode::kCharacter, '9', '('},
+    {KeyCode::kBackspace},
+    {KeyCode::kEnter},
+    {KeyCode::kRecord},
+    {KeyCode::kEnter},
+    {KeyCode::kCharacter, '0', ')'},
+    {KeyCode::kRight},
+}};
 }  // namespace tca8418
 
 namespace sy7200a {

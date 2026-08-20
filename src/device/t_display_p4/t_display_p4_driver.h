@@ -142,6 +142,12 @@ class TDisplayP4Driver {
     kSleep,
   };
 
+  enum class KeyboardExpansionLed {
+    kLed1,
+    kLed2,
+    kLed3,
+  };
+
   // ES8311 按实际音频路径区分工作模式。
   enum class Es8311OperatingMode {
     kSleep,     // 关闭 ADC、DAC 和模拟偏置。
@@ -423,6 +429,14 @@ class TDisplayP4Driver {
    * @return RF 开关引脚配置成功时返回 true，否则返回 false。
    */
   bool SetCc1101RfSwitch(Cc1101RfSwitch rf_switch);
+
+  /**
+   * @brief 设置键盘扩展指示灯状态
+   * @param led 键盘扩展指示灯
+   * @param enabled true 点亮，false 熄灭
+   * @return 指示灯状态设置成功返回 true，否则返回 false
+   */
+  bool SetKeyboardExpansionLed(KeyboardExpansionLed led, bool enabled);
 
  private:
   void CreateDrivers();
