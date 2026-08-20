@@ -1502,8 +1502,11 @@ bool TDisplayP4Driver::InitKeyboardExpansion() {
     return false;
   }
 
+  // 扩展板通过外部电阻上拉 TCA8418 INT。启用主板内部下拉后，
+  // 扩展板断开时 INT 会自动变为低电平，供应用层确认连接状态。
   if (!tool_->SetGpioMode(keyboard_gpio::tca8418::kInt,
-          cpp_bus_driver::Tool::GpioMode::kInput)) {
+          cpp_bus_driver::Tool::GpioMode::kInput,
+          cpp_bus_driver::Tool::GpioStatus::kPulldown)) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "Keyboard expansion GPIO initialization failed\n");
     return false;
