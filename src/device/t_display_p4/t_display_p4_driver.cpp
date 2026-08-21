@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-08-19 15:03:27
+ * @LastEditTime: 2026-08-21 17:18:22
  * @License: GPL 3.0
  */
 #include "t_display_p4_driver.h"
@@ -1254,17 +1254,17 @@ bool TDisplayP4Driver::InitCc1101() {
   }
 
   bool rf_switch_initialized = true;
-  rf_switch_initialized &= chip_.xl9555->GpioWrite(
-      keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0, 1);
-  rf_switch_initialized &= chip_.xl9555->GpioWrite(
-      keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1, 0);
   rf_switch_initialized &= chip_.xl9555->SetGpioMode(
       keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0,
       cpp_bus_driver::Xl95x5::Mode::kOutput);
   rf_switch_initialized &= chip_.xl9555->SetGpioMode(
       keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1,
       cpp_bus_driver::Xl95x5::Mode::kOutput);
-  if (!rf_switch_initialized || !chip_.cc1101->Init()) {
+  // 初始化默认选择 868/915 MHz 通路
+  rf_switch_initialized &=
+      SetCc1101RfSwitch(Cc1101RfSwitch::k868_915Mhz);
+  if (!rf_switch_initialized ||
+      !chip_.cc1101->Init(keyboard_device::cc1101::kSpiFrequencyHz)) {
     status_.cc1101.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitCc1101 failed\n");
     return false;

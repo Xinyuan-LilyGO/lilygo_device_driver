@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 键盘扩展硬件配置
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-05-18 18:29:34
+ * @LastEditTime: 2026-08-21 18:02:24
  */
 #pragma once
 
@@ -87,6 +87,10 @@ namespace device {
 namespace xl9555 {
 inline constexpr uint8_t kI2cAddress = 0x20;
 }  // namespace xl9555
+
+namespace cc1101 {
+inline constexpr int32_t kSpiFrequencyHz = 4000000;
+}  // namespace cc1101
 
 namespace tca8418 {
 inline constexpr uint8_t kI2cAddress = 0x34;
