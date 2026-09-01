@@ -161,6 +161,11 @@ class TDisplayP4Driver {
     kDuplex,    // 同时打开采集与播放路径。
   };
 
+  enum class Sky13453RfSwitch {
+    kInternalAntenna,
+    kExternalAntenna,
+  };
+
   enum class Cc1101RfSwitch {
     k315Mhz,
     k434Mhz,
@@ -442,8 +447,15 @@ class TDisplayP4Driver {
    * @param led 键盘扩展指示灯
    * @param enabled true 点亮，false 熄灭
    * @return 指示灯状态设置成功返回 true，否则返回 false
-   */
+  */
   bool SetKeyboardExpansionLed(KeyboardExpansionLed led, bool enabled);
+
+  /**
+   * @brief 选择 SKY13453 RF 开关连接的天线。
+   * @param rf_switch 内置或外置天线开关位置。
+   * @return RF 开关引脚配置成功时返回 true，否则返回 false。
+   */
+  bool SetSky13453RfSwitch(Sky13453RfSwitch rf_switch);
 
  private:
   void CreateDrivers();

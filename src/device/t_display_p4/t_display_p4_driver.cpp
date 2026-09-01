@@ -2574,6 +2574,36 @@ bool TDisplayP4Driver::SetKeyboardExpansionLed(
   return chip_.xl9555->GpioWrite(pin, enabled ? 0 : 1);
 }
 
+bool TDisplayP4Driver::SetSky13453RfSwitch(Sky13453RfSwitch rf_switch) {
+  if (!IsXl9535Ready()) {
+    LogMessage(
+        LogLevel::kError, __FILE__, __LINE__, "SetSky13453RfSwitch failed\n");
+    return false;
+  }
+
+  uint8_t vctl_level = 0;
+  switch (rf_switch) {
+    case Sky13453RfSwitch::kInternalAntenna:
+      vctl_level = 1;
+      break;
+    case Sky13453RfSwitch::kExternalAntenna:
+      vctl_level = 0;
+      break;
+    default:
+      LogMessage(LogLevel::kError, __FILE__, __LINE__,
+          "SetSky13453RfSwitch failed\n");
+      return false;
+  }
+
+  const bool result = chip_.xl9535->GpioWrite(
+      gpio::xl9535::kSky13453Vctl, vctl_level);
+  if (!result) {
+    LogMessage(
+        LogLevel::kError, __FILE__, __LINE__, "SetSky13453RfSwitch failed\n");
+  }
+  return result;
+}
+
 bool TDisplayP4Driver::DetectScreenType() {
   status_.gt9895.init_flag = false;
 
