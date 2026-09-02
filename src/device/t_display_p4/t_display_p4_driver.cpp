@@ -447,7 +447,7 @@ bool TDisplayP4Driver::InitBq27220() {
     result &= chip_.bq27220->ApplyBatteryProfileIfNeeded(
         battery_profile, gauging_config);
     result &= chip_.bq27220->SetTemperatureMode(
-        cpp_bus_driver::Bq27220::TemperatureMode::kExternalNtc);
+        cpp_bus_driver::Bq27220::TemperatureMode::kInternal);
 
     status_.bq27220.init_flag = result;
     if (result) {
