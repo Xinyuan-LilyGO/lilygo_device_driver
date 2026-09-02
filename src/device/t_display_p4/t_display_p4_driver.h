@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-08-03 16:14:05
+ * @LastEditTime: 2026-09-02 17:16:01
  * @License: GPL 3.0
  */
 
@@ -388,8 +388,7 @@ class TDisplayP4Driver {
   bool DeinitRadio();
   bool DeinitSt25r3916();
   bool DeinitKeyboardExpansion(
-      KeyboardExpansionDeinitMode mode =
-          KeyboardExpansionDeinitMode::kNormal);
+      KeyboardExpansionDeinitMode mode = KeyboardExpansionDeinitMode::kNormal);
   bool DeinitSdmmc();
 
   bool IsBq27220Ready() const;
@@ -428,8 +427,7 @@ class TDisplayP4Driver {
   bool SetCc1101OperatingMode(Cc1101OperatingMode mode);
   bool SetNrf24l01OperatingMode(Nrf24l01OperatingMode mode);
   bool SetSt25r3916OperatingMode(St25r3916OperatingMode mode);
-  bool SetKeyboardExpansionOperatingMode(
-      KeyboardExpansionOperatingMode mode);
+  bool SetKeyboardExpansionOperatingMode(KeyboardExpansionOperatingMode mode);
   bool SetRadioOperatingMode(RadioOperatingMode mode);
   bool SetEsp32c6PowerEnabled(bool enabled);
   bool SetCameraPowerEnabled(bool enabled);
@@ -449,7 +447,7 @@ class TDisplayP4Driver {
    * @param led 键盘扩展指示灯
    * @param enabled true 点亮，false 熄灭
    * @return 指示灯状态设置成功返回 true，否则返回 false
-  */
+   */
   bool SetKeyboardExpansionLed(KeyboardExpansionLed led, bool enabled);
 
   /**

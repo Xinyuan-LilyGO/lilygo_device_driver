@@ -45,9 +45,9 @@ void AsyncInitManager::FinishTask() {
 bool AsyncInitManager::StopAndWait(uint32_t timeout_ms) {
   stop_requested_.store(true, std::memory_order_release);
   for (uint32_t elapsed_ms = 0;
-       task_count_.load(std::memory_order_acquire) != 0 &&
-       elapsed_ms < timeout_ms;
-       elapsed_ms += kStopPollIntervalMs) {
+      task_count_.load(std::memory_order_acquire) != 0 &&
+      elapsed_ms < timeout_ms;
+      elapsed_ms += kStopPollIntervalMs) {
     vTaskDelay(pdMS_TO_TICKS(kStopPollIntervalMs));
   }
   return task_count_.load(std::memory_order_acquire) == 0;

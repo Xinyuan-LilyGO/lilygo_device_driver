@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-08-20 16:13:11
+ * @LastEditTime: 2026-09-02 17:16:04
  * @License: GPL 3.0
  */
 #include "t_display_p4_air_driver.h"
@@ -109,8 +109,7 @@ void TDisplayP4AirDriver::CreateDrivers() {
   chip_.bhi260ap = std::make_unique<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy>(
       bus_.bhi260ap_i2c_bus, device::bhi260ap::kI2cAddress);
   chip_.qmc6310n = std::make_unique<SensorQMC6310>();
-  chip_.sy7200a =
-      std::make_unique<cpp_bus_driver::Pwm>(gpio::sy7200a::kEn);
+  chip_.sy7200a = std::make_unique<cpp_bus_driver::Pwm>(gpio::sy7200a::kEn);
   chip_.nrf9151 =
       std::make_unique<cpp_bus_driver::Nrf9151>(bus_.nrf9151_uart_bus);
   chip_.lr1121 =
@@ -163,67 +162,67 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
 
   if (mode == InitMode::kAsync) {
     result &= async_init_manager_.StartTask(
-                   [](void* arg) {
-                     auto* self = static_cast<TDisplayP4AirDriver*>(arg);
-                     const bool screen_initialized = self->InitScreen();
+        [](void* arg) {
+          auto* self = static_cast<TDisplayP4AirDriver*>(arg);
+          const bool screen_initialized = self->InitScreen();
 
-                     if (screen_initialized) {
-                       self->InitTouch();
-                       self->InitScreenBacklight();
-                     }
+          if (screen_initialized) {
+            self->InitTouch();
+            self->InitScreenBacklight();
+          }
 
-                     // BHI260AP 与触摸控制器共享 I2C，两个初始化流程
-                     // 必须依次完成，避免并发占用同一条总线。
-                     // 屏幕已可用后降低任务优先级，避免上传传感器固件时
-                     // 抢占界面刷新并造成启动动画停顿。
-                     if (!self->async_init_manager_.stop_requested()) {
-                       vTaskPrioritySet(nullptr, tskIDLE_PRIORITY);
-                       self->InitBhi260ap();
-                     }
-                     self->async_init_manager_.FinishTask();
-                   },
-                   "InitScreenImuTask", 8192, this, 3);
-
-    result &= async_init_manager_.StartTask(
-                   [](void* arg) {
-                     auto* self = static_cast<TDisplayP4AirDriver*>(arg);
-                     if (!self->async_init_manager_.stop_requested()) {
-                       self->InitQmc6310n();
-                     }
-                     self->async_init_manager_.FinishTask();
-                   },
-                   "InitQmc6310nTask", 4096, this, 3);
+          // BHI260AP 与触摸控制器共享 I2C，两个初始化流程
+          // 必须依次完成，避免并发占用同一条总线。
+          // 屏幕已可用后降低任务优先级，避免上传传感器固件时
+          // 抢占界面刷新并造成启动动画停顿。
+          if (!self->async_init_manager_.stop_requested()) {
+            vTaskPrioritySet(nullptr, tskIDLE_PRIORITY);
+            self->InitBhi260ap();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitScreenImuTask", 8192, this, 3);
 
     result &= async_init_manager_.StartTask(
-                   [](void* arg) {
-                     auto* self = static_cast<TDisplayP4AirDriver*>(arg);
-                     if (!self->async_init_manager_.stop_requested()) {
-                       self->InitAw86224();
-                     }
-                     self->async_init_manager_.FinishTask();
-                   },
-                   "InitAw86224Task", 4096, this, 3);
+        [](void* arg) {
+          auto* self = static_cast<TDisplayP4AirDriver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitQmc6310n();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitQmc6310nTask", 4096, this, 3);
 
     result &= async_init_manager_.StartTask(
-                   [](void* arg) {
-                     auto* self = static_cast<TDisplayP4AirDriver*>(arg);
-                     if (!self->async_init_manager_.stop_requested()) {
-                       self->InitLr1121();
-                     }
-                     self->async_init_manager_.FinishTask();
-                   },
-                   "InitLr1121Task", 4096, this, 3);
+        [](void* arg) {
+          auto* self = static_cast<TDisplayP4AirDriver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitAw86224();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitAw86224Task", 4096, this, 3);
 
     result &= async_init_manager_.StartTask(
-                   [](void* arg) {
-                     auto* self = static_cast<TDisplayP4AirDriver*>(arg);
-                     if (!self->async_init_manager_.stop_requested() &&
-                         !self->InitEs8389()) {
-                       self->SetNs4150Enabled(false);
-                     }
-                     self->async_init_manager_.FinishTask();
-                   },
-                   "InitEs8389Task", 4096, this, 3);
+        [](void* arg) {
+          auto* self = static_cast<TDisplayP4AirDriver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitLr1121();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitLr1121Task", 4096, this, 3);
+
+    result &= async_init_manager_.StartTask(
+        [](void* arg) {
+          auto* self = static_cast<TDisplayP4AirDriver*>(arg);
+          if (!self->async_init_manager_.stop_requested() &&
+              !self->InitEs8389()) {
+            self->SetNs4150Enabled(false);
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitEs8389Task", 4096, this, 3);
 
   } else {
     const bool screen_initialized = InitScreen();
@@ -294,8 +293,7 @@ bool TDisplayP4AirDriver::InitXl9535() {
   // ESP32-P4 只有在 USB PHY 电源保持开启时才能降低功耗；关闭该电源会
   // 产生约 20 mA 功耗，因此初始化后默认保持开启。
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 1);
-  result &= chip_.xl9535->GpioWrite(
-      gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLed1, 1);
@@ -540,8 +538,7 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
   }
 
   chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
-  LogMessage(
-      LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
+  LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
   return false;
 }
 
@@ -552,8 +549,7 @@ bool TDisplayP4AirDriver::InitSy7200a() {
   }
   if (chip_.sy7200a == nullptr) {
     status_.sy7200a.init_flag = false;
-    LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "InitSy7200a failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSy7200a failed\n");
     return false;
   }
 
@@ -563,14 +559,12 @@ bool TDisplayP4AirDriver::InitSy7200a() {
   config.frequency_hz = device::sy7200a::kPwmFrequencyHz;
   if (!chip_.sy7200a->Init(config)) {
     status_.sy7200a.init_flag = false;
-    LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "InitSy7200a failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSy7200a failed\n");
     return false;
   }
 
   status_.sy7200a.init_flag = true;
-  LogMessage(
-      LogLevel::kInfo, __FILE__, __LINE__, "InitSy7200a success\n");
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSy7200a success\n");
   return true;
 }
 
@@ -677,50 +671,51 @@ bool TDisplayP4AirDriver::InitEs8389() {
   };
   es8389_ctrl_if_ = audio_codec_new_i2c_ctrl(&i2c_cfg);
 
-  if (es8389_ctrl_if_ == nullptr || !bus_.es8389_i2s_bus->Init(
-      [](int value) -> i2s_mclk_multiple_t {
-        switch (value) {
-          case 128:
-            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_128;
-          case 192:
-            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_192;
-          case 256:
-            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_256;
-          case 384:
-            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_384;
-          case 512:
-            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_512;
-          case 576:
-            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_576;
-          case 768:
-            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_768;
-          case 1024:
-            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_1024;
-          case 1152:
-            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_1152;
-          default:
-            LogMessage(
-                LogLevel::kWarning, __FILE__, __LINE__, "Value out of range\n");
-            return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_256;
-        }
-      }(device::es8389::kMclkMultiple),
-      device::es8389::kSampleRate,
-      [](int value) -> i2s_data_bit_width_t {
-        switch (value) {
-          case 8:
-            return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_8BIT;
-          case 16:
-            return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_16BIT;
-          case 24:
-            return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_24BIT;
-          case 32:
-            return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_32BIT;
-          default:
-            LogMessage(
-                LogLevel::kWarning, __FILE__, __LINE__, "Value out of range\n");
-            return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_16BIT;
-        }
-      }(device::es8389::kBitsPerSample))) {
+  if (es8389_ctrl_if_ == nullptr ||
+      !bus_.es8389_i2s_bus->Init(
+          [](int value) -> i2s_mclk_multiple_t {
+            switch (value) {
+              case 128:
+                return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_128;
+              case 192:
+                return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_192;
+              case 256:
+                return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_256;
+              case 384:
+                return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_384;
+              case 512:
+                return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_512;
+              case 576:
+                return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_576;
+              case 768:
+                return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_768;
+              case 1024:
+                return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_1024;
+              case 1152:
+                return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_1152;
+              default:
+                LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
+                    "Value out of range\n");
+                return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_256;
+            }
+          }(device::es8389::kMclkMultiple),
+          device::es8389::kSampleRate,
+          [](int value) -> i2s_data_bit_width_t {
+            switch (value) {
+              case 8:
+                return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_8BIT;
+              case 16:
+                return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_16BIT;
+              case 24:
+                return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_24BIT;
+              case 32:
+                return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_32BIT;
+              default:
+                LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
+                    "Value out of range\n");
+                return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_16BIT;
+            }
+          }(device::es8389::kBitsPerSample))) {
     DeinitEs8389();
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
     return false;
@@ -821,13 +816,11 @@ bool TDisplayP4AirDriver::InitEs8389() {
       .mclk_multiple = device::es8389::kMclkMultiple,
   };
   esp_codec_dev_sample_info_t input_sample_info = output_sample_info;
-  const bool output_opened =
-      esp_codec_dev_open(es8389_output_codec_dev_, &output_sample_info) ==
-      ESP_CODEC_DEV_OK;
+  const bool output_opened = esp_codec_dev_open(es8389_output_codec_dev_,
+                                 &output_sample_info) == ESP_CODEC_DEV_OK;
   const bool input_opened =
-      output_opened &&
-      esp_codec_dev_open(es8389_input_codec_dev_, &input_sample_info) ==
-          ESP_CODEC_DEV_OK;
+      output_opened && esp_codec_dev_open(es8389_input_codec_dev_,
+                           &input_sample_info) == ESP_CODEC_DEV_OK;
   bool result = output_opened && input_opened;
   if (result) {
     result &= ConfigureEs8389OutputPolarity();
@@ -869,12 +862,10 @@ bool TDisplayP4AirDriver::InitLr1121() {
     return false;
   }
   bool power_enabled = true;
-  power_enabled &=
-      chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
+  power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
   power_enabled &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kLr1121PowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  power_enabled &=
-      chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 1);
+  power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 1);
   if (!power_enabled) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitLr1121 power enable failed\n");
@@ -961,25 +952,22 @@ bool TDisplayP4AirDriver::InitLr1121() {
                  LR11XX_RADIO_FALLBACK_STDBY_RC) == LR11XX_STATUS_OK);
   result &= (chip_.lr1121->Invoke(lr11xx_system_clear_irq_status,
                  LR11XX_SYSTEM_IRQ_ALL_MASK) == LR11XX_STATUS_OK);
-  result &= (chip_.lr1121->Invoke(lr11xx_system_set_dio_irq_params,
-                 LR11XX_SYSTEM_IRQ_NONE, LR11XX_SYSTEM_IRQ_NONE) ==
-             LR11XX_STATUS_OK);
-  result &= (chip_.lr1121->Invoke(lr11xx_system_calibrate,
-                 static_cast<uint8_t>(
-                     LR11XX_SYSTEM_CALIB_LF_RC_MASK |
-                     LR11XX_SYSTEM_CALIB_HF_RC_MASK |
-                     LR11XX_SYSTEM_CALIB_PLL_MASK |
-                     LR11XX_SYSTEM_CALIB_ADC_MASK |
-                     LR11XX_SYSTEM_CALIB_IMG_MASK |
-                     LR11XX_SYSTEM_CALIB_PLL_TX_MASK)) == LR11XX_STATUS_OK);
-  result &= (chip_.lr1121->Invoke(
-                 lr11xx_system_drive_dio_in_sleep_mode, true) ==
-             LR11XX_STATUS_OK);
+  result &=
+      (chip_.lr1121->Invoke(lr11xx_system_set_dio_irq_params,
+           LR11XX_SYSTEM_IRQ_NONE, LR11XX_SYSTEM_IRQ_NONE) == LR11XX_STATUS_OK);
+  result &=
+      (chip_.lr1121->Invoke(lr11xx_system_calibrate,
+           static_cast<uint8_t>(
+               LR11XX_SYSTEM_CALIB_LF_RC_MASK | LR11XX_SYSTEM_CALIB_HF_RC_MASK |
+               LR11XX_SYSTEM_CALIB_PLL_MASK | LR11XX_SYSTEM_CALIB_ADC_MASK |
+               LR11XX_SYSTEM_CALIB_IMG_MASK |
+               LR11XX_SYSTEM_CALIB_PLL_TX_MASK)) == LR11XX_STATUS_OK);
+  result &= (chip_.lr1121->Invoke(lr11xx_system_drive_dio_in_sleep_mode,
+                 true) == LR11XX_STATUS_OK);
   result &= (chip_.lr1121->Invoke(lr11xx_system_set_dio_as_rf_switch,
                  &rf_switch_config) == LR11XX_STATUS_OK);
   result &= chip_.lr1121->Configure(lora_config);
-  result &= (chip_.lr1121->Invoke(
-                 lr11xx_system_set_sleep, sleep_config, 0U) ==
+  result &= (chip_.lr1121->Invoke(lr11xx_system_set_sleep, sleep_config, 0U) ==
              LR11XX_STATUS_OK);
   if (!result) {
     chip_.lr1121->Deinit();
@@ -1006,26 +994,25 @@ bool TDisplayP4AirDriver::InitNrf9151() {
       !status_.xl9535.init_flag) {
     status_.nrf9151.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitNrf9151 failed: driver, UART bus, or modem power is unavailable\n");
+        "InitNrf9151 failed: driver, UART bus, or modem power is "
+        "unavailable\n");
     return false;
   }
 
   bool power_enabled = true;
-  power_enabled &=
-      chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
+  power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
   power_enabled &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kNrf9151En, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  power_enabled &=
-      chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 1);
+  power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 1);
   if (!power_enabled) {
     status_.nrf9151.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitNrf9151 failed: driver, UART bus, or modem power is unavailable\n");
+        "InitNrf9151 failed: driver, UART bus, or modem power is "
+        "unavailable\n");
     return false;
   }
 
-  const bool result =
-      chip_.nrf9151->Init(device::nrf9151::kDefaultBaudRate);
+  const bool result = chip_.nrf9151->Init(device::nrf9151::kDefaultBaudRate);
 
   if (!result) {
     if (!chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0)) {
@@ -1036,8 +1023,7 @@ bool TDisplayP4AirDriver::InitNrf9151() {
 
   if (result) {
     cpp_bus_driver::Nrf9151::SerialModemVersion serial_modem_version;
-    if (chip_.nrf9151->GetSerialModemVersion(
-            &serial_modem_version,
+    if (chip_.nrf9151->GetSerialModemVersion(&serial_modem_version,
             cpp_bus_driver::Nrf9151::kDefaultCommandTimeoutMs)) {
       LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
           "Nrf9151 Serial Modem version: %s, NCS version: %s\n",
@@ -1103,8 +1089,7 @@ bool TDisplayP4AirDriver::InitScreen() {
     return false;
   }
   bool reset_pin_initialized = true;
-  reset_pin_initialized &=
-      chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
+  reset_pin_initialized &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
   reset_pin_initialized &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kScreenRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   if (!reset_pin_initialized) {
@@ -1146,9 +1131,7 @@ bool TDisplayP4AirDriver::InitScreen() {
 
 bool TDisplayP4AirDriver::InitTouch() { return InitHi8561Touch(); }
 
-bool TDisplayP4AirDriver::InitScreenBacklight() {
-  return InitSy7200a();
-}
+bool TDisplayP4AirDriver::InitScreenBacklight() { return InitSy7200a(); }
 
 bool TDisplayP4AirDriver::InitSpiffs(
     const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf) {
@@ -1555,8 +1538,7 @@ bool TDisplayP4AirDriver::DeinitSdmmc(bool release_bus) {
     }
   }
   if (status_.xl9535.init_flag && chip_.xl9535 != nullptr) {
-    deinit_result &=
-        chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
+    deinit_result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
   }
   return deinit_result;
 }
@@ -1633,8 +1615,7 @@ bool TDisplayP4AirDriver::SetNs4150Enabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
-  return chip_.xl9535->GpioWrite(
-      gpio::xl9535::kNs4150En, enabled ? 1 : 0);
+  return chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, enabled ? 1 : 0);
 }
 
 bool TDisplayP4AirDriver::SetLedEnabled(bool enabled) {
@@ -1717,15 +1698,13 @@ bool TDisplayP4AirDriver::SetEs8389OperatingMode(Es8389OperatingMode mode) {
         .mclk_multiple = device::es8389::kMclkMultiple,
     };
     esp_codec_dev_sample_info_t input_sample_info = output_sample_info;
-    const bool output_opened =
-        esp_codec_dev_open(es8389_output_codec_dev_, &output_sample_info) ==
-        ESP_CODEC_DEV_OK;
+    const bool output_opened = esp_codec_dev_open(es8389_output_codec_dev_,
+                                   &output_sample_info) == ESP_CODEC_DEV_OK;
     const bool input_opened =
-        output_opened &&
-        esp_codec_dev_open(es8389_input_codec_dev_, &input_sample_info) ==
-            ESP_CODEC_DEV_OK;
-    result = output_opened && input_opened &&
-             ConfigureEs8389OutputPolarity() && SetNs4150Enabled(true);
+        output_opened && esp_codec_dev_open(es8389_input_codec_dev_,
+                             &input_sample_info) == ESP_CODEC_DEV_OK;
+    result = output_opened && input_opened && ConfigureEs8389OutputPolarity() &&
+             SetNs4150Enabled(true);
     if (!result) {
       if (input_opened) {
         esp_codec_dev_close(es8389_input_codec_dev_);
@@ -1749,9 +1728,8 @@ bool TDisplayP4AirDriver::ConfigureEs8389OutputPolarity() {
   }
 
   int register_value = 0;
-  if (es8389_ctrl_if_->read_reg(es8389_ctrl_if_,
-          kEs8389DacMiscControl2Register, 1, &register_value, 1) !=
-      ESP_CODEC_DEV_OK) {
+  if (es8389_ctrl_if_->read_reg(es8389_ctrl_if_, kEs8389DacMiscControl2Register,
+          1, &register_value, 1) != ESP_CODEC_DEV_OK) {
     return false;
   }
 
@@ -1760,8 +1738,8 @@ bool TDisplayP4AirDriver::ConfigureEs8389OutputPolarity() {
   // 否则两个扬声器的声学相位不一致，输出声音会失真。
   register_value |= kEs8389Dac1OutputInvertMask;
   return es8389_ctrl_if_->write_reg(es8389_ctrl_if_,
-             kEs8389DacMiscControl2Register, 1, &register_value, 1) ==
-         ESP_CODEC_DEV_OK;
+             kEs8389DacMiscControl2Register, 1, &register_value,
+             1) == ESP_CODEC_DEV_OK;
 }
 
 bool TDisplayP4AirDriver::SetLr1121OperatingMode(Lr1121OperatingMode mode) {
@@ -1792,8 +1770,7 @@ bool TDisplayP4AirDriver::SetEsp32c5PowerEnabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
-  return chip_.xl9535->GpioWrite(
-      gpio::xl9535::kEsp32c5En, enabled ? 1 : 0);
+  return chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, enabled ? 1 : 0);
 }
 
 bool TDisplayP4AirDriver::SetCameraPowerEnabled(bool enabled) {

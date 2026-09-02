@@ -2,7 +2,7 @@
  * @Description: T-Glasses-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:58:49
- * @LastEditTime: 2026-08-03 16:14:10
+ * @LastEditTime: 2026-09-02 17:16:16
  * @License: GPL 3.0
  */
 #include "t_glasses_p4_driver.h"
@@ -167,75 +167,72 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
 
   if (mode == InitMode::kAsync) {
     result &= async_init_manager_.StartTask(
-                   [](void* arg) {
-                     auto* self = static_cast<TGlassesP4Driver*>(arg);
-                     if (!self->async_init_manager_.stop_requested()) {
-                       self->InitScreen();
-                     }
-                     self->async_init_manager_.FinishTask();
-                   },
-                   "ScreenTask", 4096, this, 3);
+        [](void* arg) {
+          auto* self = static_cast<TGlassesP4Driver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitScreen();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "ScreenTask", 4096, this, 3);
 
     result &= async_init_manager_.StartTask(
-                   [](void* arg) {
-                     auto* self = static_cast<TGlassesP4Driver*>(arg);
-                     if (!self->async_init_manager_.stop_requested()) {
-                       self->InitBq27220();
-                     }
-                     self->async_init_manager_.FinishTask();
-                   },
-                   "InitBq27220Task", 2048, this, 3);
+        [](void* arg) {
+          auto* self = static_cast<TGlassesP4Driver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitBq27220();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitBq27220Task", 2048, this, 3);
 
     result &= async_init_manager_.StartTask(
-                   [](void* arg) {
-                     auto* self = static_cast<TGlassesP4Driver*>(arg);
-                     if (!self->async_init_manager_.stop_requested()) {
-                       self->InitAw86224();
-                     }
-                     self->async_init_manager_.FinishTask();
-                   },
-                   "InitAw86224Task", 4096, this, 3);
+        [](void* arg) {
+          auto* self = static_cast<TGlassesP4Driver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitAw86224();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitAw86224Task", 4096, this, 3);
 
     result &= async_init_manager_.StartTask(
-                   [](void* arg) {
-                     auto* self = static_cast<TGlassesP4Driver*>(arg);
-                     if (!self->async_init_manager_.stop_requested() &&
-                         self->InitEs8311()) {
-                       self->SetEs8311OperatingMode(
-                           Es8311OperatingMode::kSleep);
-                     }
-                     self->async_init_manager_.FinishTask();
-                   },
-                   "InitEs8311Task", 4096, this, 3);
+        [](void* arg) {
+          auto* self = static_cast<TGlassesP4Driver*>(arg);
+          if (!self->async_init_manager_.stop_requested() &&
+              self->InitEs8311()) {
+            self->SetEs8311OperatingMode(Es8311OperatingMode::kSleep);
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitEs8311Task", 4096, this, 3);
 
     result &= async_init_manager_.StartTask(
-                   [](void* arg) {
-                     auto* self = static_cast<TGlassesP4Driver*>(arg);
-                     if (!self->async_init_manager_.stop_requested()) {
-                       self->InitSx1262();
-                     }
-                     self->async_init_manager_.FinishTask();
-                   },
-                   "InitSx1262Task", 4096, this, 3);
+        [](void* arg) {
+          auto* self = static_cast<TGlassesP4Driver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitSx1262();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitSx1262Task", 4096, this, 3);
 
     result &= async_init_manager_.StartTask(
-                   [](void* arg) {
-                     auto* self = static_cast<TGlassesP4Driver*>(arg);
-                     if (!self->async_init_manager_.stop_requested()) {
-                       self->InitSdmmc(
-                           device::sd::kBasePath, SDMMC_FREQ_52M);
-                     }
-                     self->async_init_manager_.FinishTask();
-                   },
-                   "InitSdmmcTask", 4096, this, 3);
+        [](void* arg) {
+          auto* self = static_cast<TGlassesP4Driver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitSdmmcTask", 4096, this, 3);
   } else {
     result &= InitScreen();
     InitBq27220();
     result &= InitAw86224();
     bool es8311_initialized = InitEs8311();
     if (es8311_initialized) {
-      es8311_initialized =
-          SetEs8311OperatingMode(Es8311OperatingMode::kSleep);
+      es8311_initialized = SetEs8311OperatingMode(Es8311OperatingMode::kSleep);
     }
     result &= es8311_initialized;
     result &= InitSx1262();
@@ -453,12 +450,11 @@ bool TGlassesP4Driver::InitEs8311() {
       cpp_bus_driver::Es8311::AdcOffsetFreeze::kDynamicHpf);
   result &= chip_.es8311->SetAdcHpfStage2Coeff(10);
   result &= chip_.es8311->SetDacEqualizer(false);
-  result &= chip_.es8311->SetMic(
-      cpp_bus_driver::Es8311::MicType::kAnalogMic,
+  result &= chip_.es8311->SetMic(cpp_bus_driver::Es8311::MicType::kAnalogMic,
       cpp_bus_driver::Es8311::MicInput::kMic1p1n);
   result &= chip_.es8311->SetAdcAutoVolumeControl(false);
-  result &= chip_.es8311->SetAdcGain(
-      cpp_bus_driver::Es8311::AdcGain::kGain18db);
+  result &=
+      chip_.es8311->SetAdcGain(cpp_bus_driver::Es8311::AdcGain::kGain18db);
   result &= chip_.es8311->SetAdcPgaGain(
       cpp_bus_driver::Es8311::AdcPgaGain::kGain30db);
   result &= chip_.es8311->SetAdcVolume(191);
@@ -752,9 +748,8 @@ bool TGlassesP4Driver::SetEs8311OperatingMode(Es8311OperatingMode mode) {
   }
   const bool playback_enabled = mode == Es8311OperatingMode::kPlayback ||
                                 mode == Es8311OperatingMode::kDuplex;
-  const bool capture_enabled =
-      mode == Es8311OperatingMode::kCapture ||
-      mode == Es8311OperatingMode::kDuplex;
+  const bool capture_enabled = mode == Es8311OperatingMode::kCapture ||
+                               mode == Es8311OperatingMode::kDuplex;
   const bool sleep = mode == Es8311OperatingMode::kSleep;
   cpp_bus_driver::Es8311::PowerStatus power_status = {
       .contorl =
@@ -793,7 +788,7 @@ bool TGlassesP4Driver::SetSx1262OperatingMode(Sx1262OperatingMode mode) {
     return mode == Sx1262OperatingMode::kSleep;
   }
   return mode == Sx1262OperatingMode::kSleep ? chip_.sx1262->SetSleep()
-                                           : chip_.sx1262->Wakeup();
+                                             : chip_.sx1262->Wakeup();
 }
 
 bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
