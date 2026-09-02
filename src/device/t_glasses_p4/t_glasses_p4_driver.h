@@ -73,16 +73,16 @@ inline constexpr CameraInfo kCameraInfo = {
     .buffer_count = camera::kBufferCount,
 };
 
-// 充电芯片、电量计和电池容量信息
+// 充电芯片、电量计芯片和电池容量信息
 struct BatteryInfo {
-  const char* charger_name;
-  const char* fuel_gauge_name;
+  const char* charger_chip_name;
+  const char* fuel_gauge_chip_name;
   uint16_t capacity_mah;
 };
 
 inline constexpr BatteryInfo kBatteryInfo = {
-    .charger_name = "sy6970",
-    .fuel_gauge_name = "bq27220",
+    .charger_chip_name = "sy6970",
+    .fuel_gauge_chip_name = "bq27220",
     .capacity_mah = 650,
 };
 

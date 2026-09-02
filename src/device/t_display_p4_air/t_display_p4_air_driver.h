@@ -56,11 +56,6 @@ struct DeviceModelInfo {
   const char* version;
 };
 
-inline constexpr DeviceModelInfo kDeviceModelInfo = {
-    .name = "T-Display-P4-Air",
-    .version = "v1.0",
-};
-
 // 摄像头型号、像素格式和缓冲区信息
 struct CameraInfo {
   CameraType type;
@@ -68,6 +63,26 @@ struct CameraInfo {
   const char* pixel_format;
   int bits_per_pixel;
   int buffer_count;
+};
+
+// 充电芯片、电量计芯片和主机内置电池容量信息
+struct BatteryInfo {
+  const char* charger_chip_name;
+  const char* fuel_gauge_chip_name;
+  uint16_t capacity_mah;
+};
+
+// T-Display-P4-Air 聚合设备信息
+struct DeviceInfo {
+  DeviceModelInfo model;
+  ScreenInfo screen;
+  CameraInfo camera;
+  BatteryInfo battery;
+};
+
+inline constexpr DeviceModelInfo kDeviceModelInfo = {
+    .name = "T-Display-P4-Air",
+    .version = "v1.0",
 };
 
 inline constexpr CameraInfo kCameraInfo = {
@@ -78,11 +93,10 @@ inline constexpr CameraInfo kCameraInfo = {
     .buffer_count = camera::kBufferCount,
 };
 
-// T-Display-P4-Air 聚合设备信息
-struct DeviceInfo {
-  DeviceModelInfo model;
-  ScreenInfo screen;
-  CameraInfo camera;
+inline constexpr BatteryInfo kBatteryInfo = {
+    .charger_chip_name = "axp517",
+    .fuel_gauge_chip_name = "axp517",
+    .capacity_mah = 1000,
 };
 
 }  // namespace t_display_p4_air::device
@@ -211,6 +225,13 @@ class TDisplayP4AirDriver {
   const t_display_p4_air::device::CameraInfo& camera_info() const {
     return t_display_p4_air::device::kCameraInfo;
   }
+  /**
+   * @brief 获取主机固定电池硬件信息
+   * @return 充电芯片、电量计芯片和主机内置电池额定容量
+   */
+  const t_display_p4_air::device::BatteryInfo& battery_info() const {
+    return t_display_p4_air::device::kBatteryInfo;
+  }
   esp_codec_dev_handle_t es8389_input_codec_dev() const {
     return es8389_input_codec_dev_;
   }
@@ -222,6 +243,7 @@ class TDisplayP4AirDriver {
         .model = device_model_info(),
         .screen = screen_info(),
         .camera = camera_info(),
+        .battery = battery_info(),
     };
   }
 
