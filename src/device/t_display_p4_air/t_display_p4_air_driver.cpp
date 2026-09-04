@@ -1023,8 +1023,7 @@ bool TDisplayP4AirDriver::InitNrf9151() {
 
   if (result) {
     cpp_bus_driver::Nrf9151::SerialModemVersion serial_modem_version;
-    if (chip_.nrf9151->GetSerialModemVersion(&serial_modem_version,
-            cpp_bus_driver::Nrf9151::kDefaultCommandTimeoutMs)) {
+    if (chip_.nrf9151->GetSerialModemVersion(&serial_modem_version)) {
       LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
           "Nrf9151 Serial Modem version: %s, NCS version: %s\n",
           serial_modem_version.application.c_str(),
@@ -1040,8 +1039,7 @@ bool TDisplayP4AirDriver::InitNrf9151() {
     }
 
     std::string modem_firmware_version;
-    if (chip_.nrf9151->GetModemFirmwareVersion(&modem_firmware_version,
-            cpp_bus_driver::Nrf9151::kDefaultCommandTimeoutMs)) {
+    if (chip_.nrf9151->GetModemFirmwareVersion(&modem_firmware_version)) {
       LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
           "Nrf9151 modem firmware version: %s\n",
           modem_firmware_version.c_str());
