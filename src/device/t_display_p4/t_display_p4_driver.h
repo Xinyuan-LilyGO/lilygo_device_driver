@@ -12,12 +12,15 @@
 #include <memory>
 #include <string>
 
-#include "cpp_bus_driver_library.h"
+#include "cpp_bus_driver.h"
 #include "device/common/async_init_manager.h"
+#include "driver/spi_common.h"
 #include "esp32p4_driver.h"
-#include "stsw_st25rfal002_cpp_bus_driver_library.h"
+#include "esp_spiffs.h"
+#include "sdmmc_cmd.h"
+#include "stsw_st25rfal002_cpp_bus_driver.h"
 #include "t_display_p4_keyboard_expansion_config.h"
-#include "usp_cpp_bus_driver_library.h"
+#include "usp_cpp_bus_driver.h"
 
 namespace lilygo_device_driver {
 namespace t_display_p4::device {
@@ -175,20 +178,20 @@ class TDisplayP4Driver {
   };
 
   struct Bus {
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> bq27220_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> xl9535_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> sgm38121_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> pcf8563_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> aw86224_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> es8311_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> icm20948_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> xl9535_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> sgm38121_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> pcf8563_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> es8311_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> icm20948_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareUart> l76k_uart_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> radio_spi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> hi8561_i2c_touch_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> gt9895_i2c_touch_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> hi8561_i2c_touch_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> gt9895_i2c_touch_bus;
 
     std::shared_ptr<cpp_bus_driver::SoftwareI2c> xl9555_i2c_bus;
     std::shared_ptr<cpp_bus_driver::SoftwareI2c> tca8418_i2c_bus;
@@ -465,7 +468,7 @@ class TDisplayP4Driver {
   bool InitMinimalDrivers();
 
   AsyncInitManager async_init_manager_;
-  std::unique_ptr<cpp_bus_driver::Tool> tool_;
+  std::unique_ptr<cpp_bus_driver::PlatformHal> platform_hal_;
   Bus bus_;
   Chip chip_;
   Status status_;

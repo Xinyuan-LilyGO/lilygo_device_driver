@@ -7,7 +7,7 @@
  */
 #pragma once
 
-#include "../../config.h"
+#include <cstdint>
 
 namespace lilygo_device_driver {
 bool InitLdoPower(uint8_t chan_id, uint32_t voltage_mv);

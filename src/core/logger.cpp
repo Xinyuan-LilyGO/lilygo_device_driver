@@ -5,14 +5,21 @@
  * @LastEditTime: 2026-04-16 15:43:18
  * @License: GPL 3.0
  */
-#include "tool.h"
+#include "logger.h"
 
 #include <atomic>
+#include <cstdarg>
+#include <cstdio>
+#include <memory>
+#include <new>
+
+#include "lilygo_device_driver_config.h"
 
 namespace lilygo_device_driver {
 namespace {
 
-constexpr uint16_t kMaxLogBufferSize = 1024;
+// 日志正文缓冲区上限，包含结尾空字符；过长正文会被截断。
+constexpr std::size_t kMaxLogBufferSize = 1024;
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_LOG_LEVEL_DEBUG)
 constexpr LogLevel kDefaultMinimumLogLevel = LogLevel::kDebug;
@@ -28,6 +35,7 @@ constexpr LogLevel kDefaultMinimumLogLevel = LogLevel::kNone;
 constexpr LogLevel kDefaultMinimumLogLevel = LogLevel::kInfo;
 #endif
 
+// 各任务共享最低日志等级，使用原子访问避免并发读写冲突。
 std::atomic<LogLevel> g_minimum_log_level{kDefaultMinimumLogLevel};
 
 /**
@@ -73,20 +81,30 @@ bool ShouldLog(LogLevel level) {
   return minimum_level != LogLevel::kNone && level >= minimum_level;
 }
 
-void LogMessage(LogLevel level, const char* file_name, size_t line_number,
+void LogMessage(LogLevel level, const char* file_name, std::size_t line_number,
     const char* format, ...) {
-  if (!ShouldLog(level)) {
+  if (!ShouldLog(level) || format == nullptr) {
+    return;
+  }
+
+  // 不占用任务栈上的大缓冲区，分配失败时跳过日志而不抛出异常。
+  std::unique_ptr<char[]> buffer(new (std::nothrow) char[kMaxLogBufferSize]);
+  if (!buffer) {
     return;
   }
 
   va_list args;
   va_start(args, format);
-  auto buffer = std::make_unique<char[]>(kMaxLogBufferSize);
-  snprintf(buffer.get(), kMaxLogBufferSize,
-      "[lilygo_device_driver log][%s]->[%s][%u line]: %s", LogLevelName(level),
-      file_name, static_cast<unsigned int>(line_number), format);
-  vprintf(buffer.get(), args);
+  const int length = std::vsnprintf(buffer.get(), kMaxLogBufferSize, format, args);
   va_end(args);
+  if (length < 0) {
+    return;
+  }
+
+  // 正文先完成格式化，避免截断格式占位符或将文件名当作格式串解析。
+  std::printf("[lilygo_device_driver log][%s]->[%s][%zu line]: %s",
+      LogLevelName(level), file_name != nullptr ? file_name : "Unknown",
+      line_number, buffer.get());
 }
 
 }  // namespace lilygo_device_driver

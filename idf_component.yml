@@ -1,4 +1,4 @@
-version: "2.2.0"
+version: "2.3.0"
 license: "GPL-3.0"
 description: "This is a library for managing lilygo devices."
 url: https://github.com/Xinyuan-LilyGO/lilygo_device_driver
@@ -7,7 +7,7 @@ dependencies:
   idf: ">=5.5.3"
 
   llgok/cpp_bus_driver:
-    version: "2.2.0"
+    version: "2.3.0"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_GLASSES_P4} == True"
@@ -28,7 +28,7 @@ dependencies:
 
   usp_cpp_bus_driver:
     path: "../usp_cpp_bus_driver"
-    version: "1.0.0"
+    version: "1.1.0"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_GLASSES_P4} == True"
@@ -37,7 +37,7 @@ dependencies:
 
   stsw-st25rfal002_cpp_bus_driver:
     path: "../stsw-st25rfal002_cpp_bus_driver"
-    version: "1.0.0"
+    version: "1.1.0"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
@@ -45,7 +45,7 @@ dependencies:
 
   bhi2xy_sensorapi_cpp_bus_driver:
     path: "../bhi2xy_sensorapi_cpp_bus_driver"
-    version: "1.0.0"
+    version: "1.1.0"
     require: public
     matches:
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"

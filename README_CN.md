@@ -26,7 +26,7 @@
 在 `idf.py menuconfig` 中选择目标 LILYGO 设备后，只需要包含统一入口头文件，库会根据 `sdkconfig` 自动包含对应设备驱动：
 
 ```cpp
-#include "lilygo_device_driver_library.h"
+#include "lilygo_device_driver.h"
 ```
 
 ### 统一访问板级资源
@@ -72,7 +72,7 @@ your_project/
 然后在代码中包含统一入口：
 
 ```cpp
-#include "lilygo_device_driver_library.h"
+#include "lilygo_device_driver.h"
 ```
 
 ### 配置目标设备
@@ -92,7 +92,7 @@ idf.py menuconfig
 T-Display-P4 可以这样使用：
 
 ```cpp
-#include "lilygo_device_driver_library.h"
+#include "lilygo_device_driver.h"
 
 extern "C" void app_main(void) {
   auto& driver = lilygo_device_driver::TDisplayP4Driver::GetInstance();

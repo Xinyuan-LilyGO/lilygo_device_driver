@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <memory>
 
-#include "cpp_bus_driver_library.h"
+#include "cpp_bus_driver.h"
 #include "device/common/async_init_manager.h"
 #include "driver/sdmmc_host.h"
 #include "driver/spi_common.h"
@@ -113,12 +113,12 @@ class TGlassesP4Driver {
   };
 
   struct Bus {
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> sy6970_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> bq27220_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> sgm38121_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> aw86224_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> es8311_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> screen_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> sy6970_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> sgm38121_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> es8311_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> screen_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
@@ -237,7 +237,7 @@ class TGlassesP4Driver {
   bool InitMinimalDrivers();
 
   AsyncInitManager async_init_manager_;
-  std::unique_ptr<cpp_bus_driver::Tool> tool_;
+  std::unique_ptr<cpp_bus_driver::PlatformHal> platform_hal_;
   Bus bus_;
   Chip chip_;
   Status status_;

@@ -9,6 +9,13 @@
 
 #include <array>
 #include <cstdint>
+#include <cstdio>
+
+#include "../../core/logger.h"
+#include "driver/sdmmc_host.h"
+#include "driver/sdspi_host.h"
+#include "driver/spi_master.h"
+#include "esp_vfs_fat.h"
 
 namespace lilygo_device_driver {
 namespace gpio = t_display_p4::gpio;
@@ -128,17 +135,17 @@ device::ScreenType TDisplayP4Driver::screen_type() const {
 }
 
 void TDisplayP4Driver::CreateDrivers() {
-  if (tool_ != nullptr) {
+  if (platform_hal_ != nullptr) {
     return;
   }
-  tool_ = std::make_unique<cpp_bus_driver::Tool>();
+  platform_hal_ = std::make_unique<cpp_bus_driver::PlatformHal>();
   radio_type_ = RadioType::kUnknown;
   status_.sx1262.init_flag = false;
   status_.lr2021.init_flag = false;
 
-  bus_.xl9535_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
+  bus_.xl9535_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
       gpio::i2c::kPort1Sda, gpio::i2c::kPort1Scl, I2C_NUM_0);
-  bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
+  bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
       gpio::i2c::kPort2Sda, gpio::i2c::kPort2Scl, I2C_NUM_1);
   bus_.radio_spi_bus =
       std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::spi::kPort1Mosi,
@@ -146,13 +153,13 @@ void TDisplayP4Driver::CreateDrivers() {
   bus_.sx1262_spi_bus = bus_.radio_spi_bus;
 
   bus_.bq27220_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
   bus_.pcf8563_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
   bus_.aw86224_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.es8311_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
 
   bus_.es8311_i2s_bus = std::make_shared<cpp_bus_driver::HardwareI2s>(
       gpio::es8311::kAdcData, gpio::es8311::kDacData, gpio::es8311::kWsLrck,
@@ -165,7 +172,7 @@ void TDisplayP4Driver::CreateDrivers() {
       gpio::l76k::kRx, gpio::l76k::kTx, UART_NUM_1);
 
   bus_.icm20948_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
 
   chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220>(
       bus_.bq27220_i2c_bus, device::bq27220::kI2cAddress);
@@ -177,13 +184,13 @@ void TDisplayP4Driver::CreateDrivers() {
       bus_.sgm38121_i2c_bus, device::sgm38121::kI2cAddress);
 
   bus_.hi8561_i2c_touch_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
       bus_.hi8561_i2c_touch_bus, device::hi8561::kTouchI2cAddress);
   chip_.pt4103 = std::make_unique<cpp_bus_driver::Pwm>(gpio::pt4103::kEn);
 
   bus_.gt9895_i2c_touch_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
   cpp_bus_driver::TouchCoordinateTransform gt9895_coordinate_transform;
   gt9895_coordinate_transform.source_width =
       device::gt9895::kRawCoordinateWidth;
@@ -284,9 +291,9 @@ void TDisplayP4Driver::DestroyKeyboardExpansionDrivers() {
 
 bool TDisplayP4Driver::Init(InitMode mode) {
   CreateDrivers();
-  const int64_t start_time_us = tool_->GetSystemTimeUs();
+  const int64_t start_time_us = platform_hal_->GetSystemTimeUs();
   const bool result = InitDrivers(mode);
-  const int64_t elapsed_time_us = tool_->GetSystemTimeUs() - start_time_us;
+  const int64_t elapsed_time_us = platform_hal_->GetSystemTimeUs() - start_time_us;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
       "TDisplayP4Driver init finished (mode: %s, result: %s, elapsed: %lld "
       "ms)\n",
@@ -607,13 +614,13 @@ bool TDisplayP4Driver::InitHi8561Touch() {
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
-  tool_->DelayMs(10);
+  platform_hal_->DelayMs(10);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
-  tool_->DelayMs(100);
+  platform_hal_->DelayMs(100);
 
   if (chip_.hi8561_touch == nullptr) {
     chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
@@ -698,12 +705,12 @@ bool TDisplayP4Driver::InitGt9895() {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
     return false;
   }
-  tool_->DelayMs(30);
+  platform_hal_->DelayMs(30);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitGt9895 failed\n");
     return false;
   }
-  tool_->DelayMs(100);
+  platform_hal_->DelayMs(100);
 
   if (chip_.gt9895 == nullptr) {
     chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
@@ -836,9 +843,9 @@ bool TDisplayP4Driver::InitEs8311() {
       cpp_bus_driver::Es8311::MicInput::kMic1p1n);
   result &= chip_.es8311->SetAdcAutoVolumeControl(false);
   result &=
-      chip_.es8311->SetAdcGain(cpp_bus_driver::Es8311::AdcGain::kGain18db);
+      chip_.es8311->SetAdcGain(cpp_bus_driver::Es8311::AdcGain::kGain18Db);
   result &= chip_.es8311->SetAdcPgaGain(
-      cpp_bus_driver::Es8311::AdcPgaGain::kGain30db);
+      cpp_bus_driver::Es8311::AdcPgaGain::kGain30Db);
   result &= chip_.es8311->SetAdcVolume(191);
   result &= chip_.es8311->SetDacVolume(191);
   if (!result) {
@@ -1043,7 +1050,7 @@ bool TDisplayP4Driver::InitLr2021() {
       break;
     }
     if (attempt + 1U < kDetectionAttempts) {
-      tool_->DelayMs(10);
+      platform_hal_->DelayMs(10);
       if (!chip_.lr2021->Reset()) {
         break;
       }
@@ -1157,13 +1164,13 @@ bool TDisplayP4Driver::InitTca8418() {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitTca8418 failed\n");
     return false;
   }
-  tool_->DelayMs(10);
+  platform_hal_->DelayMs(10);
   if (!chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 1)) {
     status_.tca8418.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitTca8418 failed\n");
     return false;
   }
-  tool_->DelayMs(10);
+  platform_hal_->DelayMs(10);
 
   if (!chip_.tca8418->Init()) {
     chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
@@ -1175,7 +1182,7 @@ bool TDisplayP4Driver::InitTca8418() {
     result &= chip_.tca8418->SetKeypadScanWindow(0, 0,
         keyboard_device::tca8418::kKeypadScanWidth,
         keyboard_device::tca8418::kKeypadScanHeight);
-    result &= chip_.tca8418->SetIrqGpioMode(
+    result &= chip_.tca8418->SetInterruptEnable(
         cpp_bus_driver::Tca8418::IrqMask::kKeyEvents);
     result &= chip_.tca8418->ClearIrqFlag(
         cpp_bus_driver::Tca8418::IrqFlag::kKeyEvents);
@@ -1332,11 +1339,11 @@ bool TDisplayP4Driver::InitScreen() {
   if (!reset_pin_initialized) {
     return false;
   }
-  tool_->DelayMs(10);
+  platform_hal_->DelayMs(10);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1)) {
     return false;
   }
-  tool_->DelayMs(120);
+  platform_hal_->DelayMs(120);
 
   if (!DetectScreenType()) {
     chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
@@ -1422,7 +1429,7 @@ bool TDisplayP4Driver::InitRadio() {
 }
 
 bool TDisplayP4Driver::InitKeyboardExpansion() {
-  if (tool_ == nullptr || bus_.radio_spi_bus == nullptr) {
+  if (platform_hal_ == nullptr || bus_.radio_spi_bus == nullptr) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "Initialize the base device driver before the keyboard expansion\n");
     return false;
@@ -1471,9 +1478,9 @@ bool TDisplayP4Driver::InitKeyboardExpansion() {
 
   // 扩展板通过外部电阻上拉 TCA8418 INT。启用主板内部下拉后，
   // 扩展板断开时 INT 会自动变为低电平，供应用层确认连接状态。
-  if (!tool_->SetGpioMode(keyboard_gpio::tca8418::kInt,
-          cpp_bus_driver::Tool::GpioMode::kInput,
-          cpp_bus_driver::Tool::GpioStatus::kPulldown)) {
+  if (!platform_hal_->SetGpioMode(keyboard_gpio::tca8418::kInt,
+          cpp_bus_driver::PlatformHal::GpioMode::kInput,
+          cpp_bus_driver::PlatformHal::GpioStatus::kPulldown)) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "Keyboard expansion GPIO initialization failed\n");
     return false;
@@ -1933,8 +1940,8 @@ bool TDisplayP4Driver::DeinitKeyboardExpansion(
   status_.tca8418.init_flag = false;
   status_.xl9555.init_flag = false;
 
-  if (tool_ != nullptr) {
-    result &= tool_->ResetGpio(keyboard_gpio::tca8418::kInt);
+  if (platform_hal_ != nullptr) {
+    result &= platform_hal_->ResetGpio(keyboard_gpio::tca8418::kInt);
   }
 
   DestroyKeyboardExpansionDrivers();
@@ -2571,11 +2578,11 @@ bool TDisplayP4Driver::DetectScreenType() {
   if (!reset_pin_initialized) {
     return false;
   }
-  tool_->DelayMs(30);
+  platform_hal_->DelayMs(30);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1)) {
     return false;
   }
-  tool_->DelayMs(100);
+  platform_hal_->DelayMs(100);
 
   if (chip_.gt9895 != nullptr &&
       chip_.gt9895->Init(device::gt9895::kI2cFrequencyHz)) {

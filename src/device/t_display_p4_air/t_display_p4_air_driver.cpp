@@ -7,7 +7,14 @@
  */
 #include "t_display_p4_air_driver.h"
 
+#include <cstdio>
+
+#include "../../core/logger.h"
 #include "driver/gpio.h"
+#include "driver/sdmmc_host.h"
+#include "driver/sdspi_host.h"
+#include "driver/spi_master.h"
+#include "esp_vfs_fat.h"
 #include "firmware/bhi260ap/BHI260AP.fw.h"
 #include "sdmmc_cmd.h"
 
@@ -54,28 +61,28 @@ const device::ScreenInfo& TDisplayP4AirDriver::screen_info() const {
 }
 
 void TDisplayP4AirDriver::CreateDrivers() {
-  if (tool_ != nullptr) {
+  if (platform_hal_ != nullptr) {
     return;
   }
-  tool_ = std::make_unique<cpp_bus_driver::Tool>();
+  platform_hal_ = std::make_unique<cpp_bus_driver::PlatformHal>();
 
-  bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
+  bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
       gpio::sgm38121::kSda, gpio::sgm38121::kScl, I2C_NUM_0);
-  bus_.xl9535_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
+  bus_.xl9535_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
       gpio::xl9535::kSda, gpio::xl9535::kScl, I2C_NUM_1);
 
   bus_.axp517_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
   bus_.hi8561_i2c_touch_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.bhi260ap_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.qmc6310n_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
   bus_.aw86224_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
   bus_.st25r3916_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.xl9535_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
 
   bus_.es8389_i2s_bus = std::make_shared<cpp_bus_driver::HardwareI2s>(
       gpio::es8389::kAdcData, gpio::es8389::kDacData, gpio::es8389::kWsLrck,
@@ -115,16 +122,16 @@ void TDisplayP4AirDriver::CreateDrivers() {
   chip_.lr1121 =
       std::make_unique<usp_cpp_bus_driver::Lr11xx>(bus_.lr1121_spi_bus,
           gpio::lr1121::kBusy, gpio::lr1121::kCs, [this](bool released) {
-            return tool_ != nullptr &&
-                   tool_->GpioWrite(gpio::lr1121::kRst, released);
+            return platform_hal_ != nullptr &&
+                   platform_hal_->GpioWrite(gpio::lr1121::kRst, released);
           });
 }
 
 bool TDisplayP4AirDriver::Init(InitMode mode) {
   CreateDrivers();
-  const int64_t start_time_us = tool_->GetSystemTimeUs();
+  const int64_t start_time_us = platform_hal_->GetSystemTimeUs();
   const bool result = InitDrivers(mode);
-  const int64_t elapsed_time_us = tool_->GetSystemTimeUs() - start_time_us;
+  const int64_t elapsed_time_us = platform_hal_->GetSystemTimeUs() - start_time_us;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
       "TDisplayP4AirDriver init finished (mode: %s, result: %s, elapsed: "
       "%lld ms)\n",
@@ -407,13 +414,13 @@ bool TDisplayP4AirDriver::InitBhi260ap() {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBhi260ap failed\n");
     return false;
   }
-  tool_->DelayMs(2);
+  platform_hal_->DelayMs(2);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 1)) {
     status_.bhi260ap.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBhi260ap failed\n");
     return false;
   }
-  tool_->DelayMs(120);
+  platform_hal_->DelayMs(120);
 
   bool result = chip_.bhi260ap->Init();
   if (result) {
@@ -521,14 +528,14 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
-  tool_->DelayMs(10);
+  platform_hal_->DelayMs(10);
 
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0)) {
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
   }
-  tool_->DelayMs(100);
+  platform_hal_->DelayMs(100);
 
   if (chip_.hi8561_touch->Init(device::hi8561::kI2cFrequencyHz)) {
     status_.hi8561_touch.init_flag = true;
@@ -871,16 +878,16 @@ bool TDisplayP4AirDriver::InitLr1121() {
         "InitLr1121 power enable failed\n");
     return false;
   }
-  tool_->DelayMs(10);
+  platform_hal_->DelayMs(10);
 
   bool transport_initialized = true;
-  transport_initialized &= tool_->SetGpioMode(
-      gpio::lr1121::kRst, cpp_bus_driver::Tool::GpioMode::kOutput);
-  transport_initialized &= tool_->SetGpioMode(
-      gpio::lr1121::kInt, cpp_bus_driver::Tool::GpioMode::kInput);
+  transport_initialized &= platform_hal_->SetGpioMode(
+      gpio::lr1121::kRst, cpp_bus_driver::PlatformHal::GpioMode::kOutput);
+  transport_initialized &= platform_hal_->SetGpioMode(
+      gpio::lr1121::kInt, cpp_bus_driver::PlatformHal::GpioMode::kInput);
   if (!transport_initialized ||
       !chip_.lr1121->Init(device::lr1121::kSpiFrequencyHz)) {
-    tool_->GpioWrite(gpio::lr1121::kRst, 0);
+    platform_hal_->GpioWrite(gpio::lr1121::kRst, 0);
     chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitLr1121 transport failed\n");
@@ -892,7 +899,7 @@ bool TDisplayP4AirDriver::InitLr1121() {
           LR11XX_STATUS_OK ||
       version.type != LR11XX_SYSTEM_VERSION_TYPE_LR1121) {
     chip_.lr1121->Deinit();
-    tool_->GpioWrite(gpio::lr1121::kRst, 0);
+    platform_hal_->GpioWrite(gpio::lr1121::kRst, 0);
     chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitLr1121 chip detection failed\n");
@@ -971,7 +978,7 @@ bool TDisplayP4AirDriver::InitLr1121() {
              LR11XX_STATUS_OK);
   if (!result) {
     chip_.lr1121->Deinit();
-    tool_->GpioWrite(gpio::lr1121::kRst, 0);
+    platform_hal_->GpioWrite(gpio::lr1121::kRst, 0);
     chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
     status_.lr1121.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
@@ -1063,19 +1070,19 @@ bool TDisplayP4AirDriver::InitPower() {
     return true;
   }
   bool power_enabled = true;
-  power_enabled &= tool_->SetGpioMode(
-      gpio::power::kEnable3v3, cpp_bus_driver::Tool::GpioMode::kOutput);
-  power_enabled &= tool_->GpioWrite(gpio::power::kEnable3v3, 1);
+  power_enabled &= platform_hal_->SetGpioMode(
+      gpio::power::kEnable3v3, cpp_bus_driver::PlatformHal::GpioMode::kOutput);
+  power_enabled &= platform_hal_->GpioWrite(gpio::power::kEnable3v3, 1);
   if (!power_enabled) {
     return false;
   }
   if (!InitLdoPower(3, 2500)) {
-    tool_->GpioWrite(gpio::power::kEnable3v3, 0);
+    platform_hal_->GpioWrite(gpio::power::kEnable3v3, 0);
     return false;
   }
   if (!InitLdoPower(4, 3300)) {
     DeinitLdoPower(3);
-    tool_->GpioWrite(gpio::power::kEnable3v3, 0);
+    platform_hal_->GpioWrite(gpio::power::kEnable3v3, 0);
     return false;
   }
   power_initialized_ = true;
@@ -1093,11 +1100,11 @@ bool TDisplayP4AirDriver::InitScreen() {
   if (!reset_pin_initialized) {
     return false;
   }
-  tool_->DelayMs(10);
+  platform_hal_->DelayMs(10);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0)) {
     return false;
   }
-  tool_->DelayMs(120);
+  platform_hal_->DelayMs(120);
 
   screen_info_ = kDefaultScreenInfo;
   const auto& screen = screen_info();
@@ -1393,7 +1400,7 @@ bool TDisplayP4AirDriver::DeinitLr1121() {
   if (status_.lr1121.init_flag && chip_.lr1121 != nullptr) {
     result &= SetLr1121OperatingMode(Lr1121OperatingMode::kSleep);
     result &= chip_.lr1121->Deinit(false);
-    result &= tool_->GpioWrite(gpio::lr1121::kRst, 0);
+    result &= platform_hal_->GpioWrite(gpio::lr1121::kRst, 0);
   }
   if (status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
@@ -1456,8 +1463,8 @@ bool TDisplayP4AirDriver::DeinitPower() {
   bool result = true;
   result &= DeinitLdoPower(3);
   result &= DeinitLdoPower(4);
-  if (tool_ != nullptr) {
-    result &= tool_->GpioWrite(gpio::power::kEnable3v3, 0);
+  if (platform_hal_ != nullptr) {
+    result &= platform_hal_->GpioWrite(gpio::power::kEnable3v3, 0);
   }
   power_initialized_ = false;
   return result;
@@ -1870,9 +1877,9 @@ bool TDisplayP4AirDriver::EnterEsp32c5DownloadMode() {
 
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);
-  tool_->DelayMs(10);
+  platform_hal_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 1);
-  tool_->DelayMs(10);
+  platform_hal_->DelayMs(10);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 1);
 
   if (!result) {

@@ -13,15 +13,18 @@
 #include <string>
 
 #include "SensorQMC6310.hpp"
-#include "bhi2xy_sensorapi_cpp_bus_driver_library.h"
-#include "cpp_bus_driver_library.h"
+#include "bhi2xy_sensorapi_cpp_bus_driver.h"
+#include "cpp_bus_driver.h"
 #include "device/common/async_init_manager.h"
+#include "driver/spi_common.h"
 #include "esp32p4_driver.h"
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
-#include "stsw_st25rfal002_cpp_bus_driver_library.h"
+#include "esp_spiffs.h"
+#include "sdmmc_cmd.h"
+#include "stsw_st25rfal002_cpp_bus_driver.h"
 #include "t_display_p4_air_config.h"
-#include "usp_cpp_bus_driver_library.h"
+#include "usp_cpp_bus_driver.h"
 
 namespace lilygo_device_driver {
 namespace t_display_p4_air::device {
@@ -118,14 +121,14 @@ class TDisplayP4AirDriver {
   };
 
   struct Bus {
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> axp517_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> xl9535_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> sgm38121_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> aw86224_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> st25r3916_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> hi8561_i2c_touch_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> bhi260ap_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c1> qmc6310n_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> axp517_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> xl9535_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> sgm38121_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> st25r3916_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> hi8561_i2c_touch_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> bhi260ap_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> qmc6310n_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> lr1121_spi_bus;
@@ -335,7 +338,7 @@ class TDisplayP4AirDriver {
   bool ConfigureEs8389OutputPolarity();
 
   AsyncInitManager async_init_manager_;
-  std::unique_ptr<cpp_bus_driver::Tool> tool_;
+  std::unique_ptr<cpp_bus_driver::PlatformHal> platform_hal_;
   Bus bus_;
   Chip chip_;
   Status status_;

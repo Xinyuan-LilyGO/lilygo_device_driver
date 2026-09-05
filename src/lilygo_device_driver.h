@@ -8,7 +8,8 @@
 
 #pragma once
 
-#include "sdkconfig.h"
+#include "lilygo_device_driver_config.h"
+#include "core/logger.h"
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4)
 #include "t_glasses_p4_driver.h"

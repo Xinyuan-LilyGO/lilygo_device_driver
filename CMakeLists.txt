@@ -57,6 +57,9 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
             "stsw-st25rfal002_cpp_bus_driver")
 endif()
 
+# 所有设备共用独立日志模块。
+list(APPEND src_dirs "./src/core/")
+
 idf_component_register(
         SRC_DIRS
         ${src_dirs}

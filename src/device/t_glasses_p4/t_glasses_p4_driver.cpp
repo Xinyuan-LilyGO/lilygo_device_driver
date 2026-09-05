@@ -9,6 +9,7 @@
 
 #include <cstdio>
 
+#include "../../core/logger.h"
 #include "driver/gpio.h"
 #include "driver/sdspi_host.h"
 #include "driver/spi_master.h"
@@ -79,28 +80,28 @@ device::ScreenType TGlassesP4Driver::screen_type() const {
 }
 
 void TGlassesP4Driver::CreateDrivers() {
-  if (tool_ != nullptr) {
+  if (platform_hal_ != nullptr) {
     return;
   }
-  tool_ = std::make_unique<cpp_bus_driver::Tool>();
+  platform_hal_ = std::make_unique<cpp_bus_driver::PlatformHal>();
   screen_info_ = kDefaultScreenInfo;
 
-  bus_.sy6970_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
+  bus_.sy6970_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
       gpio::sy6970::kSda, gpio::sy6970::kScl, I2C_NUM_0);
-  bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c1>(
+  bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
       gpio::sgm38121::kSda, gpio::sgm38121::kScl, I2C_NUM_1);
   bus_.sx1262_spi_bus =
       std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::sx1262::kMosi,
           gpio::sx1262::kSclk, gpio::sx1262::kMiso, SPI2_HOST, 0);
 
   bus_.bq27220_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sy6970_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sy6970_i2c_bus);
   bus_.aw86224_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.es8311_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.screen_i2c_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c1>(bus_.sgm38121_i2c_bus);
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
 
   bus_.es8311_i2s_bus = std::make_shared<cpp_bus_driver::HardwareI2s>(
       gpio::es8311::kAdcData, gpio::es8311::kDacData, gpio::es8311::kWsLrck,
@@ -122,7 +123,7 @@ void TGlassesP4Driver::CreateDrivers() {
   chip_.sx1262 =
       std::make_unique<usp_cpp_bus_driver::Sx126x>(bus_.sx1262_spi_bus,
           gpio::sx1262::kBusy, gpio::sx1262::kCs, [this](bool level) {
-            return tool_->GpioWrite(gpio::sx1262::kRst, level);
+            return platform_hal_->GpioWrite(gpio::sx1262::kRst, level);
           });
   chip_.s023msafjf10111e1 = std::make_unique<cpp_bus_driver::S023msafjf10111e1>(
       bus_.screen_i2c_bus, device::s023msafjf10111e1::kI2cAddress,
@@ -131,9 +132,9 @@ void TGlassesP4Driver::CreateDrivers() {
 
 bool TGlassesP4Driver::Init(InitMode mode) {
   CreateDrivers();
-  const int64_t start_time_us = tool_->GetSystemTimeUs();
+  const int64_t start_time_us = platform_hal_->GetSystemTimeUs();
   const bool result = InitDrivers(mode);
-  const int64_t elapsed_time_us = tool_->GetSystemTimeUs() - start_time_us;
+  const int64_t elapsed_time_us = platform_hal_->GetSystemTimeUs() - start_time_us;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
       "TGlassesP4Driver init finished (mode: %s, result: %s, elapsed: "
       "%lld ms)\n",
@@ -454,9 +455,9 @@ bool TGlassesP4Driver::InitEs8311() {
       cpp_bus_driver::Es8311::MicInput::kMic1p1n);
   result &= chip_.es8311->SetAdcAutoVolumeControl(false);
   result &=
-      chip_.es8311->SetAdcGain(cpp_bus_driver::Es8311::AdcGain::kGain18db);
+      chip_.es8311->SetAdcGain(cpp_bus_driver::Es8311::AdcGain::kGain18Db);
   result &= chip_.es8311->SetAdcPgaGain(
-      cpp_bus_driver::Es8311::AdcPgaGain::kGain30db);
+      cpp_bus_driver::Es8311::AdcPgaGain::kGain30Db);
   result &= chip_.es8311->SetAdcVolume(191);
   result &= chip_.es8311->SetDacVolume(191);
   if (!result) {
@@ -472,12 +473,12 @@ bool TGlassesP4Driver::InitSx1262() {
   if (IsSx1262Ready()) {
     return true;
   }
-  if (!tool_->SetGpioMode(gpio::sx1262::kRst,
-          cpp_bus_driver::Tool::GpioMode::kOutput,
-          cpp_bus_driver::Tool::GpioStatus::kPullup) ||
+  if (!platform_hal_->SetGpioMode(gpio::sx1262::kRst,
+          cpp_bus_driver::PlatformHal::GpioMode::kOutput,
+          cpp_bus_driver::PlatformHal::GpioStatus::kPullup) ||
       !chip_.sx1262->Init(device::sx1262::kSpiFrequencyHz)) {
     status_.sx1262.init_flag = false;
-    tool_->GpioWrite(gpio::sx1262::kRst, 0);
+    platform_hal_->GpioWrite(gpio::sx1262::kRst, 0);
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSx1262 failed\n");
     return false;
   }
@@ -485,7 +486,7 @@ bool TGlassesP4Driver::InitSx1262() {
   const bool result = chip_.sx1262->SetSleep();
   if (!result) {
     chip_.sx1262->Deinit(false);
-    tool_->GpioWrite(gpio::sx1262::kRst, 0);
+    platform_hal_->GpioWrite(gpio::sx1262::kRst, 0);
   }
   status_.sx1262.init_flag = result;
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
@@ -503,20 +504,20 @@ bool TGlassesP4Driver::InitPower() {
   }
 
   bool gpio_initialized = true;
-  gpio_initialized &= tool_->SetGpioMode(
-      gpio::power::kEn5v0, cpp_bus_driver::Tool::GpioMode::kOutput);
-  gpio_initialized &= tool_->SetGpioMode(
-      gpio::power::kEn3v3, cpp_bus_driver::Tool::GpioMode::kOutput);
-  gpio_initialized &= tool_->GpioWrite(gpio::power::kEn5v0, true);
-  gpio_initialized &= tool_->GpioWrite(gpio::power::kEn3v3, true);
+  gpio_initialized &= platform_hal_->SetGpioMode(
+      gpio::power::kEn5v0, cpp_bus_driver::PlatformHal::GpioMode::kOutput);
+  gpio_initialized &= platform_hal_->SetGpioMode(
+      gpio::power::kEn3v3, cpp_bus_driver::PlatformHal::GpioMode::kOutput);
+  gpio_initialized &= platform_hal_->GpioWrite(gpio::power::kEn5v0, true);
+  gpio_initialized &= platform_hal_->GpioWrite(gpio::power::kEn3v3, true);
   if (!gpio_initialized) {
-    tool_->GpioWrite(gpio::power::kEn5v0, false);
-    tool_->GpioWrite(gpio::power::kEn3v3, false);
+    platform_hal_->GpioWrite(gpio::power::kEn5v0, false);
+    platform_hal_->GpioWrite(gpio::power::kEn3v3, false);
     DeinitLdoPower(3);
     DeinitLdoPower(4);
     return false;
   }
-  tool_->DelayMs(200);
+  platform_hal_->DelayMs(200);
   return true;
 }
 
@@ -676,7 +677,7 @@ bool TGlassesP4Driver::DeinitSx1262() {
   if (status_.sx1262.init_flag && chip_.sx1262 != nullptr) {
     result &= chip_.sx1262->SetSleep();
     result &= chip_.sx1262->Deinit(false);
-    result &= tool_->GpioWrite(gpio::sx1262::kRst, 0);
+    result &= platform_hal_->GpioWrite(gpio::sx1262::kRst, 0);
   }
   status_.sx1262.init_flag = false;
   return result;
@@ -831,8 +832,8 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
   if (IsSdmmcReady()) {
     result &= DeinitSdmmc();
   }
-  result &= tool_->GpioWrite(gpio::power::kEn5v0, 0);
-  result &= tool_->GpioWrite(gpio::power::kEn3v3, 0);
+  result &= platform_hal_->GpioWrite(gpio::power::kEn5v0, 0);
+  result &= platform_hal_->GpioWrite(gpio::power::kEn3v3, 0);
   minimal_drivers_initialized_ = false;
   return result;
 }

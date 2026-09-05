@@ -7,9 +7,8 @@
  */
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
-
-#include "config.h"
 
 namespace lilygo_device_driver {
 enum class LogLevel : uint8_t {
@@ -46,6 +45,6 @@ bool ShouldLog(LogLevel level);
  * @param line_number 源代码行号
  * @param format printf 风格格式字符串
  */
-void LogMessage(LogLevel level, const char* file_name, size_t line_number,
+void LogMessage(LogLevel level, const char* file_name, std::size_t line_number,
     const char* format, ...);
 }  // namespace lilygo_device_driver

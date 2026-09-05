@@ -10,7 +10,7 @@
 
 #include <cstdint>
 
-#include "cpp_bus_driver_library.h"
+#include "cpp_bus_driver.h"
 
 namespace lilygo_device_driver::t_display_p4_air {
 namespace gpio {

@@ -9,6 +9,7 @@
 
 #include <array>
 
+#include "../../core/logger.h"
 #include "esp_ldo_regulator.h"
 
 namespace lilygo_device_driver {

@@ -26,7 +26,7 @@ The library is designed to work together with [`cpp_bus_driver`](https://github.
 Select the target LILYGO device in `idf.py menuconfig`, include the unified header, and initialize the selected board. The library chooses the correct device driver through `sdkconfig`:
 
 ```cpp
-#include "lilygo_device_driver_library.h"
+#include "lilygo_device_driver.h"
 ```
 
 ### Unified Access to Board Resources
@@ -72,7 +72,7 @@ your_project/
 Then include the unified entry header:
 
 ```cpp
-#include "lilygo_device_driver_library.h"
+#include "lilygo_device_driver.h"
 ```
 
 ### Configure the Target Device
@@ -92,7 +92,7 @@ Some example projects also provide board, screen, camera, and pixel-format optio
 For T-Display-P4:
 
 ```cpp
-#include "lilygo_device_driver_library.h"
+#include "lilygo_device_driver.h"
 
 extern "C" void app_main(void) {
   auto& driver = lilygo_device_driver::TDisplayP4Driver::GetInstance();
