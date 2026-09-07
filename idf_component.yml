@@ -18,6 +18,7 @@ dependencies:
     version: "1.5.10"
     require: public
     matches:
+      # - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_GLASSES_P4} == True"
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
 
   lewisxhe/sensorlib:
@@ -31,7 +32,7 @@ dependencies:
     version: "1.1.0"
     require: public
     matches:
-      - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_GLASSES_P4} == True"
+      # - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_GLASSES_P4} == True"
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4} == True"
       - if: "$CONFIG{LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR} == True"
 
