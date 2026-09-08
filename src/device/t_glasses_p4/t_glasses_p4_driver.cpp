@@ -6,8 +6,6 @@
  */
 #include "t_glasses_p4_driver.h"
 
-#include <initializer_list>
-
 #include "../../core/logger.h"
 
 // 其余外围恢复时再启用这些依赖。
@@ -222,26 +220,33 @@ bool TGlassesP4Driver::InitSgm38121() {
   }
 
   bool result = true;
-  for (const auto channel : {cpp_bus_driver::Sgm38121::Channel::kDvdd1,
-           cpp_bus_driver::Sgm38121::Channel::kDvdd2,
-           cpp_bus_driver::Sgm38121::Channel::kAvdd1,
-           cpp_bus_driver::Sgm38121::Channel::kAvdd2}) {
-    result &= chip_.sgm38121->SetChannelStatus(
-        channel, cpp_bus_driver::Sgm38121::Status::kOff);
-  }
-  // 显示板 DOVDD_1V8 接 AVDD1；只启用屏幕所需的这一路电源。
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2,
+      cpp_bus_driver::Sgm38121::Status::kOff);
+
+  // AVDD1 为屏幕、摄像头和外部时钟共享的 1.8 V 电源。
   result &= chip_.sgm38121->SetOutputVoltage(
       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
-  // 摄像头供电配置参考，AVDD1 与屏幕共享，不随摄像头关闭。
-  // result &= chip_.sgm38121->SetOutputVoltage(
-  //     cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
-  // #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
-  // result &= chip_.sgm38121->SetOutputVoltage(
-  //     cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3000);
-  // #else
-  // result &= chip_.sgm38121->SetOutputVoltage(
-  //     cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
-  // #endif
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
+  result &= chip_.sgm38121->SetOutputVoltage(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
+  result &= chip_.sgm38121->SetOutputVoltage(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
+  result &= chip_.sgm38121->SetOutputVoltage(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3000);
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
+  result &= chip_.sgm38121->SetOutputVoltage(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
+  result &= chip_.sgm38121->SetOutputVoltage(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
+#endif
   if (result) {
     result = chip_.sgm38121->SetChannelStatus(
         cpp_bus_driver::Sgm38121::Channel::kAvdd1,
@@ -397,8 +402,32 @@ bool TGlassesP4Driver::SetEsp32c5PowerEnabled(bool /*enabled*/) {
   return false;
 }
 
+bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
+  if (!IsSgm38121Ready()) {
+    return !enabled;
+  }
+  const auto status = enabled ? cpp_bus_driver::Sgm38121::Status::kOn
+                              : cpp_bus_driver::Sgm38121::Status::kOff;
+  bool result = true;
+  // AVDD1 与屏幕共享，摄像头电源切换只操作独立电源通道。
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710) || \
+    defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1, status);
+  result &= chip_.sgm38121->SetChannelStatus(
+      cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
+#else
+  return false;
+#endif
+  return result;
+}
+
 bool TGlassesP4Driver::PrepareMinimalDriversForPowerOff() {
   bool result = true;
+  result &= SetCameraPowerEnabled(false);
   if (IsSgm38121Ready()) {
     result &= chip_.sgm38121->SetChannelStatus(
         cpp_bus_driver::Sgm38121::Channel::kAvdd1,
@@ -690,36 +719,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //     platform_hal_->GpioWrite(gpio::esp32c5::kEn, 0);
 //     platform_hal_->GpioWrite(gpio::esp32c5::kPowerEn, 0);
 //   }
-//   return result;
-// }
-//
-// bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
-//   if (!status_.sgm38121.init_flag) {
-//     return !enabled;
-//   }
-//   const auto status = enabled ? cpp_bus_driver::Sgm38121::Status::kOn
-//                               : cpp_bus_driver::Sgm38121::Status::kOff;
-//   bool result = true;
-//   // AVDD1 是屏幕与摄像头共享的 1.8 V，不能随摄像头关闭。
-//   if (!enabled) {
-//     result &= chip_.sgm38121->SetChannelStatus(
-//         cpp_bus_driver::Sgm38121::Channel::kDvdd1, status);
-//     result &= chip_.sgm38121->SetChannelStatus(
-//         cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
-//     return result;
-//   }
-// #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
-//   result &= chip_.sgm38121->SetChannelStatus(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
-// #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710) ||
-// defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
-//   result &= chip_.sgm38121->SetChannelStatus(
-//       cpp_bus_driver::Sgm38121::Channel::kDvdd1, status);
-//   result &= chip_.sgm38121->SetChannelStatus(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
-// #else
-//   return false;
-// #endif
 //   return result;
 // }
 //

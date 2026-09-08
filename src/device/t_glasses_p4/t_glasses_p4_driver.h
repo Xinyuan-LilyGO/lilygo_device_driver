@@ -275,7 +275,7 @@ class TGlassesP4Driver {
   // bool SetEs8389OperatingMode(Es8389OperatingMode mode);
   // bool SetSx1262OperatingMode(Sx1262OperatingMode mode);
   bool SetEsp32c5PowerEnabled(bool enabled);
-  // bool SetCameraPowerEnabled(bool enabled);
+  bool SetCameraPowerEnabled(bool enabled);
   bool PrepareMinimalDriversForPowerOff();
   bool PrepareDriversForPowerOff();
 
