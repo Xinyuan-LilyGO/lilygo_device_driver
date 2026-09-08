@@ -225,10 +225,8 @@ inline constexpr uint8_t kI2cAddress = 0x6B;
 //
 // #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB565)
 // inline constexpr int kBitsPerPixel = 16;
-// inline constexpr const char* kPixelFormat = "rgb565";
 // #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB888)
 // inline constexpr int kBitsPerPixel = 24;
-// inline constexpr const char* kPixelFormat = "rgb888";
 // #else
 // #error "Missing required macro definition."
 // #endif
@@ -303,7 +301,6 @@ namespace screen {
 inline constexpr int kRotationDirection = 0;
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_SCREEN_PIXEL_FORMAT_RGB888)
 inline constexpr int kBitsPerPixel = 24;
-inline constexpr const char* kPixelFormat = "rgb888";
 #else
 #error "T-Glasses-P4 screen requires RGB888."
 #endif

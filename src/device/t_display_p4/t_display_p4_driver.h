@@ -14,6 +14,7 @@
 
 #include "cpp_bus_driver.h"
 #include "device/common/async_init_manager.h"
+#include "device/common/pixel_format.h"
 #include "driver/spi_common.h"
 #include "esp32p4_driver.h"
 #include "esp_spiffs.h"
@@ -79,7 +80,7 @@ struct CameraInfo {
 inline constexpr CameraInfo kCameraInfo = {
     .type = camera::kType,
     .name = camera::kName,
-    .pixel_format = camera::kPixelFormat,
+    .pixel_format = GetRgbPixelFormatName(camera::kBitsPerPixel),
     .bits_per_pixel = camera::kBitsPerPixel,
     .buffer_count = camera::kBufferCount,
 };

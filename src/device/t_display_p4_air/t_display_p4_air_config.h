@@ -203,10 +203,8 @@ inline constexpr int kRotationDirection = 0;
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_SCREEN_PIXEL_FORMAT_RGB565)
 inline constexpr int kBitsPerPixel = 16;
-inline constexpr const char* kPixelFormat = "rgb565";
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_SCREEN_PIXEL_FORMAT_RGB888)
 inline constexpr int kBitsPerPixel = 24;
-inline constexpr const char* kPixelFormat = "rgb888";
 #else
 #error "Missing required macro definition."
 #endif
@@ -273,13 +271,10 @@ inline constexpr const char* kName = "unknown";
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB565)
 inline constexpr int kBitsPerPixel = 16;
-inline constexpr const char* kPixelFormat = "rgb565";
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB888)
 inline constexpr int kBitsPerPixel = 24;
-inline constexpr const char* kPixelFormat = "rgb888";
 #else
 inline constexpr int kBitsPerPixel = 0;
-inline constexpr const char* kPixelFormat = "unknown";
 #endif
 
 inline constexpr int kBufferCount = 2;

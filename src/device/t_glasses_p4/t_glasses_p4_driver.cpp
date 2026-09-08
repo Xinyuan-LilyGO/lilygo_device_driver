@@ -33,7 +33,7 @@ constexpr device::ScreenInfo kScreenInfo = {
     .width = device::screen::kWidth,
     .height = device::screen::kHeight,
     .bits_per_pixel = device::screen::kBitsPerPixel,
-    .pixel_format = device::screen::kPixelFormat,
+    .pixel_format = GetRgbPixelFormatName(device::screen::kBitsPerPixel),
     .mipi_dsi_dpi_clk_mhz = device::screen::kMipiDsiDpiClkMhz,
     .mipi_dsi_hsync = device::screen::kMipiDsiHsync,
     .mipi_dsi_hbp = device::screen::kMipiDsiHbp,
@@ -116,11 +116,12 @@ bool TGlassesP4Driver::Init(InitMode mode) {
   const bool result = InitDrivers(mode);
   const int64_t elapsed_time_us =
       platform_hal_->GetSystemTimeUs() - start_time_us;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-      "TGlassesP4Driver init finished (mode: %s, result: %s, elapsed: "
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      "TGlassesP4Driver init (mode: %s, result: %s, elapsed: "
       "%lld ms)\n",
       mode == InitMode::kAsync ? "async" : "sync",
-      result ? "success" : "failed",
+      result ? (mode == InitMode::kAsync ? "tasks scheduled" : "success")
+             : "failed",
       static_cast<long long>(elapsed_time_us / 1000));
   return result;
 }
@@ -457,23 +458,20 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
           : (target_vertical ? Screen::MirrorMode::kVertical
                              : Screen::MirrorMode::kOff);
   if (!chip_.s023msafjf10111e1->SetMirror(target)) {
-    LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "SetScreenMirror write failed\n");
     return false;
   }
   Screen::MirrorMode actual;
   if (!chip_.s023msafjf10111e1->GetMirror(&actual)) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "SetScreenMirror readback failed\n");
     return false;
   }
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+  LogMessage(LogLevel::kDebug, __FILE__, __LINE__,
       "Screen mirror: initial=%d, target=%d, readback=%d, RSMX=%d, RSMY=%d\n",
       static_cast<int>(kDefaultScreenMirror), static_cast<int>(target),
       static_cast<int>(actual), target_horizontal, target_vertical);
   if (actual != target) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "SetScreenMirror readback mismatch\n");
+        "SetScreenMirror readback mismatch (target: %d, actual: %d)\n",
+        static_cast<int>(target), static_cast<int>(actual));
     return false;
   }
   return true;

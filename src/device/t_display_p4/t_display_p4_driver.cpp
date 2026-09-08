@@ -41,7 +41,7 @@ constexpr ScreenInfo kHi8561ScreenInfo = {
     .width = device::hi8561::kScreenWidth,
     .height = device::hi8561::kScreenHeight,
     .bits_per_pixel = device::screen::kBitsPerPixel,
-    .pixel_format = device::screen::kPixelFormat,
+    .pixel_format = GetRgbPixelFormatName(device::screen::kBitsPerPixel),
     .mipi_dsi_dpi_clk_mhz = device::hi8561::kScreenMipiDsiDpiClkMhz,
     .mipi_dsi_hsync = device::hi8561::kScreenMipiDsiHsync,
     .mipi_dsi_hbp = device::hi8561::kScreenMipiDsiHbp,
@@ -59,7 +59,7 @@ constexpr ScreenInfo kRm69a10ScreenInfo = {
     .width = device::rm69a10::kScreenWidth,
     .height = device::rm69a10::kScreenHeight,
     .bits_per_pixel = device::screen::kBitsPerPixel,
-    .pixel_format = device::screen::kPixelFormat,
+    .pixel_format = GetRgbPixelFormatName(device::screen::kBitsPerPixel),
     .mipi_dsi_dpi_clk_mhz = device::rm69a10::kScreenMipiDsiDpiClkMhz,
     .mipi_dsi_hsync = device::rm69a10::kScreenMipiDsiHsync,
     .mipi_dsi_hbp = device::rm69a10::kScreenMipiDsiHbp,
@@ -293,12 +293,14 @@ bool TDisplayP4Driver::Init(InitMode mode) {
   CreateDrivers();
   const int64_t start_time_us = platform_hal_->GetSystemTimeUs();
   const bool result = InitDrivers(mode);
-  const int64_t elapsed_time_us = platform_hal_->GetSystemTimeUs() - start_time_us;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-      "TDisplayP4Driver init finished (mode: %s, result: %s, elapsed: %lld "
+  const int64_t elapsed_time_us =
+      platform_hal_->GetSystemTimeUs() - start_time_us;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      "TDisplayP4Driver init (mode: %s, result: %s, elapsed: %lld "
       "ms)\n",
       mode == InitMode::kAsync ? "async" : "sync",
-      result ? "success" : "failed",
+      result ? (mode == InitMode::kAsync ? "tasks scheduled" : "success")
+             : "failed",
       static_cast<long long>(elapsed_time_us / 1000));
   return result;
 }
@@ -1533,7 +1535,7 @@ bool TDisplayP4Driver::InitSpiffs(
   }
 
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-      "Partition size: total: %d bytes, used: %d bytes\n", total, used);
+      "Partition size: total: %zu bytes, used: %zu bytes\n", total, used);
 
   if (used > total) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
@@ -1546,7 +1548,7 @@ bool TDisplayP4Driver::InitSpiffs(
       return false;
     } else {
       LogMessage(
-          LogLevel::kError, __FILE__, __LINE__, "esp_spiffs_check success\n");
+          LogLevel::kInfo, __FILE__, __LINE__, "esp_spiffs_check success\n");
     }
   }
 
@@ -2537,8 +2539,8 @@ bool TDisplayP4Driver::SetKeyboardExpansionLed(
 
 bool TDisplayP4Driver::SetSky13453RfSwitch(Sky13453RfSwitch rf_switch) {
   if (!IsXl9535Ready()) {
-    LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "SetSky13453RfSwitch failed\n");
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "SetSky13453RfSwitch failed (XL9535 not ready)\n");
     return false;
   }
 
@@ -2551,18 +2553,13 @@ bool TDisplayP4Driver::SetSky13453RfSwitch(Sky13453RfSwitch rf_switch) {
       vctl_level = 0;
       break;
     default:
-      LogMessage(
-          LogLevel::kError, __FILE__, __LINE__, "SetSky13453RfSwitch failed\n");
+      LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
+          "SetSky13453RfSwitch rejected (invalid mode: %d)\n",
+          static_cast<int>(rf_switch));
       return false;
   }
 
-  const bool result =
-      chip_.xl9535->GpioWrite(gpio::xl9535::kSky13453Vctl, vctl_level);
-  if (!result) {
-    LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "SetSky13453RfSwitch failed\n");
-  }
-  return result;
+  return chip_.xl9535->GpioWrite(gpio::xl9535::kSky13453Vctl, vctl_level);
 }
 
 bool TDisplayP4Driver::DetectScreenType() {

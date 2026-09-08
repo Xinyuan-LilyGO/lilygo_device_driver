@@ -7,6 +7,8 @@
 
 #include "async_init_manager.h"
 
+#include "../../core/logger.h"
+
 namespace lilygo_device_driver {
 namespace {
 
@@ -30,6 +32,10 @@ bool AsyncInitManager::StartTask(TaskFunction_t task, const char* name,
     return true;
   }
   task_count_.fetch_sub(1, std::memory_order_release);
+  LogMessage(LogLevel::kError, __FILE__, __LINE__,
+      "Async init task creation failed (task: %s, stack size: %lu)\n",
+      name != nullptr ? name : "Unknown",
+      static_cast<unsigned long>(stack_size));
   return false;
 }
 

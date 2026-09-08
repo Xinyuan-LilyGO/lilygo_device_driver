@@ -32,7 +32,7 @@ constexpr ScreenInfo kHi8561ScreenInfo = {
     .width = device::hi8561::kScreenWidth,
     .height = device::hi8561::kScreenHeight,
     .bits_per_pixel = device::screen::kBitsPerPixel,
-    .pixel_format = device::screen::kPixelFormat,
+    .pixel_format = GetRgbPixelFormatName(device::screen::kBitsPerPixel),
     .mipi_dsi_dpi_clk_mhz = device::hi8561::kScreenMipiDsiDpiClkMhz,
     .mipi_dsi_hsync = device::hi8561::kScreenMipiDsiHsync,
     .mipi_dsi_hbp = device::hi8561::kScreenMipiDsiHbp,
@@ -131,12 +131,14 @@ bool TDisplayP4AirDriver::Init(InitMode mode) {
   CreateDrivers();
   const int64_t start_time_us = platform_hal_->GetSystemTimeUs();
   const bool result = InitDrivers(mode);
-  const int64_t elapsed_time_us = platform_hal_->GetSystemTimeUs() - start_time_us;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-      "TDisplayP4AirDriver init finished (mode: %s, result: %s, elapsed: "
+  const int64_t elapsed_time_us =
+      platform_hal_->GetSystemTimeUs() - start_time_us;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      "TDisplayP4AirDriver init (mode: %s, result: %s, elapsed: "
       "%lld ms)\n",
       mode == InitMode::kAsync ? "async" : "sync",
-      result ? "success" : "failed",
+      result ? (mode == InitMode::kAsync ? "tasks scheduled" : "success")
+             : "failed",
       static_cast<long long>(elapsed_time_us / 1000));
   return result;
 }
