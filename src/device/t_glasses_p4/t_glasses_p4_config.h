@@ -61,11 +61,11 @@ inline constexpr int kD3 = 42;
 // inline constexpr int kD3 = 17;
 // }  // namespace sdio2
 //
-// namespace spi {
-// inline constexpr int kPort1Sclk = 33;
-// inline constexpr int kPort1Mosi = 32;
-// inline constexpr int kPort1Miso = 31;
-// }  // namespace spi
+namespace spi {
+inline constexpr int kPort1Sclk = 33;
+inline constexpr int kPort1Mosi = 32;
+inline constexpr int kPort1Miso = 31;
+}  // namespace spi
 //
 // namespace esp32c5 {
 // inline constexpr int kEn = 12;
@@ -126,16 +126,16 @@ inline constexpr int kCs = sdio1::kD3;
 // inline constexpr int kInt = 54;
 // }  // namespace bmm350
 //
-// namespace sx1262 {
-// inline constexpr int kCs = 34;
-// inline constexpr int kBusy = 28;
-// inline constexpr int kInt = 29;
-// inline constexpr int kRst = 27;
-// inline constexpr int kDio3 = 30;
-// inline constexpr int kSclk = spi::kPort1Sclk;
-// inline constexpr int kMosi = spi::kPort1Mosi;
-// inline constexpr int kMiso = spi::kPort1Miso;
-// }  // namespace sx1262
+namespace lr2021 {
+inline constexpr int kCs = 34;
+inline constexpr int kBusy = 28;
+inline constexpr int kInt = 29;
+inline constexpr int kRst = 27;
+inline constexpr int kDio3 = 30;
+inline constexpr int kSclk = spi::kPort1Sclk;
+inline constexpr int kMosi = spi::kPort1Mosi;
+inline constexpr int kMiso = spi::kPort1Miso;
+}  // namespace lr2021
 
 // 以下仅保留旧板参考，不能在新板取消注释启用。
 // 旧板 I2C/电源引脚与当前屏幕和外围引脚有冲突。
@@ -251,9 +251,9 @@ inline constexpr int kChannel = 2;
 // inline constexpr uint8_t kI2cAddress = 0x14;
 // }  // namespace bmm350
 //
-// namespace sx1262 {
-// inline constexpr int32_t kSpiFrequencyHz = 10000000;
-// }  // namespace sx1262
+namespace lr2021 {
+inline constexpr int32_t kSpiFrequencyHz = 10000000;
+}  // namespace lr2021
 //
 namespace sd {
 inline constexpr const char* kBasePath = "/sdcard";

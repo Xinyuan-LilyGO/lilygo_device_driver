@@ -47,6 +47,8 @@ constexpr device::ScreenInfo kScreenInfo = {
 // 旧版 CreateDrivers 的屏幕信息指针配套参考。
 // constexpr const device::ScreenInfo* kDefaultScreenInfo = &kScreenInfo;
 constexpr uint32_t kInitializationShutdownTimeoutMs = 5 * 1000;
+constexpr uint8_t kLr2021ExpectedVersionMajor = 0x01;
+constexpr uint8_t kLr2021ExpectedVersionMinor = 0x18;
 
 }  // namespace
 
@@ -96,18 +98,18 @@ void TGlassesP4Driver::CreateDrivers() {
   // AW86224 与 SGM38121 共用引脚，恢复后共享 LP I2C 总线。
   // bus_.aw86224_i2c_bus =
   //     std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
-  // bus_.sx1262_spi_bus =
-  //     std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::sx1262::kMosi,
-  //         gpio::sx1262::kSclk, gpio::sx1262::kMiso, SPI2_HOST, 0);
+  bus_.lr2021_spi_bus =
+      std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::lr2021::kMosi,
+          gpio::lr2021::kSclk, gpio::lr2021::kMiso, SPI2_HOST, 0);
   // chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220>(
   //     bus_.bq27220_i2c_bus, device::bq27220::kI2cAddress);
   // chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
   //     bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
-  // chip_.sx1262 =
-  //     std::make_unique<usp_cpp_bus_driver::Sx126x>(bus_.sx1262_spi_bus,
-  //         gpio::sx1262::kBusy, gpio::sx1262::kCs, [this](bool level) {
-  //           return platform_hal_->GpioWrite(gpio::sx1262::kRst, level);
-  //         });
+  chip_.lr2021 =
+      std::make_unique<usp_cpp_bus_driver::Lr20xx>(bus_.lr2021_spi_bus,
+          gpio::lr2021::kBusy, gpio::lr2021::kCs, [this](bool level) {
+            return platform_hal_->GpioWrite(gpio::lr2021::kRst, level);
+          });
 }
 
 bool TGlassesP4Driver::Init(InitMode mode) {
@@ -173,6 +175,16 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
         },
         "InitEs8389Task", 4096, this, 3);
 
+    result &= async_init_manager_.StartTask(
+        [](void* arg) {
+          auto* self = static_cast<TGlassesP4Driver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitLr2021();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitLr2021Task", 4096, this, 3);
+
     // 未接入外围的异步初始化参考。
     // result &= async_init_manager_.StartTask(
     //     [](void* arg) {
@@ -180,7 +192,6 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     //       if (!self->async_init_manager_.stop_requested()) {
     //         self->InitBq27220();
     //         self->InitAw86224();
-    //         self->InitSx1262();
     //       }
     //       self->async_init_manager_.FinishTask();
     //     },
@@ -189,7 +200,7 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     result &= InitScreen();
     // result &= InitBq27220();
     // result &= InitAw86224();
-    // result &= InitSx1262();
+    result &= InitLr2021();
     result &= InitEs8389();
   }
   return result;
@@ -408,7 +419,125 @@ bool TGlassesP4Driver::InitBhi260ap() { return false; }
 
 bool TGlassesP4Driver::InitBmm350() { return false; }
 
-bool TGlassesP4Driver::InitSx1262() { return false; }
+bool TGlassesP4Driver::InitLr2021() {
+  if (IsLr2021Ready()) {
+    return true;
+  }
+  if (!power_initialized_ || chip_.lr2021 == nullptr) {
+    return false;
+  }
+  bool result = platform_hal_->GpioWrite(gpio::lr2021::kRst, 0);
+  result &= platform_hal_->SetGpioMode(
+      gpio::lr2021::kRst, cpp_bus_driver::PlatformHal::GpioMode::kOutput);
+  result &= platform_hal_->SetGpioMode(
+      gpio::lr2021::kInt, cpp_bus_driver::PlatformHal::GpioMode::kInput);
+  // 模块辅助信号由无线芯片驱动，主控保持无上下拉输入。
+  result &= platform_hal_->SetGpioMode(
+      gpio::lr2021::kDio3, cpp_bus_driver::PlatformHal::GpioMode::kInput);
+  if (!result || !chip_.lr2021->Init(device::lr2021::kSpiFrequencyHz)) {
+    chip_.lr2021->Deinit(false);
+    platform_hal_->GpioWrite(gpio::lr2021::kRst, 0);
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitLr2021 transport failed\n");
+    return false;
+  }
+
+  constexpr uint8_t kDetectionAttempts = 10;
+  lr20xx_system_version_t version = {};
+  bool detected = false;
+  for (uint8_t attempt = 0; attempt < kDetectionAttempts; ++attempt) {
+    version = {};
+    detected = chip_.lr2021->Invoke(lr20xx_system_get_version, &version) ==
+                   LR20XX_STATUS_OK &&
+               version.major == kLr2021ExpectedVersionMajor &&
+               version.minor == kLr2021ExpectedVersionMinor;
+    if (detected) {
+      break;
+    }
+    if (attempt + 1U < kDetectionAttempts) {
+      platform_hal_->DelayMs(10);
+      if (!chip_.lr2021->Reset()) {
+        break;
+      }
+    }
+  }
+
+  if (!detected) {
+    chip_.lr2021->Deinit(false);
+    platform_hal_->GpioWrite(gpio::lr2021::kRst, 0);
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitLr2021 chip detection failed (fw: %u.%u)\n",
+        static_cast<unsigned>(version.major),
+        static_cast<unsigned>(version.minor));
+    return false;
+  }
+
+  const auto configure_rf_switch =
+      [this](
+          lr20xx_system_dio_t dio, lr20xx_system_dio_rf_switch_cfg_t config) {
+        if (chip_.lr2021->Invoke(lr20xx_system_set_dio_function, dio,
+                LR20XX_SYSTEM_DIO_FUNC_RF_SWITCH,
+                LR20XX_SYSTEM_DIO_DRIVE_NONE) != LR20XX_STATUS_OK) {
+          return false;
+        }
+        return chip_.lr2021->Invoke(lr20xx_system_set_dio_rf_switch_cfg, dio,
+                   config) == LR20XX_STATUS_OK;
+      };
+  constexpr auto kCalibrationMask =
+      static_cast<lr20xx_system_calibration_mask_t>(
+          LR20XX_SYSTEM_CALIB_LF_RC_MASK | LR20XX_SYSTEM_CALIB_HF_RC_MASK |
+          LR20XX_SYSTEM_CALIB_PLL_MASK | LR20XX_SYSTEM_CALIB_AAF_MASK |
+          LR20XX_SYSTEM_CALIB_MU_MASK | LR20XX_SYSTEM_CALIB_PA_OFF_MASK);
+
+  const lr20xx_system_sleep_cfg_t sleep_config = {
+      .is_clk_32k_enabled = false,
+      .is_ram_retention_enabled = true,
+  };
+  result = true;
+  result &= (chip_.lr2021->Invoke(lr20xx_system_set_standby_mode,
+                 LR20XX_SYSTEM_STANDBY_MODE_RC) == LR20XX_STATUS_OK);
+  result &= (chip_.lr2021->Invoke(lr20xx_system_set_tcxo_mode,
+                 LR20XX_SYSTEM_TCXO_CTRL_3_3V, 32768U) == LR20XX_STATUS_OK);
+  result &= (chip_.lr2021->Invoke(lr20xx_system_set_reg_mode,
+                 LR20XX_SYSTEM_REG_MODE_DCDC) == LR20XX_STATUS_OK);
+  result &= (chip_.lr2021->Invoke(lr20xx_radio_common_set_rx_tx_fallback_mode,
+                 LR20XX_RADIO_FALLBACK_STDBY_RC) == LR20XX_STATUS_OK);
+  result &= (chip_.lr2021->Invoke(lr20xx_system_clear_irq_status,
+                 LR20XX_SYSTEM_IRQ_ALL_MASK) == LR20XX_STATUS_OK);
+  result &= (chip_.lr2021->Invoke(lr20xx_system_calibrate, kCalibrationMask) ==
+             LR20XX_STATUS_OK);
+  result &= configure_rf_switch(
+      LR20XX_SYSTEM_DIO_6, LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_RX_HF);
+  result &= configure_rf_switch(
+      LR20XX_SYSTEM_DIO_7, LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_TX_HF);
+  result &= configure_rf_switch(
+      LR20XX_SYSTEM_DIO_8, LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_RX_LF |
+                               LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_TX_LF);
+  result &= configure_rf_switch(
+      LR20XX_SYSTEM_DIO_10, LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_RX_HF |
+                                LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_TX_HF);
+  result &= (chip_.lr2021->Invoke(lr20xx_system_set_dio_function,
+                 LR20XX_SYSTEM_DIO_11, LR20XX_SYSTEM_DIO_FUNC_IRQ,
+                 LR20XX_SYSTEM_DIO_DRIVE_NONE) == LR20XX_STATUS_OK);
+  result &=
+      (chip_.lr2021->Invoke(lr20xx_system_set_dio_irq_cfg, LR20XX_SYSTEM_DIO_11,
+           LR20XX_SYSTEM_IRQ_NONE) == LR20XX_STATUS_OK);
+  result &= chip_.lr2021->SetSleep(sleep_config);
+  if (!result) {
+    chip_.lr2021->Deinit(false);
+    platform_hal_->GpioWrite(gpio::lr2021::kRst, 0);
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitLr2021 hardware configuration failed\n");
+    return false;
+  }
+
+  status_.lr2021.init_flag = true;
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+      "InitLr2021 success (fw: %u.%u)\n",
+      static_cast<unsigned>(version.major),
+      static_cast<unsigned>(version.minor));
+  return true;
+}
 
 bool TGlassesP4Driver::InitPower() {
   if (power_initialized_) {
@@ -548,6 +677,17 @@ bool TGlassesP4Driver::DeinitEs8389() {
   return result;
 }
 
+bool TGlassesP4Driver::DeinitLr2021() {
+  bool result = true;
+  if (IsLr2021Ready()) {
+    result &= SetLr2021OperatingMode(Lr2021OperatingMode::kSleep);
+    result &= chip_.lr2021->Deinit(false);
+    result &= platform_hal_->GpioWrite(gpio::lr2021::kRst, 0);
+  }
+  status_.lr2021.init_flag = false;
+  return result;
+}
+
 bool TGlassesP4Driver::DeinitSdmmc() {
   if (sd_card_ == nullptr) {
     status_.sd_card.init_flag = false;
@@ -617,6 +757,10 @@ bool TGlassesP4Driver::IsS023msafjf10111e1Ready() const {
          chip_.s023msafjf10111e1 != nullptr;
 }
 
+bool TGlassesP4Driver::IsLr2021Ready() const {
+  return status_.lr2021.init_flag && chip_.lr2021 != nullptr;
+}
+
 bool TGlassesP4Driver::IsScreenReady() const {
   return IsS023msafjf10111e1Ready() && bus_.screen_mipi_bus != nullptr &&
          bus_.screen_mipi_bus->device_handle() != nullptr;
@@ -663,6 +807,27 @@ bool TGlassesP4Driver::SetEs8389OperatingMode(Es8389OperatingMode mode) {
   }
   es8389_operating_mode_ = mode;
   return true;
+}
+
+bool TGlassesP4Driver::SetLr2021OperatingMode(Lr2021OperatingMode mode) {
+  if (!IsLr2021Ready()) {
+    return mode == Lr2021OperatingMode::kSleep;
+  }
+  switch (mode) {
+    case Lr2021OperatingMode::kStandby:
+      return chip_.lr2021->Wakeup() &&
+             chip_.lr2021->Invoke(lr20xx_system_set_standby_mode,
+                 LR20XX_SYSTEM_STANDBY_MODE_RC) == LR20XX_STATUS_OK;
+    case Lr2021OperatingMode::kSleep: {
+      const lr20xx_system_sleep_cfg_t sleep_config = {
+          .is_clk_32k_enabled = false,
+          .is_ram_retention_enabled = true,
+      };
+      return chip_.lr2021->SetSleep(sleep_config);
+    }
+    default:
+      return false;
+  }
 }
 
 bool TGlassesP4Driver::SetEsp32c5PowerEnabled(bool /*enabled*/) {
@@ -715,7 +880,7 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
   // 外围关机参考，恢复外围后应在关闭公共电源前执行。
   // result &= DeinitAw86224();
   result &= DeinitEs8389();
-  // result &= DeinitSx1262();
+  result &= DeinitLr2021();
   result &= SetCameraPowerEnabled(false);
   result &= DeinitSdmmc();
   // result &= SetEsp32c5PowerEnabled(false);
@@ -852,33 +1017,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   return result;
 // }
 //
-// bool TGlassesP4Driver::InitSx1262() {
-//   if (IsSx1262Ready()) {
-//     return true;
-//   }
-//   if (!InitMinimal()) {
-//     return false;
-//   }
-//   if (!platform_hal_->SetGpioMode(gpio::sx1262::kRst,
-//           cpp_bus_driver::PlatformHal::GpioMode::kOutput,
-//           cpp_bus_driver::PlatformHal::GpioStatus::kPullup) ||
-//       !chip_.sx1262->Init(device::sx1262::kSpiFrequencyHz)) {
-//     status_.sx1262.init_flag = false;
-//     platform_hal_->GpioWrite(gpio::sx1262::kRst, 0);
-//     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSx1262 failed\n");
-//     return false;
-//   }
-//
-//   const bool result = chip_.sx1262->SetSleep();
-//   if (!result) {
-//     chip_.sx1262->Deinit(false);
-//     platform_hal_->GpioWrite(gpio::sx1262::kRst, 0);
-//   }
-//   status_.sx1262.init_flag = result;
-//   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
-//       result ? "InitSx1262 success\n" : "InitSx1262 sleep failed\n");
-//   return result;
-// }
 //
 // bool TGlassesP4Driver::DeinitAw86224() {
 //   bool result = true;
@@ -891,16 +1029,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   return result;
 // }
 //
-// bool TGlassesP4Driver::DeinitSx1262() {
-//   bool result = true;
-//   if (status_.sx1262.init_flag && chip_.sx1262 != nullptr) {
-//     result &= chip_.sx1262->SetSleep();
-//     result &= chip_.sx1262->Deinit(false);
-//     result &= platform_hal_->GpioWrite(gpio::sx1262::kRst, 0);
-//   }
-//   status_.sx1262.init_flag = false;
-//   return result;
-// }
 //
 // bool TGlassesP4Driver::IsBq27220Ready() const {
 //   return status_.bq27220.init_flag && chip_.bq27220 != nullptr;
@@ -910,22 +1038,12 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   return status_.aw86224.init_flag && chip_.aw86224 != nullptr;
 // }
 //
-// bool TGlassesP4Driver::IsSx1262Ready() const {
-//   return status_.sx1262.init_flag && chip_.sx1262 != nullptr;
-// }
 //
 //
 // bool TGlassesP4Driver::SetAw86224Standby() {
 //   return !IsAw86224Ready() || chip_.aw86224->StopRamPlaybackWaveform();
 // }
 //
-// bool TGlassesP4Driver::SetSx1262OperatingMode(Sx1262OperatingMode mode) {
-//   if (!status_.sx1262.init_flag) {
-//     return mode == Sx1262OperatingMode::kSleep;
-//   }
-//   return mode == Sx1262OperatingMode::kSleep ? chip_.sx1262->SetSleep()
-//                                              : chip_.sx1262->Wakeup();
-// }
 
 // SD 卡 SPI 模式参考，后续需要时再接入。
 //
@@ -1020,9 +1138,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //       gpio::sy6970::kSda, gpio::sy6970::kScl, I2C_NUM_0);
 //   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
 //       gpio::sgm38121::kSda, gpio::sgm38121::kScl, I2C_NUM_1);
-//   bus_.sx1262_spi_bus =
-//       std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::sx1262::kMosi,
-//           gpio::sx1262::kSclk, gpio::sx1262::kMiso, SPI2_HOST, 0);
 //
 //   bus_.bq27220_i2c_bus =
 //       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sy6970_i2c_bus);
@@ -1050,11 +1165,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //       bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
 //   chip_.es8311 = std::make_unique<cpp_bus_driver::Es8311>(
 //       bus_.es8311_i2c_bus, bus_.es8311_i2s_bus, device::es8311::kI2cAddress);
-//   chip_.sx1262 =
-//       std::make_unique<usp_cpp_bus_driver::Sx126x>(bus_.sx1262_spi_bus,
-//           gpio::sx1262::kBusy, gpio::sx1262::kCs, [this](bool level) {
-//             return platform_hal_->GpioWrite(gpio::sx1262::kRst, level);
-//           });
 //   chip_.s023msafjf10111e1 =
 //   std::make_unique<cpp_bus_driver::S023msafjf10111e1>(
 //       bus_.screen_i2c_bus, device::s023msafjf10111e1::kI2cAddress,
@@ -1139,15 +1249,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //         },
 //         "InitEs8311Task", 4096, this, 3);
 //
-//     result &= async_init_manager_.StartTask(
-//         [](void* arg) {
-//           auto* self = static_cast<TGlassesP4Driver*>(arg);
-//           if (!self->async_init_manager_.stop_requested()) {
-//             self->InitSx1262();
-//           }
-//           self->async_init_manager_.FinishTask();
-//         },
-//         "InitSx1262Task", 4096, this, 3);
 //
 //     result &= async_init_manager_.StartTask(
 //         [](void* arg) {
@@ -1168,7 +1269,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //       SetEs8311OperatingMode(Es8311OperatingMode::kSleep);
 //     }
 //     result &= es8311_initialized;
-//     result &= InitSx1262();
 //
 //     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
 //
@@ -1177,7 +1277,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //     result &= status_.bq27220.init_flag;
 //     result &= status_.aw86224.init_flag;
 //     result &= status_.es8311.init_flag;
-//     result &= status_.sx1262.init_flag;
 //   }
 //
 //   return result;
@@ -1445,7 +1544,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   result &= DeinitScreen();
 //   result &= DeinitAw86224();
 //   result &= DeinitEs8311();
-//   result &= DeinitSx1262();
 //   result &= SetCameraPowerEnabled(false);
 //   if (IsSdmmcReady()) {
 //     result &= DeinitSdmmc();

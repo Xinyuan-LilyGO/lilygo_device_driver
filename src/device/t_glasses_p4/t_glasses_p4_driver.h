@@ -18,7 +18,7 @@
 #include "esp32p4_driver.h"
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
-// #include "sx126x/sx126x_driver.h"
+#include "lr20xx/lr20xx_driver.h"
 #include "t_glasses_p4_config.h"
 
 namespace lilygo_device_driver {
@@ -112,10 +112,10 @@ class TGlassesP4Driver {
     kSleep,
   };
   //
-  // enum class Sx1262OperatingMode {
-  //   kStandby,
-  //   kSleep,
-  // };
+  enum class Lr2021OperatingMode {
+    kStandby,
+    kSleep,
+  };
 
   struct Bus {
     // 屏幕与 BQ25896 分别使用 I2C0、I2C1，SGM38121 使用 LP I2C0。
@@ -133,7 +133,7 @@ class TGlassesP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
     // std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
-    // std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareSpi> lr2021_spi_bus;
   };
 
   struct Chip {
@@ -143,7 +143,7 @@ class TGlassesP4Driver {
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
     // std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
     // std::unique_ptr<cpp_bus_driver::Es8311> es8311;
-    // std::unique_ptr<usp_cpp_bus_driver::Sx126x> sx1262;
+    std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
     std::unique_ptr<cpp_bus_driver::S023msafjf10111e1> s023msafjf10111e1;
   };
 
@@ -181,9 +181,9 @@ class TGlassesP4Driver {
       bool init_flag = false;
     } es8389;
     //
-    // struct {
-    //   bool init_flag = false;
-    // } sx1262;
+    struct {
+      bool init_flag = false;
+    } lr2021;
     //
     struct {
       bool init_flag = false;
@@ -243,7 +243,7 @@ class TGlassesP4Driver {
   bool InitAw86224();
   bool InitBhi260ap();
   bool InitBmm350();
-  bool InitSx1262();
+  bool InitLr2021();
   bool InitPower();
   bool InitScreen();
   bool InitSdmmc(const char* base_path,
@@ -254,7 +254,7 @@ class TGlassesP4Driver {
   // bool DeinitAw86224();
   // bool DeinitEs8311();
   bool DeinitEs8389();
-  // bool DeinitSx1262();
+  bool DeinitLr2021();
   bool DeinitScreen();
   bool DeinitSdmmc();
 
@@ -266,14 +266,14 @@ class TGlassesP4Driver {
   // bool IsAw86224Ready() const;
   // bool IsEs8311Ready() const;
   bool IsEs8389Ready() const;
-  // bool IsSx1262Ready() const;
+  bool IsLr2021Ready() const;
   bool IsScreenReady() const;
   bool IsSdmmcReady() const;
 
   // bool SetAw86224Standby();
   // bool SetEs8311OperatingMode(Es8311OperatingMode mode);
   bool SetEs8389OperatingMode(Es8389OperatingMode mode);
-  // bool SetSx1262OperatingMode(Sx1262OperatingMode mode);
+  bool SetLr2021OperatingMode(Lr2021OperatingMode mode);
   bool SetEsp32c5PowerEnabled(bool enabled);
   bool SetCameraPowerEnabled(bool enabled);
   bool PrepareMinimalDriversForPowerOff();
