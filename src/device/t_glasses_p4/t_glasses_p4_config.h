@@ -43,15 +43,14 @@ inline constexpr int kScl = i2c::kSensorScl;
 inline constexpr int kRst = 52;
 }  // namespace s023msafjf10111e1
 
-// 以下为新板已核对的外围 GPIO，暂以注释保留，不参与屏幕初始化。
-// namespace sdio1 {
-// inline constexpr int kClk = 43;
-// inline constexpr int kCmd = 44;
-// inline constexpr int kD0 = 39;
-// inline constexpr int kD1 = 40;
-// inline constexpr int kD2 = 41;
-// inline constexpr int kD3 = 42;
-// }  // namespace sdio1
+namespace sdio1 {
+inline constexpr int kClk = 43;
+inline constexpr int kCmd = 44;
+inline constexpr int kD0 = 39;
+inline constexpr int kD1 = 40;
+inline constexpr int kD2 = 41;
+inline constexpr int kD3 = 42;
+}  // namespace sdio1
 //
 // namespace sdio2 {
 // inline constexpr int kClk = 18;
@@ -85,28 +84,28 @@ inline constexpr int kRst = 52;
 // inline constexpr int kScl = i2c::kPort1Scl;
 // }  // namespace bq27220
 //
-// namespace es8389 {
-// inline constexpr int kSda = i2c::kPort2Sda;
-// inline constexpr int kScl = i2c::kPort2Scl;
-// inline constexpr int kAdcData = 4;
-// inline constexpr int kDacData = 8;
-// inline constexpr int kBclk = 2;
-// inline constexpr int kMclk = 3;
-// inline constexpr int kWsLrck = 5;
-// }  // namespace es8389
+namespace es8389 {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
+inline constexpr int kAdcData = 4;
+inline constexpr int kDacData = 8;
+inline constexpr int kBclk = 2;
+inline constexpr int kMclk = 3;
+inline constexpr int kWsLrck = 5;
+}  // namespace es8389
 //
-// namespace sd {
-// inline constexpr int kSdioClk = sdio1::kClk;
-// inline constexpr int kSdioCmd = sdio1::kCmd;
-// inline constexpr int kSdioD0 = sdio1::kD0;
-// inline constexpr int kSdioD1 = sdio1::kD1;
-// inline constexpr int kSdioD2 = sdio1::kD2;
-// inline constexpr int kSdioD3 = sdio1::kD3;
-// inline constexpr int kSclk = sdio1::kClk;
-// inline constexpr int kMosi = sdio1::kCmd;
-// inline constexpr int kMiso = sdio1::kD0;
-// inline constexpr int kCs = sdio1::kD3;
-// }  // namespace sd
+namespace sd {
+inline constexpr int kSdioClk = sdio1::kClk;
+inline constexpr int kSdioCmd = sdio1::kCmd;
+inline constexpr int kSdioD0 = sdio1::kD0;
+inline constexpr int kSdioD1 = sdio1::kD1;
+inline constexpr int kSdioD2 = sdio1::kD2;
+inline constexpr int kSdioD3 = sdio1::kD3;
+inline constexpr int kSclk = sdio1::kClk;
+inline constexpr int kMosi = sdio1::kCmd;
+inline constexpr int kMiso = sdio1::kD0;
+inline constexpr int kCs = sdio1::kD3;
+}  // namespace sd
 //
 // namespace bhi260ap {
 // inline constexpr int kSda = i2c::kSensorSda;
@@ -201,13 +200,13 @@ inline constexpr uint8_t kI2cAddress = 0x6B;
 // inline constexpr uint8_t kI2cAddress = 0x55;
 // }  // namespace bq27220
 //
-// namespace es8389 {
-// inline constexpr uint8_t kI2cAddress = 0x10;
-// inline constexpr int kMclkMultiple = 256;
-// inline constexpr int kSampleRate = 48000;
-// inline constexpr int kBitsPerSample = 16;
-// inline constexpr int kChannel = 2;
-// }  // namespace es8389
+namespace es8389 {
+inline constexpr uint8_t kI2cAddress = 0x10;
+inline constexpr int kMclkMultiple = 256;
+inline constexpr int kSampleRate = 48000;
+inline constexpr int kBitsPerSample = 16;
+inline constexpr int kChannel = 2;
+}  // namespace es8389
 //
 // namespace camera {
 // #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
@@ -256,9 +255,9 @@ inline constexpr uint8_t kI2cAddress = 0x6B;
 // inline constexpr int32_t kSpiFrequencyHz = 10000000;
 // }  // namespace sx1262
 //
-// namespace sd {
-// inline constexpr const char* kBasePath = "/sdcard";
-// }  // namespace sd
+namespace sd {
+inline constexpr const char* kBasePath = "/sdcard";
+}  // namespace sd
 
 // 以下器件仅为旧板参考，新板使用 BQ25896/ES8389，不能启用旧驱动。
 // namespace sy6970 {

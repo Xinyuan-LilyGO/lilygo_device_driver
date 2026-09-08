@@ -8,16 +8,16 @@
 
 // #include <cstdint>
 #include <memory>
-// #include <string>
+#include <string>
 
 #include "cpp_bus_driver.h"
 #include "device/common/async_init_manager.h"
 #include "device/common/pixel_format.h"
-// #include "driver/sdmmc_host.h"
+#include "driver/sdmmc_host.h"
 // #include "driver/spi_common.h"
 #include "esp32p4_driver.h"
-// #include "esp_codec_dev.h"
-// #include "esp_codec_dev_defaults.h"
+#include "esp_codec_dev.h"
+#include "esp_codec_dev_defaults.h"
 // #include "sx126x/sx126x_driver.h"
 #include "t_glasses_p4_config.h"
 
@@ -107,10 +107,10 @@ class TGlassesP4Driver {
   //   kDuplex,    // 同时开启采集和播放路径。
   // };
   //
-  // enum class Es8389OperatingMode {
-  //   kActive,
-  //   kSleep,
-  // };
+  enum class Es8389OperatingMode {
+    kActive,
+    kSleep,
+  };
   //
   // enum class Sx1262OperatingMode {
   //   kStandby,
@@ -132,7 +132,7 @@ class TGlassesP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c> screen_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
     // std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
-    // std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
     // std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
   };
 
@@ -177,17 +177,17 @@ class TGlassesP4Driver {
     //   bool init_flag = false;
     // } es8311;
     //
-    // struct {
-    //   bool init_flag = false;
-    // } es8389;
+    struct {
+      bool init_flag = false;
+    } es8389;
     //
     // struct {
     //   bool init_flag = false;
     // } sx1262;
     //
-    // struct {
-    //   bool init_flag = false;
-    // } sd_card;
+    struct {
+      bool init_flag = false;
+    } sd_card;
   };
 
   static TGlassesP4Driver& GetInstance();
@@ -207,12 +207,12 @@ class TGlassesP4Driver {
   // const t_glasses_p4::device::BatteryInfo& battery_info() const {
   //   return t_glasses_p4::device::kBatteryInfo;
   // }
-  // esp_codec_dev_handle_t es8389_input_codec_dev() const {
-  //   return es8389_input_codec_dev_;
-  // }
-  // esp_codec_dev_handle_t es8389_output_codec_dev() const {
-  //   return es8389_output_codec_dev_;
-  // }
+  esp_codec_dev_handle_t es8389_input_codec_dev() const {
+    return es8389_input_codec_dev_;
+  }
+  esp_codec_dev_handle_t es8389_output_codec_dev() const {
+    return es8389_output_codec_dev_;
+  }
   t_glasses_p4::device::DeviceInfo device_info() const {
     return {
         .model = device_model_info(),
@@ -246,17 +246,17 @@ class TGlassesP4Driver {
   bool InitSx1262();
   bool InitPower();
   bool InitScreen();
-  // bool InitSdmmc(const char* base_path,
-  //     int max_freq_khz = SDMMC_FREQ_DEFAULT);
+  bool InitSdmmc(const char* base_path,
+      int max_freq_khz = SDMMC_FREQ_DEFAULT);
   // bool InitSdspi(const char* base_path, spi_host_device_t host_id,
   //     int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
   // bool DeinitAw86224();
   // bool DeinitEs8311();
-  // bool DeinitEs8389();
+  bool DeinitEs8389();
   // bool DeinitSx1262();
   bool DeinitScreen();
-  // bool DeinitSdmmc();
+  bool DeinitSdmmc();
 
   // bool IsSy6970Ready() const;
   // bool IsBq27220Ready() const;
@@ -265,14 +265,14 @@ class TGlassesP4Driver {
   bool IsS023msafjf10111e1Ready() const;
   // bool IsAw86224Ready() const;
   // bool IsEs8311Ready() const;
-  // bool IsEs8389Ready() const;
+  bool IsEs8389Ready() const;
   // bool IsSx1262Ready() const;
   bool IsScreenReady() const;
-  // bool IsSdmmcReady() const;
+  bool IsSdmmcReady() const;
 
   // bool SetAw86224Standby();
   // bool SetEs8311OperatingMode(Es8311OperatingMode mode);
-  // bool SetEs8389OperatingMode(Es8389OperatingMode mode);
+  bool SetEs8389OperatingMode(Es8389OperatingMode mode);
   // bool SetSx1262OperatingMode(Sx1262OperatingMode mode);
   bool SetEsp32c5PowerEnabled(bool enabled);
   bool SetCameraPowerEnabled(bool enabled);
@@ -311,21 +311,21 @@ class TGlassesP4Driver {
   Bus bus_;
   Chip chip_;
   Status status_;
-  // sdmmc_card_t* sd_card_ = nullptr;
-  // std::string sd_card_base_path_;
+  sdmmc_card_t* sd_card_ = nullptr;
+  std::string sd_card_base_path_;
   // bool sd_card_using_spi_ = false;
   // spi_host_device_t sd_card_spi_host_id_ = SPI2_HOST;
   // const t_glasses_p4::device::ScreenInfo* screen_info_ = nullptr;
   bool minimal_drivers_initialized_ = false;
   bool power_initialized_ = false;
 
-  // const audio_codec_ctrl_if_t* es8389_ctrl_if_ = nullptr;
-  // const audio_codec_data_if_t* es8389_data_if_ = nullptr;
-  // const audio_codec_gpio_if_t* es8389_gpio_if_ = nullptr;
-  // const audio_codec_if_t* es8389_codec_if_ = nullptr;
-  // esp_codec_dev_handle_t es8389_input_codec_dev_ = nullptr;
-  // esp_codec_dev_handle_t es8389_output_codec_dev_ = nullptr;
-  // Es8389OperatingMode es8389_operating_mode_ = Es8389OperatingMode::kSleep;
+  const audio_codec_ctrl_if_t* es8389_ctrl_if_ = nullptr;
+  const audio_codec_data_if_t* es8389_data_if_ = nullptr;
+  const audio_codec_gpio_if_t* es8389_gpio_if_ = nullptr;
+  const audio_codec_if_t* es8389_codec_if_ = nullptr;
+  esp_codec_dev_handle_t es8389_input_codec_dev_ = nullptr;
+  esp_codec_dev_handle_t es8389_output_codec_dev_ = nullptr;
+  Es8389OperatingMode es8389_operating_mode_ = Es8389OperatingMode::kSleep;
 
   TGlassesP4Driver() = default;
   ~TGlassesP4Driver() = default;

@@ -6,15 +6,16 @@
  */
 #include "t_glasses_p4_driver.h"
 
+#include <cstdio>
+
 #include "../../core/logger.h"
+#include "esp_vfs_fat.h"
+#include "sdmmc_cmd.h"
 
 // 其余外围恢复时再启用这些依赖。
-// #include <cstdio>
 // #include "driver/gpio.h"
 // #include "driver/sdspi_host.h"
 // #include "driver/spi_master.h"
-// #include "esp_vfs_fat.h"
-// #include "sdmmc_cmd.h"
 
 namespace lilygo_device_driver {
 namespace gpio = t_glasses_p4::gpio;
@@ -82,18 +83,19 @@ void TGlassesP4Driver::CreateDrivers() {
       bus_.screen_i2c_bus, device::s023msafjf10111e1::kI2cAddress,
       gpio::s023msafjf10111e1::kRst);
 
+  bus_.es8389_i2s_bus = std::make_shared<cpp_bus_driver::HardwareI2s>(
+      gpio::es8389::kAdcData, gpio::es8389::kDacData, gpio::es8389::kWsLrck,
+      gpio::es8389::kBclk, gpio::es8389::kMclk, i2s_port_t::I2S_NUM_0,
+      cpp_bus_driver::HardwareI2s::DataMode::kInputOutput,
+      cpp_bus_driver::HardwareI2s::I2sMode::kStd,
+      i2s_clock_src_t::I2S_CLK_SRC_DEFAULT);
+
   // 新板外围对象创建参考，待硬件完善后连同头文件成员一起恢复。
   // bus_.bq27220_i2c_bus =
   //     std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.bq25896_i2c_bus);
   // AW86224 与 SGM38121 共用引脚，恢复后共享 LP I2C 总线。
   // bus_.aw86224_i2c_bus =
   //     std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
-  // bus_.es8389_i2s_bus = std::make_shared<cpp_bus_driver::HardwareI2s>(
-  //     gpio::es8389::kAdcData, gpio::es8389::kDacData, gpio::es8389::kWsLrck,
-  //     gpio::es8389::kBclk, gpio::es8389::kMclk, i2s_port_t::I2S_NUM_0,
-  //     cpp_bus_driver::HardwareI2s::DataMode::kInputOutput,
-  //     cpp_bus_driver::HardwareI2s::I2sMode::kStd,
-  //     i2s_clock_src_t::I2S_CLK_SRC_DEFAULT);
   // bus_.sx1262_spi_bus =
   //     std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::sx1262::kMosi,
   //         gpio::sx1262::kSclk, gpio::sx1262::kMiso, SPI2_HOST, 0);
@@ -126,18 +128,15 @@ bool TGlassesP4Driver::Init(InitMode mode) {
 
 bool TGlassesP4Driver::InitMinimal() {
   CreateDrivers();
-  if (InitMinimalDrivers()) {
-    return true;
-  }
-  PrepareMinimalDriversForPowerOff();
-  return false;
+  // 初始化失败保留公共电源，允许后续重试。
+  return InitMinimalDrivers();
 }
 
 bool TGlassesP4Driver::InitMinimalDrivers() {
   if (minimal_drivers_initialized_) {
     return true;
   }
-  if (!InitPower() || !InitBq25896() || !InitSgm38121()) {
+  if (!InitPower() || !InitBq25896()) {
     return false;
   }
   minimal_drivers_initialized_ = true;
@@ -149,44 +148,51 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     return false;
   }
   if (!InitMinimalDrivers()) {
-    PrepareMinimalDriversForPowerOff();
     return false;
   }
-  if (mode == InitMode::kSync) {
-    // 外围初始化调用参考，不属于当前屏幕验证路径。
-    // bool result = InitScreen();
+  bool result = InitSgm38121();
+  async_init_manager_.Reset();
+  if (mode == InitMode::kAsync) {
+    result &= async_init_manager_.StartTask(
+        [](void* arg) {
+          auto* self = static_cast<TGlassesP4Driver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitScreen();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitScreenTask", 4096, this, 3);
+
+    result &= async_init_manager_.StartTask(
+        [](void* arg) {
+          auto* self = static_cast<TGlassesP4Driver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitEs8389();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitEs8389Task", 4096, this, 3);
+
+    // 未接入外围的异步初始化参考。
+    // result &= async_init_manager_.StartTask(
+    //     [](void* arg) {
+    //       auto* self = static_cast<TGlassesP4Driver*>(arg);
+    //       if (!self->async_init_manager_.stop_requested()) {
+    //         self->InitBq27220();
+    //         self->InitAw86224();
+    //         self->InitSx1262();
+    //       }
+    //       self->async_init_manager_.FinishTask();
+    //     },
+    //     "PeripheralTask", 4096, this, 3);
+  } else {
+    result &= InitScreen();
     // result &= InitBq27220();
     // result &= InitAw86224();
-    // result &= InitEs8389();
     // result &= InitSx1262();
-    // InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
-    // return result;
-    return InitScreen();
+    result &= InitEs8389();
   }
-  async_init_manager_.Reset();
-  // 外围异步任务参考；恢复时需要累积各 StartTask 的结果。
-  // async_init_manager_.StartTask(
-  //     [](void* arg) {
-  //       auto* self = static_cast<TGlassesP4Driver*>(arg);
-  //       if (!self->async_init_manager_.stop_requested()) {
-  //         self->InitBq27220();
-  //         self->InitAw86224();
-  //         self->InitEs8389();
-  //         self->InitSx1262();
-  //         self->InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
-  //       }
-  //       self->async_init_manager_.FinishTask();
-  //     },
-  //     "PeripheralTask", 4096, this, 3);
-  return async_init_manager_.StartTask(
-      [](void* arg) {
-        auto* self = static_cast<TGlassesP4Driver*>(arg);
-        if (!self->async_init_manager_.stop_requested()) {
-          self->InitScreen();
-        }
-        self->async_init_manager_.FinishTask();
-      },
-      "ScreenTask", 4096, this, 3);
+  return result;
 }
 
 bool TGlassesP4Driver::InitBq25896() {
@@ -291,7 +297,110 @@ bool TGlassesP4Driver::InitS023msafjf10111e1() {
 // 外围函数空壳，后续硬件完善后再接入对应驱动。
 bool TGlassesP4Driver::InitBq27220() { return false; }
 
-bool TGlassesP4Driver::InitEs8389() { return false; }
+bool TGlassesP4Driver::InitEs8389() {
+  if (IsEs8389Ready()) {
+    return true;
+  }
+  if (!power_initialized_ || bus_.es8389_i2s_bus == nullptr ||
+      bus_.sgm38121_i2c_bus == nullptr ||
+      bus_.sgm38121_i2c_bus->bus_handle() == nullptr) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitEs8389 failed (power or bus not ready)\n");
+    return false;
+  }
+  audio_codec_i2c_cfg_t i2c_cfg = {
+      .port = static_cast<uint8_t>(LP_I2C_NUM_0),
+      .addr = static_cast<uint8_t>(device::es8389::kI2cAddress << 1),
+      .bus_handle = bus_.sgm38121_i2c_bus->bus_handle(),
+  };
+  es8389_ctrl_if_ = audio_codec_new_i2c_ctrl(&i2c_cfg);
+  if (es8389_ctrl_if_ == nullptr ||
+      !bus_.es8389_i2s_bus->Init(
+          static_cast<i2s_mclk_multiple_t>(device::es8389::kMclkMultiple),
+          device::es8389::kSampleRate,
+          static_cast<i2s_data_bit_width_t>(device::es8389::kBitsPerSample))) {
+    DeinitEs8389();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitEs8389 failed (I2C control or I2S initialization)\n");
+    return false;
+  }
+  audio_codec_i2s_cfg_t i2s_cfg = {
+      .port = static_cast<uint8_t>(bus_.es8389_i2s_bus->port()),
+      .rx_handle = bus_.es8389_i2s_bus->rx_handle(),
+      .tx_handle = bus_.es8389_i2s_bus->tx_handle(),
+      .clk_src = static_cast<int>(I2S_CLK_SRC_DEFAULT),
+  };
+  es8389_data_if_ = audio_codec_new_i2s_data(&i2s_cfg);
+  es8389_gpio_if_ = audio_codec_new_gpio();
+  if (es8389_data_if_ == nullptr || es8389_gpio_if_ == nullptr) {
+    DeinitEs8389();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitEs8389 failed (data or GPIO interface)\n");
+    return false;
+  }
+  es8389_codec_cfg_t codec_cfg = {
+      .ctrl_if = es8389_ctrl_if_,
+      .gpio_if = es8389_gpio_if_,
+      .codec_mode = ESP_CODEC_DEV_WORK_MODE_BOTH,
+      .pa_pin = -1,
+      .pa_reverted = false,
+      .master_mode = false,
+      .use_mclk = true,
+      .digital_mic = false,
+      .invert_mclk = false,
+      .invert_sclk = false,
+      .hw_gain =
+          {
+              .pa_voltage = 3.3f,
+              .codec_dac_voltage = 3.3f,
+              .pa_gain = 0.0f,
+          },
+      .no_dac_ref = false,
+      .mclk_div = device::es8389::kMclkMultiple,
+  };
+  es8389_codec_if_ = es8389_codec_new(&codec_cfg);
+  if (es8389_codec_if_ == nullptr) {
+    DeinitEs8389();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitEs8389 failed (codec interface)\n");
+    return false;
+  }
+  esp_codec_dev_cfg_t output_dev_cfg = {
+      .dev_type = ESP_CODEC_DEV_TYPE_OUT,
+      .codec_if = es8389_codec_if_,
+      .data_if = es8389_data_if_,
+  };
+  es8389_output_codec_dev_ = esp_codec_dev_new(&output_dev_cfg);
+  esp_codec_dev_cfg_t input_dev_cfg = {
+      .dev_type = ESP_CODEC_DEV_TYPE_IN,
+      .codec_if = es8389_codec_if_,
+      .data_if = es8389_data_if_,
+  };
+  es8389_input_codec_dev_ = esp_codec_dev_new(&input_dev_cfg);
+  if (es8389_output_codec_dev_ == nullptr ||
+      es8389_input_codec_dev_ == nullptr) {
+    DeinitEs8389();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitEs8389 failed (codec device)\n");
+    return false;
+  }
+  status_.es8389.init_flag = true;
+  bool result = SetEs8389OperatingMode(Es8389OperatingMode::kActive);
+  if (result) {
+    result &= esp_codec_dev_set_out_vol(es8389_output_codec_dev_, 100) ==
+              ESP_CODEC_DEV_OK;
+    result &= esp_codec_dev_set_in_gain(es8389_input_codec_dev_, 20.0f) ==
+              ESP_CODEC_DEV_OK;
+  }
+  result &= SetEs8389OperatingMode(Es8389OperatingMode::kSleep);
+  if (!result) {
+    DeinitEs8389();
+  }
+  status_.es8389.init_flag = result;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitEs8389 success\n" : "InitEs8389 failed\n");
+  return result;
+}
 
 bool TGlassesP4Driver::InitAw86224() { return false; }
 
@@ -318,7 +427,6 @@ bool TGlassesP4Driver::InitPower() {
   if (!platform_hal_->SetGpioMode(gpio::power::kEnable3v3,
           cpp_bus_driver::PlatformHal::GpioMode::kOutput) ||
       !platform_hal_->GpioWrite(gpio::power::kEnable3v3, 1)) {
-    platform_hal_->GpioWrite(gpio::power::kEnable3v3, 0);
     DeinitLdoPower(3);
     DeinitLdoPower(4);
     return false;
@@ -352,14 +460,120 @@ bool TGlassesP4Driver::InitScreen() {
   return result;
 }
 
-bool TGlassesP4Driver::DeinitPower() {
+bool TGlassesP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
+  if (base_path == nullptr || base_path[0] == '\0' || max_freq_khz <= 0) {
+    return false;
+  }
+  if (sd_card_ != nullptr) {
+    return sd_card_base_path_ == base_path && IsSdmmcReady();
+  }
   if (!power_initialized_) {
+    return false;
+  }
+  esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+      .format_if_mount_failed = false,
+      .max_files = 5,
+      .allocation_unit_size = 16 * 1024,
+      .disk_status_check_enable = false,
+      .use_one_fat = false,
+  };
+
+  sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+  host.slot = SDMMC_HOST_SLOT_0;
+  host.max_freq_khz = max_freq_khz;
+
+  sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
+  slot_config.width = 4;
+  slot_config.clk = static_cast<gpio_num_t>(gpio::sd::kSdioClk);
+  slot_config.cmd = static_cast<gpio_num_t>(gpio::sd::kSdioCmd);
+  slot_config.d0 = static_cast<gpio_num_t>(gpio::sd::kSdioD0);
+  slot_config.d1 = static_cast<gpio_num_t>(gpio::sd::kSdioD1);
+  slot_config.d2 = static_cast<gpio_num_t>(gpio::sd::kSdioD2);
+  slot_config.d3 = static_cast<gpio_num_t>(gpio::sd::kSdioD3);
+  slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
+
+  sdmmc_card_t* card = nullptr;
+  esp_err_t result = esp_vfs_fat_sdmmc_mount(
+      base_path, &host, &slot_config, &mount_config, &card);
+  if (result != ESP_OK) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "esp_vfs_fat_sdmmc_mount failed (error code: %#X)\n", result);
+    status_.sd_card.init_flag = false;
+    sd_card_ = nullptr;
+    return false;
+  }
+
+  sdmmc_card_print_info(stdout, card);
+  sd_card_ = card;
+  sd_card_base_path_ = base_path;
+  status_.sd_card.init_flag = true;
+  return true;
+}
+
+bool TGlassesP4Driver::DeinitEs8389() {
+  bool result = SetEs8389OperatingMode(Es8389OperatingMode::kSleep);
+  if (es8389_input_codec_dev_ != nullptr) {
+    esp_codec_dev_delete(es8389_input_codec_dev_);
+    es8389_input_codec_dev_ = nullptr;
+  }
+  if (es8389_output_codec_dev_ != nullptr) {
+    esp_codec_dev_delete(es8389_output_codec_dev_);
+    es8389_output_codec_dev_ = nullptr;
+  }
+  if (es8389_codec_if_ != nullptr) {
+    result &=
+        audio_codec_delete_codec_if(es8389_codec_if_) == ESP_CODEC_DEV_OK;
+    es8389_codec_if_ = nullptr;
+  }
+  if (es8389_ctrl_if_ != nullptr) {
+    result &=
+        audio_codec_delete_ctrl_if(es8389_ctrl_if_) == ESP_CODEC_DEV_OK;
+    es8389_ctrl_if_ = nullptr;
+  }
+  if (es8389_data_if_ != nullptr) {
+    result &=
+        audio_codec_delete_data_if(es8389_data_if_) == ESP_CODEC_DEV_OK;
+    es8389_data_if_ = nullptr;
+  }
+  if (es8389_gpio_if_ != nullptr) {
+    result &=
+        audio_codec_delete_gpio_if(es8389_gpio_if_) == ESP_CODEC_DEV_OK;
+    es8389_gpio_if_ = nullptr;
+  }
+  if (bus_.es8389_i2s_bus != nullptr) {
+    result &= bus_.es8389_i2s_bus->Deinit();
+  }
+  status_.es8389.init_flag = false;
+  es8389_operating_mode_ = Es8389OperatingMode::kSleep;
+  return result;
+}
+
+bool TGlassesP4Driver::DeinitSdmmc() {
+  if (sd_card_ == nullptr) {
+    status_.sd_card.init_flag = false;
     return true;
   }
+  if (esp_vfs_fat_sdcard_unmount(sd_card_base_path_.c_str(), sd_card_) !=
+      ESP_OK) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "DeinitSdmmc failed\n");
+    return false;
+  }
+  sd_card_ = nullptr;
+  sd_card_base_path_.clear();
+  status_.sd_card.init_flag = false;
+  return true;
+}
+
+bool TGlassesP4Driver::DeinitPower() {
   bool result = true;
-  result &= platform_hal_->GpioWrite(gpio::power::kEnable3v3, 0);
   result &= DeinitLdoPower(3);
   result &= DeinitLdoPower(4);
+  if (platform_hal_ != nullptr) {
+    // 关闭前需停止外设通信，将连接到断电外设的所有信号 IO 设为无上下拉的高阻态。
+    // 否则 IO 反向供电可能导致断电不完全，使部分 I2C 设备下次初始化失败。
+    // 电源使能脚需保持关闭电平；此处不自动配置其他 IO 的高阻态。
+    result &= platform_hal_->GpioWrite(gpio::power::kEnable3v3, 0);
+  }
   power_initialized_ = false;
   return result;
 }
@@ -380,6 +594,16 @@ bool TGlassesP4Driver::DeinitScreen() {
   return result;
 }
 
+bool TGlassesP4Driver::IsEs8389Ready() const {
+  return status_.es8389.init_flag && es8389_input_codec_dev_ != nullptr &&
+         es8389_output_codec_dev_ != nullptr;
+}
+
+bool TGlassesP4Driver::IsSdmmcReady() const {
+  return status_.sd_card.init_flag && sd_card_ != nullptr &&
+         sdmmc_get_status(sd_card_) == ESP_OK;
+}
+
 bool TGlassesP4Driver::IsBq25896Ready() const {
   return status_.bq25896.init_flag && chip_.bq25896 != nullptr;
 }
@@ -396,6 +620,49 @@ bool TGlassesP4Driver::IsS023msafjf10111e1Ready() const {
 bool TGlassesP4Driver::IsScreenReady() const {
   return IsS023msafjf10111e1Ready() && bus_.screen_mipi_bus != nullptr &&
          bus_.screen_mipi_bus->device_handle() != nullptr;
+}
+
+bool TGlassesP4Driver::SetEs8389OperatingMode(Es8389OperatingMode mode) {
+  if (!IsEs8389Ready()) {
+    return mode == Es8389OperatingMode::kSleep;
+  }
+  if (mode == es8389_operating_mode_) {
+    return true;
+  }
+  if (mode != Es8389OperatingMode::kSleep &&
+      mode != Es8389OperatingMode::kActive) {
+    return false;
+  }
+  if (mode == Es8389OperatingMode::kSleep) {
+    bool result =
+        esp_codec_dev_close(es8389_input_codec_dev_) == ESP_CODEC_DEV_OK;
+    result &=
+        esp_codec_dev_close(es8389_output_codec_dev_) == ESP_CODEC_DEV_OK;
+    if (result) {
+      es8389_operating_mode_ = mode;
+    }
+    return result;
+  }
+  esp_codec_dev_sample_info_t output_sample_info = {
+      .bits_per_sample = device::es8389::kBitsPerSample,
+      .channel = device::es8389::kChannel,
+      .channel_mask = ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0) |
+                      ESP_CODEC_DEV_MAKE_CHANNEL_MASK(1),
+      .sample_rate = device::es8389::kSampleRate,
+      .mclk_multiple = device::es8389::kMclkMultiple,
+  };
+  esp_codec_dev_sample_info_t input_sample_info = output_sample_info;
+  if (esp_codec_dev_open(es8389_output_codec_dev_, &output_sample_info) !=
+      ESP_CODEC_DEV_OK) {
+    return false;
+  }
+  if (esp_codec_dev_open(es8389_input_codec_dev_, &input_sample_info) !=
+      ESP_CODEC_DEV_OK) {
+    esp_codec_dev_close(es8389_output_codec_dev_);
+    return false;
+  }
+  es8389_operating_mode_ = mode;
+  return true;
 }
 
 bool TGlassesP4Driver::SetEsp32c5PowerEnabled(bool /*enabled*/) {
@@ -427,14 +694,6 @@ bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
 
 bool TGlassesP4Driver::PrepareMinimalDriversForPowerOff() {
   bool result = true;
-  result &= SetCameraPowerEnabled(false);
-  if (IsSgm38121Ready()) {
-    result &= chip_.sgm38121->SetChannelStatus(
-        cpp_bus_driver::Sgm38121::Channel::kAvdd1,
-        cpp_bus_driver::Sgm38121::Status::kOff);
-    result &= chip_.sgm38121->Deinit(false);
-  }
-  status_.sgm38121.init_flag = false;
   if (IsBq25896Ready()) {
     // 仅解除驱动和总线初始化，保留充电配置，不断开电池供电。
     result &= chip_.bq25896->Deinit(false);
@@ -448,21 +707,29 @@ bool TGlassesP4Driver::PrepareMinimalDriversForPowerOff() {
 bool TGlassesP4Driver::PrepareDriversForPowerOff() {
   if (!async_init_manager_.StopAndWait(kInitializationShutdownTimeoutMs)) {
     LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
-        "Wait for screen initialization before power off timed out\n");
+        "Wait for asynchronous initialization before power off timed out\n");
     return false;
   }
-  bool result = DeinitScreen();
+  bool result = true;
+  result &= DeinitScreen();
   // 外围关机参考，恢复外围后应在关闭公共电源前执行。
   // result &= DeinitAw86224();
-  // result &= DeinitEs8389();
+  result &= DeinitEs8389();
   // result &= DeinitSx1262();
-  // result &= SetCameraPowerEnabled(false);
-  // result &= DeinitSdmmc();
+  result &= SetCameraPowerEnabled(false);
+  result &= DeinitSdmmc();
   // result &= SetEsp32c5PowerEnabled(false);
   // if (IsBq27220Ready()) {
   //   result &= chip_.bq27220->Deinit(false);
   //   status_.bq27220.init_flag = false;
   // }
+  if (IsSgm38121Ready()) {
+    result &= chip_.sgm38121->SetChannelStatus(
+        cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+        cpp_bus_driver::Sgm38121::Status::kOff);
+    result &= chip_.sgm38121->Deinit(false);
+  }
+  status_.sgm38121.init_flag = false;
   result &= PrepareMinimalDriversForPowerOff();
   return result;
 }
@@ -526,181 +793,9 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   return result;
 // }
 //
-// bool TGlassesP4Driver::InitEs8389() {
-//   if (IsEs8389Ready()) {
-//     return true;
-//   }
-//   if (!InitMinimal()) {
-//     return false;
-//   }
-//   audio_codec_i2c_cfg_t i2c_cfg = {
-//       .port = static_cast<uint8_t>(I2C_NUM_1),
-//       .addr = static_cast<uint8_t>(device::es8389::kI2cAddress << 1),
-//       .bus_handle = bus_.sgm38121_i2c_bus->bus_handle(),
-//   };
-//   es8389_ctrl_if_ = audio_codec_new_i2c_ctrl(&i2c_cfg);
-//   if (es8389_ctrl_if_ == nullptr ||
-//       !bus_.es8389_i2s_bus->Init(
-//           static_cast<i2s_mclk_multiple_t>(device::es8389::kMclkMultiple),
-//           device::es8389::kSampleRate,
-//           static_cast<i2s_data_bit_width_t>(device::es8389::kBitsPerSample)))
-//           {
-//     DeinitEs8389();
-//     return false;
-//   }
-//   audio_codec_i2s_cfg_t i2s_cfg = {
-//       .port = static_cast<uint8_t>(bus_.es8389_i2s_bus->port()),
-//       .rx_handle = bus_.es8389_i2s_bus->rx_handle(),
-//       .tx_handle = bus_.es8389_i2s_bus->tx_handle(),
-//       .clk_src = static_cast<int>(I2S_CLK_SRC_DEFAULT),
-//   };
-//   es8389_data_if_ = audio_codec_new_i2s_data(&i2s_cfg);
-//   es8389_gpio_if_ = audio_codec_new_gpio();
-//   if (es8389_data_if_ == nullptr || es8389_gpio_if_ == nullptr) {
-//     DeinitEs8389();
-//     return false;
-//   }
-//   es8389_codec_cfg_t codec_cfg = {
-//       .ctrl_if = es8389_ctrl_if_,
-//       .gpio_if = es8389_gpio_if_,
-//       .codec_mode = ESP_CODEC_DEV_WORK_MODE_BOTH,
-//       .pa_pin = -1,
-//       .pa_reverted = false,
-//       .master_mode = false,
-//       .use_mclk = true,
-//       .digital_mic = false,
-//       .invert_mclk = false,
-//       .invert_sclk = false,
-//       .hw_gain =
-//           {
-//               .pa_voltage = 3.3f,
-//               .codec_dac_voltage = 3.3f,
-//               .pa_gain = 0.0f,
-//           },
-//       .no_dac_ref = false,
-//       .mclk_div = device::es8389::kMclkMultiple,
-//   };
-//   es8389_codec_if_ = es8389_codec_new(&codec_cfg);
-//   if (es8389_codec_if_ == nullptr) {
-//     DeinitEs8389();
-//     return false;
-//   }
-//   esp_codec_dev_cfg_t output_dev_cfg = {
-//       .dev_type = ESP_CODEC_DEV_TYPE_OUT,
-//       .codec_if = es8389_codec_if_,
-//       .data_if = es8389_data_if_,
-//   };
-//   es8389_output_codec_dev_ = esp_codec_dev_new(&output_dev_cfg);
-//   esp_codec_dev_cfg_t input_dev_cfg = {
-//       .dev_type = ESP_CODEC_DEV_TYPE_IN,
-//       .codec_if = es8389_codec_if_,
-//       .data_if = es8389_data_if_,
-//   };
-//   es8389_input_codec_dev_ = esp_codec_dev_new(&input_dev_cfg);
-//   if (es8389_output_codec_dev_ == nullptr || es8389_input_codec_dev_ ==
-//   nullptr) {
-//     DeinitEs8389();
-//     return false;
-//   }
-//   status_.es8389.init_flag = true;
-//   bool result = SetEs8389OperatingMode(Es8389OperatingMode::kActive);
-//   if (result) {
-//     result &= esp_codec_dev_set_out_vol(es8389_output_codec_dev_, 100) ==
-//               ESP_CODEC_DEV_OK;
-//     result &= esp_codec_dev_set_in_gain(es8389_input_codec_dev_, 20.0f) ==
-//               ESP_CODEC_DEV_OK;
-//   }
-//   result &= SetEs8389OperatingMode(Es8389OperatingMode::kSleep);
-//   if (!result) {
-//     DeinitEs8389();
-//   }
-//   status_.es8389.init_flag = result;
-//   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
-//       result ? "InitEs8389 success\n" : "InitEs8389 failed\n");
-//   return result;
-// }
 //
-// bool TGlassesP4Driver::DeinitEs8389() {
-//   bool result = SetEs8389OperatingMode(Es8389OperatingMode::kSleep);
-//   if (es8389_input_codec_dev_ != nullptr) {
-//     esp_codec_dev_delete(es8389_input_codec_dev_);
-//     es8389_input_codec_dev_ = nullptr;
-//   }
-//   if (es8389_output_codec_dev_ != nullptr) {
-//     esp_codec_dev_delete(es8389_output_codec_dev_);
-//     es8389_output_codec_dev_ = nullptr;
-//   }
-//   if (es8389_codec_if_ != nullptr) {
-//     result &= audio_codec_delete_codec_if(es8389_codec_if_) ==
-//     ESP_CODEC_DEV_OK; es8389_codec_if_ = nullptr;
-//   }
-//   if (es8389_ctrl_if_ != nullptr) {
-//     result &= audio_codec_delete_ctrl_if(es8389_ctrl_if_) ==
-//     ESP_CODEC_DEV_OK; es8389_ctrl_if_ = nullptr;
-//   }
-//   if (es8389_data_if_ != nullptr) {
-//     result &= audio_codec_delete_data_if(es8389_data_if_) ==
-//     ESP_CODEC_DEV_OK; es8389_data_if_ = nullptr;
-//   }
-//   if (es8389_gpio_if_ != nullptr) {
-//     result &= audio_codec_delete_gpio_if(es8389_gpio_if_) ==
-//     ESP_CODEC_DEV_OK; es8389_gpio_if_ = nullptr;
-//   }
-//   if (bus_.es8389_i2s_bus != nullptr) {
-//     result &= bus_.es8389_i2s_bus->Deinit();
-//   }
-//   status_.es8389.init_flag = false;
-//   es8389_operating_mode_ = Es8389OperatingMode::kSleep;
-//   return result;
-// }
 //
-// bool TGlassesP4Driver::IsEs8389Ready() const {
-//   return status_.es8389.init_flag && es8389_input_codec_dev_ != nullptr &&
-//          es8389_output_codec_dev_ != nullptr;
-// }
 //
-// bool TGlassesP4Driver::SetEs8389OperatingMode(Es8389OperatingMode mode) {
-//   if (!IsEs8389Ready()) {
-//     return mode == Es8389OperatingMode::kSleep;
-//   }
-//   if (mode == es8389_operating_mode_) {
-//     return true;
-//   }
-//   if (mode != Es8389OperatingMode::kSleep &&
-//       mode != Es8389OperatingMode::kActive) {
-//     return false;
-//   }
-//   if (mode == Es8389OperatingMode::kSleep) {
-//     bool result = esp_codec_dev_close(es8389_input_codec_dev_) ==
-//                   ESP_CODEC_DEV_OK;
-//     result &= esp_codec_dev_close(es8389_output_codec_dev_) ==
-//               ESP_CODEC_DEV_OK;
-//     if (result) {
-//       es8389_operating_mode_ = mode;
-//     }
-//     return result;
-//   }
-//   esp_codec_dev_sample_info_t output_sample_info = {
-//       .bits_per_sample = device::es8389::kBitsPerSample,
-//       .channel = device::es8389::kChannel,
-//       .channel_mask = ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0) |
-//                       ESP_CODEC_DEV_MAKE_CHANNEL_MASK(1),
-//       .sample_rate = device::es8389::kSampleRate,
-//       .mclk_multiple = device::es8389::kMclkMultiple,
-//   };
-//   esp_codec_dev_sample_info_t input_sample_info = output_sample_info;
-//   if (esp_codec_dev_open(es8389_output_codec_dev_, &output_sample_info) !=
-//       ESP_CODEC_DEV_OK) {
-//     return false;
-//   }
-//   if (esp_codec_dev_open(es8389_input_codec_dev_, &input_sample_info) !=
-//       ESP_CODEC_DEV_OK) {
-//     esp_codec_dev_close(es8389_output_codec_dev_);
-//     return false;
-//   }
-//   es8389_operating_mode_ = mode;
-//   return true;
-// }
 //
 // bool TGlassesP4Driver::SetEsp32c5PowerEnabled(bool enabled) {
 //   CreateDrivers();
@@ -819,10 +914,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   return status_.sx1262.init_flag && chip_.sx1262 != nullptr;
 // }
 //
-// bool TGlassesP4Driver::IsSdmmcReady() const {
-//   return status_.sd_card.init_flag && sd_card_ != nullptr &&
-//          sdmmc_get_status(sd_card_) == ESP_OK;
-// }
 //
 // bool TGlassesP4Driver::SetAw86224Standby() {
 //   return !IsAw86224Ready() || chip_.aw86224->StopRamPlaybackWaveform();
@@ -836,58 +927,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //                                              : chip_.sx1262->Wakeup();
 // }
 
-// SD 卡挂载与释放参考；恢复时需同步恢复状态字段和 ESP-IDF 头文件。
-// bool TGlassesP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
-//   if (base_path == nullptr || max_freq_khz <= 0) {
-//     return false;
-//   }
-//   if (sd_card_ != nullptr) {
-//     return !sd_card_using_spi_ && sd_card_base_path_ == base_path &&
-//            IsSdmmcReady();
-//   }
-//   if (!InitMinimal()) {
-//     return false;
-//   }
-//   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-//       .format_if_mount_failed = false,
-//       .max_files = 5,
-//       .allocation_unit_size = 16 * 1024,
-//       .disk_status_check_enable = false,
-//       .use_one_fat = false,
-//   };
-//
-//   sdmmc_host_t host = SDMMC_HOST_DEFAULT();
-//   host.slot = SDMMC_HOST_SLOT_0;
-//   host.max_freq_khz = max_freq_khz;
-//
-//   sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-//   slot_config.width = 4;
-//   slot_config.clk = static_cast<gpio_num_t>(gpio::sd::kSdioClk);
-//   slot_config.cmd = static_cast<gpio_num_t>(gpio::sd::kSdioCmd);
-//   slot_config.d0 = static_cast<gpio_num_t>(gpio::sd::kSdioD0);
-//   slot_config.d1 = static_cast<gpio_num_t>(gpio::sd::kSdioD1);
-//   slot_config.d2 = static_cast<gpio_num_t>(gpio::sd::kSdioD2);
-//   slot_config.d3 = static_cast<gpio_num_t>(gpio::sd::kSdioD3);
-//   slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
-//
-//   sdmmc_card_t* card = nullptr;
-//   esp_err_t result = esp_vfs_fat_sdmmc_mount(
-//       base_path, &host, &slot_config, &mount_config, &card);
-//   if (result != ESP_OK) {
-//     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-//         "esp_vfs_fat_sdmmc_mount failed (error code: %#X)\n", result);
-//     status_.sd_card.init_flag = false;
-//     sd_card_ = nullptr;
-//     return false;
-//   }
-//
-//   sdmmc_card_print_info(stdout, card);
-//   sd_card_ = card;
-//   sd_card_base_path_ = base_path;
-//   sd_card_using_spi_ = false;
-//   status_.sd_card.init_flag = true;
-//   return true;
-// }
+// SD 卡 SPI 模式参考，后续需要时再接入。
 //
 // bool TGlassesP4Driver::InitSdspi(
 //     const char* base_path, spi_host_device_t host_id, int max_freq_khz) {
@@ -965,23 +1005,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   return true;
 // }
 //
-// bool TGlassesP4Driver::DeinitSdmmc() {
-//   if (sd_card_ == nullptr) {
-//     status_.sd_card.init_flag = false;
-//     return true;
-//   }
-//   if (esp_vfs_fat_sdcard_unmount(sd_card_base_path_.c_str(), sd_card_) !=
-//   ESP_OK) {
-//     return false;
-//   }
-//   sd_card_ = nullptr;
-//   sd_card_base_path_.clear();
-//   status_.sd_card.init_flag = false;
-//   const bool result = !sd_card_using_spi_ ||
-//                       spi_bus_free(sd_card_spi_host_id_) == ESP_OK;
-//   sd_card_using_spi_ = false;
-//   return result;
-// }
 
 // 以下为修改前 HEAD 的旧板实现，仅保留追溯，不可直接启用到当前新板。
 // SY6970、ES8311、旧 I2C 分配和独立 5 V GPIO 均不匹配当前硬件。

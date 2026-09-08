@@ -145,11 +145,8 @@ bool TDisplayP4AirDriver::Init(InitMode mode) {
 
 bool TDisplayP4AirDriver::InitMinimal() {
   CreateDrivers();
-  if (InitMinimalDrivers()) {
-    return true;
-  }
-  PrepareMinimalDriversForPowerOff();
-  return false;
+  // 初始化失败保留公共电源，允许后续重试。
+  return InitMinimalDrivers();
 }
 
 bool TDisplayP4AirDriver::InitMinimalDrivers() {
@@ -1065,12 +1062,10 @@ bool TDisplayP4AirDriver::InitPower() {
     return false;
   }
   if (!InitLdoPower(3, 2500)) {
-    platform_hal_->GpioWrite(gpio::power::kEnable3v3, 0);
     return false;
   }
   if (!InitLdoPower(4, 3300)) {
     DeinitLdoPower(3);
-    platform_hal_->GpioWrite(gpio::power::kEnable3v3, 0);
     return false;
   }
   power_initialized_ = true;
@@ -1452,6 +1447,9 @@ bool TDisplayP4AirDriver::DeinitPower() {
   result &= DeinitLdoPower(3);
   result &= DeinitLdoPower(4);
   if (platform_hal_ != nullptr) {
+    // 关闭前需停止外设通信，将连接到断电外设的所有信号 IO 设为无上下拉的高阻态。
+    // 否则 IO 反向供电可能导致断电不完全，使部分 I2C 设备下次初始化失败。
+    // 电源使能脚需保持关闭电平；此处不自动配置其他 IO 的高阻态。
     result &= platform_hal_->GpioWrite(gpio::power::kEnable3v3, 0);
   }
   power_initialized_ = false;
