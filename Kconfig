@@ -14,6 +14,17 @@ menu "lilygo_device_driver configuration"
             bool "T-CAN485-C5"
     endchoice
 
+    if LILYGO_DEVICE_DRIVER_T_DISPLAY_P4
+    choice LILYGO_DEVICE_DRIVER_DEVICE_VERSION
+        prompt "Select the device version"
+        default LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V1
+        config LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V1
+            bool "v1.0"
+        config LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2
+            bool "v2.0"
+    endchoice
+    endif
+
     choice
         prompt "Select default log level"
         default LILYGO_DEVICE_DRIVER_LOG_LEVEL_INFO

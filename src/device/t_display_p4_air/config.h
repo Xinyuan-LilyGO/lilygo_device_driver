@@ -11,12 +11,13 @@
 #include <cstdint>
 
 #include "cpp_bus_driver.h"
+#include "device/common/camera_type.h"
 
 namespace lilygo_device_driver::t_display_p4_air {
 namespace gpio {
 namespace button {
 inline constexpr int kEsp32p4Boot = 35;
-inline constexpr int kKey1 = 49;
+inline constexpr int kKey = 49;
 inline constexpr int kPower = 11;
 }  // namespace button
 
@@ -71,7 +72,7 @@ inline constexpr auto kEsp32c5En = cpp_bus_driver::Xl95x5::Pin::kIo12;
 inline constexpr auto kTouchRst = cpp_bus_driver::Xl95x5::Pin::kIo13;
 inline constexpr auto kScreenRst = cpp_bus_driver::Xl95x5::Pin::kIo14;
 inline constexpr auto kEsp32c5Boot = cpp_bus_driver::Xl95x5::Pin::kIo15;
-inline constexpr auto kLed1 = cpp_bus_driver::Xl95x5::Pin::kIo16;
+inline constexpr auto kLed = cpp_bus_driver::Xl95x5::Pin::kIo16;
 inline constexpr auto kNs4150En = cpp_bus_driver::Xl95x5::Pin::kIo17;
 }  // namespace xl9535
 
@@ -173,6 +174,12 @@ inline constexpr int kUartCts = 20;
 }  // namespace gpio
 
 namespace device {
+namespace battery {
+inline constexpr const char* kChargerChipName = "axp517";
+inline constexpr const char* kFuelGaugeChipName = "axp517";
+inline constexpr uint16_t kCapacityMah = 1000;
+}  // namespace battery
+
 namespace xl9535 {
 inline constexpr uint8_t kI2cAddress = 0x20;
 }  // namespace xl9535
@@ -247,26 +254,15 @@ namespace sgm38121 {
 inline constexpr uint8_t kI2cAddress = 0x28;
 }  // namespace sgm38121
 
-enum class CameraType {
-  kUnknown,
-  kSc2336,
-  kOv2710,
-  kOv5645,
-};
-
 namespace camera {
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
 inline constexpr CameraType kType = CameraType::kSc2336;
-inline constexpr const char* kName = "sc2336";
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
 inline constexpr CameraType kType = CameraType::kOv2710;
-inline constexpr const char* kName = "ov2710";
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
 inline constexpr CameraType kType = CameraType::kOv5645;
-inline constexpr const char* kName = "ov5645";
 #else
 inline constexpr CameraType kType = CameraType::kUnknown;
-inline constexpr const char* kName = "unknown";
 #endif
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB565)

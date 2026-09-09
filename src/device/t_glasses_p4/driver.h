@@ -11,11 +11,12 @@
 #include <string>
 
 #include "cpp_bus_driver.h"
+#include "chip/esp32p4/sd_card.h"
 #include "device/common/async_init_manager.h"
 #include "device/common/pixel_format.h"
 #include "driver/sdmmc_host.h"
 // #include "driver/spi_common.h"
-#include "esp32p4_driver.h"
+#include "chip/esp32p4/driver.h"
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
 #include "lr20xx/lr20xx_driver.h"
@@ -67,7 +68,7 @@ inline constexpr DeviceModelInfo kDeviceModelInfo = {
 //
 // inline constexpr CameraInfo kCameraInfo = {
 //     .type = camera::kType,
-//     .name = camera::kName,
+//     .name = GetCameraTypeName(camera::kType),
 //     .pixel_format = GetRgbPixelFormatName(camera::kBitsPerPixel),
 //     .bits_per_pixel = camera::kBitsPerPixel,
 //     .buffer_count = camera::kBufferCount,
@@ -311,10 +312,7 @@ class TGlassesP4Driver {
   Bus bus_;
   Chip chip_;
   Status status_;
-  sdmmc_card_t* sd_card_ = nullptr;
-  std::string sd_card_base_path_;
-  // bool sd_card_using_spi_ = false;
-  // spi_host_device_t sd_card_spi_host_id_ = SPI2_HOST;
+  SdCard sd_card_;
   // const t_glasses_p4::device::ScreenInfo* screen_info_ = nullptr;
   bool minimal_drivers_initialized_ = false;
   bool power_initialized_ = false;

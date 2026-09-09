@@ -13,15 +13,23 @@
 #include <string>
 
 #include "cpp_bus_driver.h"
+#include "chip/esp32p4/sd_card.h"
 #include "device/common/async_init_manager.h"
 #include "device/common/pixel_format.h"
 #include "driver/spi_common.h"
-#include "esp32p4_driver.h"
+#include "chip/esp32p4/driver.h"
 #include "esp_spiffs.h"
 #include "sdmmc_cmd.h"
-#include "stsw_st25rfal002_cpp_bus_driver.h"
-#include "device/t_display_p4/keyboard_expansion_config.h"
+#include "device/t_display_p4/config.h"
 #include "usp_cpp_bus_driver.h"
+
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+#include "esp_codec_dev.h"
+#include "esp_codec_dev_defaults.h"
+#else
+#include "device/t_display_p4/keyboard_expansion_config.h"
+#include "stsw_st25rfal002_cpp_bus_driver.h"
+#endif
 
 namespace lilygo_device_driver {
 namespace t_display_p4::device {
@@ -64,8 +72,8 @@ struct DeviceModelInfo {
 };
 
 inline constexpr DeviceModelInfo kDeviceModelInfo = {
-    .name = "T-Display-P4",
-    .version = "v1.0",
+    .name = model::kName,
+    .version = model::kVersion,
 };
 
 // 相机型号、像素格式和缓冲区信息
@@ -79,7 +87,7 @@ struct CameraInfo {
 
 inline constexpr CameraInfo kCameraInfo = {
     .type = camera::kType,
-    .name = camera::kName,
+    .name = GetCameraTypeName(camera::kType),
     .pixel_format = GetRgbPixelFormatName(camera::kBitsPerPixel),
     .bits_per_pixel = camera::kBitsPerPixel,
     .buffer_count = camera::kBufferCount,
@@ -93,9 +101,9 @@ struct BatteryInfo {
 };
 
 inline constexpr BatteryInfo kBatteryInfo = {
-    .charger_chip_name = "lgs4056hda",
-    .fuel_gauge_chip_name = "bq27220",
-    .capacity_mah = 1000,
+    .charger_chip_name = battery::kChargerChipName,
+    .fuel_gauge_chip_name = battery::kFuelGaugeChipName,
+    .capacity_mah = battery::kCapacityMah,
 };
 
 // T-Display-P4 聚合设备信息
@@ -111,16 +119,21 @@ struct DeviceInfo {
 class TDisplayP4Driver {
  public:
   enum class InitMode { kAsync, kSync };
+  enum class Lr2021OperatingMode {
+    kStandby,
+    kSleep,
+  };
 
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  enum class Es8389OperatingMode {
+    kActive,
+    kSleep,
+  };
+#else
   // SX1262 使用暖启动睡眠，唤醒后保留射频配置。
   enum class Sx1262OperatingMode {
     kStandby,  // 可立即收发。
     kSleep,    // 保留配置的低功耗状态。
-  };
-
-  enum class Lr2021OperatingMode {
-    kStandby,
-    kSleep,
   };
 
   enum class RadioOperatingMode {
@@ -177,55 +190,64 @@ class TDisplayP4Driver {
     k434Mhz,
     k868_915Mhz,
   };
+#endif
 
   struct Bus {
-    std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> xl9535_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> sgm38121_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c> pcf8563_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c> es8311_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c> icm20948_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareUart> l76k_uart_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareSpi> radio_spi_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> hi8561_i2c_touch_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> gt9895_i2c_touch_bus;
 
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> axp517_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareSpi> lr2021_spi_bus;
+#else
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> pcf8563_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> es8311_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> icm20948_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareSpi> radio_spi_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
     std::shared_ptr<cpp_bus_driver::SoftwareI2c> xl9555_i2c_bus;
     std::shared_ptr<cpp_bus_driver::SoftwareI2c> tca8418_i2c_bus;
-
     std::shared_ptr<cpp_bus_driver::HardwareSpi> cc1101_spi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> nrf24l01_spi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> st25r3916_spi_bus;
+#endif
   };
 
   struct Chip {
     std::unique_ptr<cpp_bus_driver::Xl95x5> xl9535;
-    std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
-    std::unique_ptr<cpp_bus_driver::Pcf8563x> pcf8563;
     std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
-    std::unique_ptr<cpp_bus_driver::Es8311> es8311;
     std::unique_ptr<cpp_bus_driver::L76k> l76k;
-    std::unique_ptr<cpp_bus_driver::Icm20948> icm20948;
-    std::unique_ptr<usp_cpp_bus_driver::Sx126x> sx1262;
     std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
     std::unique_ptr<cpp_bus_driver::Hi8561> hi8561;
     std::unique_ptr<cpp_bus_driver::Hi8561Touch> hi8561_touch;
-    std::unique_ptr<cpp_bus_driver::Pwm> pt4103;
     std::unique_ptr<cpp_bus_driver::Rm69a10> rm69a10;
     std::unique_ptr<cpp_bus_driver::Gt9895> gt9895;
-
-    std::unique_ptr<cpp_bus_driver::Xl95x5> xl9555;
-    std::unique_ptr<cpp_bus_driver::Tca8418> tca8418;
     std::unique_ptr<cpp_bus_driver::Pwm> sy7200a;
 
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+    std::unique_ptr<cpp_bus_driver::Axp517> axp517;
+#else
+    std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
+    std::unique_ptr<cpp_bus_driver::Pcf8563x> pcf8563;
+    std::unique_ptr<cpp_bus_driver::Es8311> es8311;
+    std::unique_ptr<cpp_bus_driver::Icm20948> icm20948;
+    std::unique_ptr<usp_cpp_bus_driver::Sx126x> sx1262;
+    std::unique_ptr<cpp_bus_driver::Pwm> pt4103;
+    std::unique_ptr<cpp_bus_driver::Xl95x5> xl9555;
+    std::unique_ptr<cpp_bus_driver::Tca8418> tca8418;
     std::unique_ptr<cpp_bus_driver::Cc1101> cc1101;
     std::unique_ptr<cpp_bus_driver::Nrf24l01x> nrf24l01;
     std::unique_ptr<stsw_st25rfal002_cpp_bus_driver::St25r3916x> st25r3916;
+#endif
   };
 
   struct Status {
@@ -247,15 +269,45 @@ class TDisplayP4Driver {
 
     struct {
       bool init_flag = false;
-    } pt4103;
-
-    struct {
-      bool init_flag = false;
     } rm69a10;
 
     struct {
       bool init_flag = false;
     } gt9895;
+
+    struct {
+      bool init_flag = false;
+      cpp_bus_driver::Aw862xx::RamWaveformInfo ram_waveform_info;
+    } aw86224;
+
+    struct {
+      bool init_flag = false;
+    } l76k;
+
+    struct {
+      bool init_flag = false;
+    } lr2021;
+
+    struct {
+      bool init_flag = false;
+    } sy7200a;
+
+    struct {
+      bool init_flag = false;
+    } sd_card;
+
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+    struct {
+      bool init_flag = false;
+    } axp517;
+
+    struct {
+      bool init_flag = false;
+    } es8389;
+#else
+    struct {
+      bool init_flag = false;
+    } pt4103;
 
     struct {
       bool init_flag = false;
@@ -267,16 +319,7 @@ class TDisplayP4Driver {
 
     struct {
       bool init_flag = false;
-      cpp_bus_driver::Aw862xx::RamWaveformInfo ram_waveform_info;
-    } aw86224;
-
-    struct {
-      bool init_flag = false;
     } es8311;
-
-    struct {
-      bool init_flag = false;
-    } l76k;
 
     struct {
       bool init_flag = false;
@@ -288,19 +331,11 @@ class TDisplayP4Driver {
 
     struct {
       bool init_flag = false;
-    } lr2021;
-
-    struct {
-      bool init_flag = false;
     } xl9555;
 
     struct {
       bool init_flag = false;
     } tca8418;
-
-    struct {
-      bool init_flag = false;
-    } sy7200a;
 
     struct {
       bool init_flag = false;
@@ -313,10 +348,7 @@ class TDisplayP4Driver {
     struct {
       bool init_flag = false;
     } st25r3916;
-
-    struct {
-      bool init_flag = false;
-    } sd_card;
+#endif
   };
 
   static TDisplayP4Driver& GetInstance();
@@ -328,9 +360,13 @@ class TDisplayP4Driver {
   const t_display_p4::device::DeviceModelInfo& device_model_info() const {
     return t_display_p4::device::kDeviceModelInfo;
   }
-  t_display_p4::device::ScreenType screen_type() const;
+  t_display_p4::device::ScreenType screen_type() const {
+    return screen_info().type;
+  }
   const t_display_p4::device::ScreenInfo& screen_info() const;
+#if !defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
   t_display_p4::device::RadioType radio_type() const { return radio_type_; }
+#endif
   const t_display_p4::device::CameraInfo& camera_info() const {
     return t_display_p4::device::kCameraInfo;
   }
@@ -346,99 +382,149 @@ class TDisplayP4Driver {
     };
   }
 
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  esp_codec_dev_handle_t es8389_input_codec_dev() const {
+    return es8389_input_codec_dev_;
+  }
+  esp_codec_dev_handle_t es8389_output_codec_dev() const {
+    return es8389_output_codec_dev_;
+  }
+#endif
+
   bool Init(InitMode mode = InitMode::kSync);
   bool InitMinimal();
-  bool InitBq27220();
   bool InitXl9535();
   bool InitSgm38121();
   bool InitHi8561();
   bool InitHi8561Touch();
-  bool InitPt4103();
   bool InitRm69a10();
   bool InitGt9895();
-  bool InitPcf8563();
   bool InitAw86224();
-  bool InitEs8311();
   bool InitL76k();
-  bool InitIcm20948();
-  bool InitSx1262();
   bool InitLr2021();
-  bool InitXl9555();
-  bool InitTca8418();
   bool InitSy7200a();
-  bool InitCc1101();
-  bool InitNrf24l01();
-  bool InitSt25r3916();
   bool InitPower();
   bool InitScreen();
   bool InitTouch();
   bool InitScreenBacklight();
-  bool InitRadio();
-  bool InitKeyboardExpansion();
   bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf);
   bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
   bool InitSdspi(const char* base_path, spi_host_device_t host_id,
       int max_freq_khz = SDMMC_FREQ_DEFAULT);
+  bool InitIcm20948();
+
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  bool InitAxp517();
+  bool InitEs8389();
+#else
+  bool InitBq27220();
+  bool InitPt4103();
+  bool InitPcf8563();
+  bool InitEs8311();
+  bool InitSx1262();
+  bool InitXl9555();
+  bool InitTca8418();
+  bool InitCc1101();
+  bool InitNrf24l01();
+  bool InitSt25r3916();
+  bool InitRadio();
+  bool InitKeyboardExpansion();
+#endif
 
   bool DeinitScreen();
   bool DeinitTouch();
   bool DeinitScreenBacklight();
   bool DeinitAw86224();
-  bool DeinitEs8311();
   bool DeinitL76k();
-  bool DeinitIcm20948();
-  bool DeinitSx1262();
   bool DeinitLr2021();
+  bool DeinitSdmmc(bool release_bus = true);
+  bool DeinitIcm20948();
+
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  bool DeinitEs8389();
+  bool DeinitPower();
+#else
+  bool DeinitEs8311();
+  bool DeinitSx1262();
   bool DeinitRadio();
   bool DeinitSt25r3916();
   bool DeinitKeyboardExpansion(
       KeyboardExpansionDeinitMode mode = KeyboardExpansionDeinitMode::kNormal);
-  bool DeinitSdmmc();
+#endif
 
-  bool IsBq27220Ready() const;
   bool IsXl9535Ready() const;
   bool IsSgm38121Ready() const;
   bool IsHi8561Ready() const;
   bool IsHi8561TouchReady() const;
-  bool IsPt4103Ready() const;
   bool IsRm69a10Ready() const;
   bool IsGt9895Ready() const;
-  bool IsPcf8563Ready() const;
   bool IsAw86224Ready() const;
-  bool IsEs8311Ready() const;
   bool IsL76kReady() const;
-  bool IsIcm20948Ready() const;
-  bool IsSx1262Ready() const;
   bool IsLr2021Ready() const;
+  bool IsSy7200aReady() const;
+  bool IsScreenReady() const;
+  bool IsTouchReady() const;
+  bool IsIcm20948Ready() const;
+  bool IsSdmmcReady() const;
+
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  bool IsAxp517Ready() const;
+  bool IsEs8389Ready() const;
+#else
+  bool IsBq27220Ready() const;
+  bool IsPt4103Ready() const;
+  bool IsPcf8563Ready() const;
+  bool IsEs8311Ready() const;
+  bool IsSx1262Ready() const;
   bool IsXl9555Ready() const;
   bool IsTca8418Ready() const;
-  bool IsSy7200aReady() const;
   bool IsCc1101Ready() const;
   bool IsNrf24l01Ready() const;
   bool IsSt25r3916Ready() const;
-  bool IsScreenReady() const;
-  bool IsTouchReady() const;
   bool IsRadioReady() const;
-  bool IsSdmmcReady() const;
+#endif
 
   bool SetAw86224Standby();
   bool SetL76kSleep(bool sleep);
-  bool SetIcm20948Sleep(bool sleep);
   bool SetScreenSleep(bool sleep);
+  bool SetLr2021OperatingMode(Lr2021OperatingMode mode);
+  bool SetCameraPowerEnabled(bool enabled);
+  bool SetUsbHostPowerEnabled(bool enabled);
+  bool PrepareDriversForPowerOff();
+
+  /**
+   * @brief 设置惯性传感器休眠状态
+   * @param sleep true 进入休眠，false 退出休眠
+   * @return 设置成功返回 true，失败或驱动未接入时返回 false
+   * @note V2 暂未接入此驱动。
+   */
+  bool SetIcm20948Sleep(bool sleep);
+
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  bool SetEs8389OperatingMode(Es8389OperatingMode mode);
+  bool SetEsp32c5PowerEnabled(bool enabled);
+  bool PrepareMinimalDriversForPowerOff();
+#else
   bool SetEs8311OperatingMode(Es8311OperatingMode mode);
   bool SetSx1262OperatingMode(Sx1262OperatingMode mode);
-  bool SetLr2021OperatingMode(Lr2021OperatingMode mode);
   bool SetCc1101OperatingMode(Cc1101OperatingMode mode);
   bool SetNrf24l01OperatingMode(Nrf24l01OperatingMode mode);
   bool SetSt25r3916OperatingMode(St25r3916OperatingMode mode);
   bool SetKeyboardExpansionOperatingMode(KeyboardExpansionOperatingMode mode);
   bool SetRadioOperatingMode(RadioOperatingMode mode);
   bool SetEsp32c6PowerEnabled(bool enabled);
-  bool SetCameraPowerEnabled(bool enabled);
   bool SetEthernetPowerEnabled(bool enabled);
-  bool SetUsbHostPowerEnabled(bool enabled);
-  bool PrepareDriversForPowerOff();
+#endif
 
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  /**
+   * @brief 使 ESP32-C5 进入下载模式。
+   * @return 时序控制成功时返回 true，否则返回 false。
+   */
+  bool EnterEsp32c5DownloadMode();
+
+  bool SetLedEnabled(bool enabled);
+#else
   /**
    * @brief 选择 CC1101 RF 开关通路。
    * @param rf_switch RF 频段开关位置。
@@ -460,37 +546,56 @@ class TDisplayP4Driver {
    * @return RF 开关引脚配置成功时返回 true，否则返回 false。
    */
   bool SetSky13453RfSwitch(Sky13453RfSwitch rf_switch);
+#endif
 
  private:
-  void CreateDrivers();
-  void CreateKeyboardExpansionDrivers();
-  void DestroyKeyboardExpansionDrivers();
-  bool InitDrivers(InitMode mode);
-  bool InitMinimalDrivers();
-
-  AsyncInitManager async_init_manager_;
-  std::unique_ptr<cpp_bus_driver::PlatformHal> platform_hal_;
-  Bus bus_;
-  Chip chip_;
-  Status status_;
-  sdmmc_card_t* sd_card_ = nullptr;
-  std::string sd_card_base_path_;
-  const t_display_p4::device::ScreenInfo* screen_info_ = nullptr;
-  t_display_p4::device::RadioType radio_type_ =
-      t_display_p4::device::RadioType::kUnknown;
-  bool minimal_drivers_initialized_ = false;
-  /**
-   * @brief 通过 GT9895 触摸 ID 检测屏幕类型。
-   * @return 检测流程完成时返回 true，否则返回 false。
-   */
-  bool DetectScreenType();
-
   TDisplayP4Driver() = default;
   ~TDisplayP4Driver() = default;
 
   // 禁止拷贝构造和赋值。
   TDisplayP4Driver(const TDisplayP4Driver&) = delete;
   TDisplayP4Driver& operator=(const TDisplayP4Driver&) = delete;
+
+  void CreateDrivers();
+  bool InitDrivers(InitMode mode);
+  bool InitMinimalDrivers();
+
+  /**
+   * @brief 通过 GT9895 触摸 ID 检测屏幕类型。
+   * @return 检测流程完成时返回 true，否则返回 false。
+   */
+  bool DetectScreenType();
+  void ResetScreenBacklightStatus();
+
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  bool SetNs4150Enabled(bool enabled);
+#else
+  void CreateKeyboardExpansionDrivers();
+  void DestroyKeyboardExpansionDrivers();
+#endif
+
+  AsyncInitManager async_init_manager_;
+  std::unique_ptr<cpp_bus_driver::PlatformHal> platform_hal_;
+  Bus bus_;
+  Chip chip_;
+  Status status_;
+  SdCard sd_card_;
+  const t_display_p4::device::ScreenInfo* screen_info_ = nullptr;
+  bool minimal_drivers_initialized_ = false;
+
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  bool power_initialized_ = false;
+  const audio_codec_ctrl_if_t* es8389_ctrl_if_ = nullptr;
+  const audio_codec_data_if_t* es8389_data_if_ = nullptr;
+  const audio_codec_gpio_if_t* es8389_gpio_if_ = nullptr;
+  const audio_codec_if_t* es8389_codec_if_ = nullptr;
+  esp_codec_dev_handle_t es8389_input_codec_dev_ = nullptr;
+  esp_codec_dev_handle_t es8389_output_codec_dev_ = nullptr;
+  Es8389OperatingMode es8389_operating_mode_ = Es8389OperatingMode::kSleep;
+#else
+  t_display_p4::device::RadioType radio_type_ =
+      t_display_p4::device::RadioType::kUnknown;
+#endif
 };
 
 }  // namespace lilygo_device_driver

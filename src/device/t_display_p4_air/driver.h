@@ -15,10 +15,11 @@
 #include "SensorQMC6310.hpp"
 #include "bhi2xy_sensorapi_cpp_bus_driver.h"
 #include "cpp_bus_driver.h"
+#include "chip/esp32p4/sd_card.h"
 #include "device/common/async_init_manager.h"
 #include "device/common/pixel_format.h"
 #include "driver/spi_common.h"
-#include "esp32p4_driver.h"
+#include "chip/esp32p4/driver.h"
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
 #include "esp_spiffs.h"
@@ -91,16 +92,16 @@ inline constexpr DeviceModelInfo kDeviceModelInfo = {
 
 inline constexpr CameraInfo kCameraInfo = {
     .type = camera::kType,
-    .name = camera::kName,
+    .name = GetCameraTypeName(camera::kType),
     .pixel_format = GetRgbPixelFormatName(camera::kBitsPerPixel),
     .bits_per_pixel = camera::kBitsPerPixel,
     .buffer_count = camera::kBufferCount,
 };
 
 inline constexpr BatteryInfo kBatteryInfo = {
-    .charger_chip_name = "axp517",
-    .fuel_gauge_chip_name = "axp517",
-    .capacity_mah = 1000,
+    .charger_chip_name = battery::kChargerChipName,
+    .fuel_gauge_chip_name = battery::kFuelGaugeChipName,
+    .capacity_mah = battery::kCapacityMah,
 };
 
 }  // namespace t_display_p4_air::device
@@ -343,14 +344,9 @@ class TDisplayP4AirDriver {
   Bus bus_;
   Chip chip_;
   Status status_;
-  sdmmc_card_t* sd_card_ = nullptr;
-  std::string sd_card_base_path_;
-  // 当前挂载是否使用 SDSPI 主机
-  bool sd_card_uses_spi_ = false;
+  SdCard sd_card_;
   bool minimal_drivers_initialized_ = false;
   bool power_initialized_ = false;
-  // 当前 SDSPI 主机编号
-  spi_host_device_t sd_card_spi_host_id_ = SPI2_HOST;
   const t_display_p4_air::device::ScreenInfo* screen_info_ = nullptr;
 
   const audio_codec_ctrl_if_t* es8389_ctrl_if_ = nullptr;

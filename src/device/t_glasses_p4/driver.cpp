@@ -593,50 +593,28 @@ bool TGlassesP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
   if (base_path == nullptr || base_path[0] == '\0' || max_freq_khz <= 0) {
     return false;
   }
-  if (sd_card_ != nullptr) {
-    return sd_card_base_path_ == base_path && IsSdmmcReady();
+  if (sd_card_.IsMounted()) {
+    return sd_card_.base_path() == base_path && IsSdmmcReady();
   }
   if (!power_initialized_) {
     return false;
   }
-  esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-      .format_if_mount_failed = false,
-      .max_files = 5,
-      .allocation_unit_size = 16 * 1024,
-      .disk_status_check_enable = false,
-      .use_one_fat = false,
-  };
 
-  sdmmc_host_t host = SDMMC_HOST_DEFAULT();
-  host.slot = SDMMC_HOST_SLOT_0;
-  host.max_freq_khz = max_freq_khz;
+  SdCard::SdmmcConfig config;
+  config.host.slot = SDMMC_HOST_SLOT_0;
+  config.host.max_freq_khz = max_freq_khz;
+  config.slot.width = 4;
+  config.slot.clk = static_cast<gpio_num_t>(gpio::sd::kSdioClk);
+  config.slot.cmd = static_cast<gpio_num_t>(gpio::sd::kSdioCmd);
+  config.slot.d0 = static_cast<gpio_num_t>(gpio::sd::kSdioD0);
+  config.slot.d1 = static_cast<gpio_num_t>(gpio::sd::kSdioD1);
+  config.slot.d2 = static_cast<gpio_num_t>(gpio::sd::kSdioD2);
+  config.slot.d3 = static_cast<gpio_num_t>(gpio::sd::kSdioD3);
+  config.slot.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
-  sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-  slot_config.width = 4;
-  slot_config.clk = static_cast<gpio_num_t>(gpio::sd::kSdioClk);
-  slot_config.cmd = static_cast<gpio_num_t>(gpio::sd::kSdioCmd);
-  slot_config.d0 = static_cast<gpio_num_t>(gpio::sd::kSdioD0);
-  slot_config.d1 = static_cast<gpio_num_t>(gpio::sd::kSdioD1);
-  slot_config.d2 = static_cast<gpio_num_t>(gpio::sd::kSdioD2);
-  slot_config.d3 = static_cast<gpio_num_t>(gpio::sd::kSdioD3);
-  slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
-
-  sdmmc_card_t* card = nullptr;
-  esp_err_t result = esp_vfs_fat_sdmmc_mount(
-      base_path, &host, &slot_config, &mount_config, &card);
-  if (result != ESP_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "esp_vfs_fat_sdmmc_mount failed (error code: %#X)\n", result);
-    status_.sd_card.init_flag = false;
-    sd_card_ = nullptr;
-    return false;
-  }
-
-  sdmmc_card_print_info(stdout, card);
-  sd_card_ = card;
-  sd_card_base_path_ = base_path;
-  status_.sd_card.init_flag = true;
-  return true;
+  const bool result = sd_card_.InitSdmmc(base_path, config);
+  status_.sd_card.init_flag = sd_card_.IsMounted();
+  return result;
 }
 
 bool TGlassesP4Driver::DeinitEs8389() {
@@ -689,19 +667,9 @@ bool TGlassesP4Driver::DeinitLr2021() {
 }
 
 bool TGlassesP4Driver::DeinitSdmmc() {
-  if (sd_card_ == nullptr) {
-    status_.sd_card.init_flag = false;
-    return true;
-  }
-  if (esp_vfs_fat_sdcard_unmount(sd_card_base_path_.c_str(), sd_card_) !=
-      ESP_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "DeinitSdmmc failed\n");
-    return false;
-  }
-  sd_card_ = nullptr;
-  sd_card_base_path_.clear();
-  status_.sd_card.init_flag = false;
-  return true;
+  bool result = sd_card_.Deinit();
+  status_.sd_card.init_flag = sd_card_.IsMounted();
+  return result;
 }
 
 bool TGlassesP4Driver::DeinitPower() {
@@ -740,8 +708,7 @@ bool TGlassesP4Driver::IsEs8389Ready() const {
 }
 
 bool TGlassesP4Driver::IsSdmmcReady() const {
-  return status_.sd_card.init_flag && sd_card_ != nullptr &&
-         sdmmc_get_status(sd_card_) == ESP_OK;
+  return status_.sd_card.init_flag && sd_card_.IsReady();
 }
 
 bool TGlassesP4Driver::IsBq25896Ready() const {
@@ -1049,78 +1016,28 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //
 // bool TGlassesP4Driver::InitSdspi(
 //     const char* base_path, spi_host_device_t host_id, int max_freq_khz) {
-//   if (base_path == nullptr || max_freq_khz <= 0) {
+//   if (base_path == nullptr || base_path[0] == '\0' || max_freq_khz <= 0) {
 //     return false;
-//   }
-//   if (sd_card_ != nullptr) {
-//     return sd_card_using_spi_ && sd_card_spi_host_id_ == host_id &&
-//            sd_card_base_path_ == base_path && IsSdmmcReady();
 //   }
 //   if (!InitMinimal()) {
 //     return false;
 //   }
-//   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-//       .format_if_mount_failed = false,
-//       .max_files = 5,
-//       .allocation_unit_size = 16 * 1024,
-//       .disk_status_check_enable = false,
-//       .use_one_fat = false,
-//   };
-//
-//   sdmmc_host_t host = SDSPI_HOST_DEFAULT();
-//   host.slot = host_id;
-//   host.max_freq_khz = max_freq_khz;
-//
-//   spi_bus_config_t bus_config = {
-//       .mosi_io_num = gpio::sd::kMosi,
-//       .miso_io_num = gpio::sd::kMiso,
-//       .sclk_io_num = gpio::sd::kSclk,
-//       .quadwp_io_num = -1,
-//       .quadhd_io_num = -1,
-//       .data4_io_num = -1,
-//       .data5_io_num = -1,
-//       .data6_io_num = -1,
-//       .data7_io_num = -1,
-//       .data_io_default_level = 0,
-//       .max_transfer_sz = 0,
-//       .flags = SPICOMMON_BUSFLAG_MASTER,
-//       .isr_cpu_id = ESP_INTR_CPU_AFFINITY_AUTO,
-//       .intr_flags = 0,
-//   };
-//
-//   esp_err_t result =
-//       spi_bus_initialize(host_id, &bus_config, SDSPI_DEFAULT_DMA);
-//   if (result != ESP_OK) {
-//     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-//         "spi_bus_initialize failed (error code: %#X)\n", result);
-//     status_.sd_card.init_flag = false;
-//     sd_card_ = nullptr;
+//   if (!DeinitSdmmc()) {
 //     return false;
 //   }
 //
-//   sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
-//   slot_config.host_id = host_id;
-//   slot_config.gpio_cs = static_cast<gpio_num_t>(gpio::sd::kCs);
+//   SdCard::SdspiConfig config;
+//   config.host.slot = host_id;
+//   config.host.max_freq_khz = max_freq_khz;
+//   config.slot.host_id = host_id;
+//   config.slot.gpio_cs = static_cast<gpio_num_t>(gpio::sd::kCs);
+//   config.bus.mosi_io_num = gpio::sd::kMosi;
+//   config.bus.miso_io_num = gpio::sd::kMiso;
+//   config.bus.sclk_io_num = gpio::sd::kSclk;
 //
-//   sdmmc_card_t* card = nullptr;
-//   result = esp_vfs_fat_sdspi_mount(
-//       base_path, &host, &slot_config, &mount_config, &card);
-//   if (result != ESP_OK) {
-//     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-//         "esp_vfs_fat_sdspi_mount failed (error code: %#X)\n", result);
-//     spi_bus_free(host_id);
-//     status_.sd_card.init_flag = false;
-//     sd_card_ = nullptr;
-//     return false;
-//   }
-//
-//   sdmmc_card_print_info(stdout, card);
-//   sd_card_ = card;
-//   sd_card_base_path_ = base_path;
-//   sd_card_using_spi_ = true;
-//   sd_card_spi_host_id_ = host_id;
-//   status_.sd_card.init_flag = true;
-//   return true;
+//   const bool result = sd_card_.InitSdspi(base_path, config);
+//   status_.sd_card.init_flag = sd_card_.IsMounted();
+//   return result;
 // }
 //
 

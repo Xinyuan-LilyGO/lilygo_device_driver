@@ -7,11 +7,13 @@
 
 #include <cstdint>
 
+#include "device/common/camera_type.h"
+
 namespace lilygo_device_driver::t_glasses_p4 {
 namespace gpio {
 namespace button {
 inline constexpr int kEsp32p4Boot = 35;
-// inline constexpr int kKey1 = 36;
+// inline constexpr int kKey = 36;
 }  // namespace button
 
 namespace power {
@@ -189,13 +191,6 @@ inline constexpr uint8_t kI2cAddress = 0x6B;
 }  // namespace bq25896
 
 // 以下外围参数暂以注释保留，恢复相应驱动时再启用。
-// enum class CameraType {
-//   kUnknown,
-//   kSc2336,
-//   kOv2710,
-//   kOv5645,
-// };
-//
 // namespace bq27220 {
 // inline constexpr uint8_t kI2cAddress = 0x55;
 // }  // namespace bq27220
@@ -211,13 +206,10 @@ inline constexpr int kChannel = 2;
 // namespace camera {
 // #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
 // inline constexpr CameraType kType = CameraType::kSc2336;
-// inline constexpr const char* kName = "sc2336";
 // #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
 // inline constexpr CameraType kType = CameraType::kOv2710;
-// inline constexpr const char* kName = "ov2710";
 // #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
 // inline constexpr CameraType kType = CameraType::kOv5645;
-// inline constexpr const char* kName = "ov5645";
 // #else
 // #error "Missing required macro definition."
 // #endif

@@ -5,7 +5,7 @@
  * @LastEditTime: 2026-04-23 17:52:12
  * @License: GPL 3.0
  */
-#include "esp32p4_driver.h"
+#include "chip/esp32p4/driver.h"
 
 #include <array>
 

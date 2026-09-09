@@ -1,0 +1,286 @@
+/*
+ * @Description: T-Display-P4 V1 板级硬件配置
+ * @Author: LILYGO_L
+ * @Date: 2024-12-06 10:32:28
+ * @LastEditTime: 2026-06-30 13:47:35
+ */
+#pragma once
+
+#include <cstdint>
+
+#include "cpp_bus_driver.h"
+
+namespace lilygo_device_driver::t_display_p4 {
+namespace gpio {
+namespace button {
+inline constexpr int kEsp32p4Boot = 35;
+}  // namespace button
+
+namespace i2c {
+inline constexpr int kPort1Sda = 7;
+inline constexpr int kPort1Scl = 8;
+inline constexpr int kPort2Sda = 20;
+inline constexpr int kPort2Scl = 21;
+}  // namespace i2c
+
+namespace spi {
+inline constexpr int kPort1Sclk = 2;
+inline constexpr int kPort1Mosi = 3;
+inline constexpr int kPort1Miso = 4;
+}  // namespace spi
+
+namespace xl9535 {
+inline constexpr int kSda = i2c::kPort1Sda;
+inline constexpr int kScl = i2c::kPort1Scl;
+inline constexpr int kInt = 5;
+inline constexpr auto kPowerEn3v3 = cpp_bus_driver::Xl95x5::Pin::kIo0;
+inline constexpr auto kSky13453Vctl = cpp_bus_driver::Xl95x5::Pin::kIo1;
+inline constexpr auto kScreenRst = cpp_bus_driver::Xl95x5::Pin::kIo2;
+inline constexpr auto kTouchRst = cpp_bus_driver::Xl95x5::Pin::kIo3;
+inline constexpr auto kTouchInt = cpp_bus_driver::Xl95x5::Pin::kIo4;
+inline constexpr auto kEthernetRst = cpp_bus_driver::Xl95x5::Pin::kIo5;
+inline constexpr auto kAudioPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo6;
+inline constexpr auto kIcm20948Int = cpp_bus_driver::Xl95x5::Pin::kIo7;
+inline constexpr auto kUsbPhyPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo10;
+inline constexpr auto kGpsWakeUp = cpp_bus_driver::Xl95x5::Pin::kIo11;
+inline constexpr auto kRtcInt = cpp_bus_driver::Xl95x5::Pin::kIo12;
+inline constexpr auto kEsp32c6WakeUp = cpp_bus_driver::Xl95x5::Pin::kIo13;
+inline constexpr auto kEsp32c6En = cpp_bus_driver::Xl95x5::Pin::kIo14;
+inline constexpr auto kSdPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo15;
+inline constexpr auto kRadioRst = cpp_bus_driver::Xl95x5::Pin::kIo16;
+inline constexpr auto kRadioDio1 = cpp_bus_driver::Xl95x5::Pin::kIo17;
+inline constexpr auto kSx1262Rst = kRadioRst;
+inline constexpr auto kSx1262Dio1 = kRadioDio1;
+inline constexpr auto kLr2021Rst = kRadioRst;
+inline constexpr auto kLr2021Dio1 = kRadioDio1;
+}  // namespace xl9535
+
+namespace es8311 {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
+inline constexpr int kAdcData = 11;
+inline constexpr int kDacData = 10;
+inline constexpr int kBclk = 12;
+inline constexpr int kMclk = 13;
+inline constexpr int kWsLrck = 9;
+}  // namespace es8311
+
+namespace aw86224 {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
+}  // namespace aw86224
+
+namespace sgm38121 {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
+}  // namespace sgm38121
+
+namespace pcf8563 {
+inline constexpr int kSda = i2c::kPort1Sda;
+inline constexpr int kScl = i2c::kPort1Scl;
+}  // namespace pcf8563
+
+namespace bq27220 {
+inline constexpr int kSda = i2c::kPort1Sda;
+inline constexpr int kScl = i2c::kPort1Scl;
+}  // namespace bq27220
+
+namespace radio {
+inline constexpr int kCs = 24;
+inline constexpr int kBusy = 6;
+inline constexpr int kSclk = spi::kPort1Sclk;
+inline constexpr int kMosi = spi::kPort1Mosi;
+inline constexpr int kMiso = spi::kPort1Miso;
+}  // namespace radio
+
+namespace sx1262 {
+inline constexpr int kCs = radio::kCs;
+inline constexpr int kBusy = radio::kBusy;
+inline constexpr int kSclk = radio::kSclk;
+inline constexpr int kMosi = radio::kMosi;
+inline constexpr int kMiso = radio::kMiso;
+}  // namespace sx1262
+
+namespace lr2021 {
+inline constexpr int kCs = radio::kCs;
+inline constexpr int kBusy = radio::kBusy;
+inline constexpr int kSclk = radio::kSclk;
+inline constexpr int kMosi = radio::kMosi;
+inline constexpr int kMiso = radio::kMiso;
+}  // namespace lr2021
+
+namespace l76k {
+inline constexpr int kTx = 22;
+inline constexpr int kRx = 23;
+}  // namespace l76k
+
+namespace icm20948 {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
+}  // namespace icm20948
+
+namespace hi8561 {
+inline constexpr int kTouchSda = i2c::kPort1Sda;
+inline constexpr int kTouchScl = i2c::kPort1Scl;
+}  // namespace hi8561
+
+namespace pt4103 {
+inline constexpr int kEn = 51;
+}  // namespace pt4103
+
+namespace gt9895 {
+inline constexpr int kSda = i2c::kPort1Sda;
+inline constexpr int kScl = i2c::kPort1Scl;
+}  // namespace gt9895
+
+namespace camera {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
+}  // namespace camera
+
+namespace sdio1 {
+inline constexpr int kClk = 43;
+inline constexpr int kCmd = 44;
+inline constexpr int kD0 = 39;
+inline constexpr int kD1 = 40;
+inline constexpr int kD2 = 41;
+inline constexpr int kD3 = 42;
+}  // namespace sdio1
+
+namespace sdio2 {
+inline constexpr int kClk = 18;
+inline constexpr int kCmd = 19;
+inline constexpr int kD0 = 14;
+inline constexpr int kD1 = 15;
+inline constexpr int kD2 = 16;
+inline constexpr int kD3 = 17;
+}  // namespace sdio2
+
+namespace sd {
+inline constexpr int kSdioClk = sdio1::kClk;
+inline constexpr int kSdioCmd = sdio1::kCmd;
+inline constexpr int kSdioD0 = sdio1::kD0;
+inline constexpr int kSdioD1 = sdio1::kD1;
+inline constexpr int kSdioD2 = sdio1::kD2;
+inline constexpr int kSdioD3 = sdio1::kD3;
+inline constexpr int kSclk = sdio1::kClk;
+inline constexpr int kMosi = sdio1::kCmd;
+inline constexpr int kMiso = sdio1::kD0;
+inline constexpr int kCs = sdio1::kD3;
+}  // namespace sd
+
+namespace esp32c6 {
+inline constexpr int kSdioClk = sdio2::kClk;
+inline constexpr int kSdioCmd = sdio2::kCmd;
+inline constexpr int kSdioD0 = sdio2::kD0;
+inline constexpr int kSdioD1 = sdio2::kD1;
+inline constexpr int kSdioD2 = sdio2::kD2;
+inline constexpr int kSdioD3 = sdio2::kD3;
+}  // namespace esp32c6
+
+namespace ext {
+inline constexpr int k2x8PSpiSclk = spi::kPort1Sclk;
+inline constexpr int k2x8PSpiMosi = spi::kPort1Mosi;
+inline constexpr int k2x8PSpiMiso = spi::kPort1Miso;
+inline constexpr int k2x8PIo26 = 26;
+inline constexpr int k2x8PIo27 = 27;
+inline constexpr int k2x8PIo33 = 33;
+inline constexpr int k2x8PIo32 = 32;
+inline constexpr int k2x8PIo25 = 25;
+inline constexpr int k2x8PIo36 = 36;
+inline constexpr int k2x8PIo53 = 53;
+inline constexpr int k2x8PIo54 = 54;
+inline constexpr int k1x4P1Io47 = 47;
+inline constexpr int k1x4P1Io48 = 48;
+inline constexpr int k1x4P2Io45 = 45;
+inline constexpr int k1x4P2Io46 = 46;
+}  // namespace ext
+
+namespace ip101 {
+inline constexpr int kPhyRst = -1;
+inline constexpr int kRmiiRefClk = 50;
+inline constexpr int kRmiiClkOut = -1;
+inline constexpr int kRmiiMdc = 31;
+inline constexpr int kRmiiMdio = 52;
+inline constexpr int kRmiiTxEn = 49;
+inline constexpr int kRmiiTxd0 = 34;
+inline constexpr int kRmiiTxd1 = 35;
+inline constexpr int kRmiiCrsDv = 28;
+inline constexpr int kRmiiRxd0 = 29;
+inline constexpr int kRmiiRxd1 = 30;
+}  // namespace ip101
+
+}  // namespace gpio
+
+namespace device {
+namespace model {
+inline constexpr const char* kVersion = "v1.0";
+}  // namespace model
+
+namespace battery {
+inline constexpr const char* kChargerChipName = "lgs4056hda";
+inline constexpr const char* kFuelGaugeChipName = "bq27220";
+inline constexpr uint16_t kCapacityMah = 1000;
+}  // namespace battery
+
+namespace ip101 {
+inline constexpr int kPhyAddress = 1;
+}  // namespace ip101
+
+namespace xl9535 {
+inline constexpr uint8_t kI2cAddress = 0x20;
+inline constexpr int kSdPowerEnabled = 0;
+inline constexpr int kSdPowerDisabled = 1;
+inline constexpr int kResetAsserted = 0;
+inline constexpr int kResetReleased = 1;
+}  // namespace xl9535
+
+namespace es8311 {
+inline constexpr uint8_t kI2cAddress = 0x18;
+inline constexpr int kMclkMultiple = 256;
+inline constexpr int kSampleRate = 44100;
+inline constexpr int kBitsPerSample = 16;
+inline constexpr int kChannel = 2;
+}  // namespace es8311
+
+namespace aw86224 {
+inline constexpr uint8_t kI2cAddress = 0x58;
+inline constexpr int32_t kI2cFrequencyHz = 500000;
+}  // namespace aw86224
+
+namespace sgm38121 {
+inline constexpr uint8_t kI2cAddress = 0x28;
+}  // namespace sgm38121
+
+namespace pcf8563 {
+inline constexpr uint8_t kI2cAddress = 0x51;
+}  // namespace pcf8563
+
+namespace bq27220 {
+inline constexpr uint8_t kI2cAddress = 0x55;
+}  // namespace bq27220
+
+namespace icm20948 {
+inline constexpr uint8_t kI2cAddress = 0x68;
+}  // namespace icm20948
+
+namespace sx1262 {
+inline constexpr int32_t kSpiFrequencyHz = 10000000;
+}  // namespace sx1262
+
+namespace lr2021 {
+inline constexpr int32_t kSpiFrequencyHz = 10000000;
+}  // namespace lr2021
+
+namespace pt4103 {
+// EN 引脚受内部软启动限制，直接 PWM 调光频率不得超过 1 kHz。
+inline constexpr uint32_t kPwmFrequencyHz = 1000;
+}  // namespace pt4103
+
+namespace sd {
+inline constexpr const char* kBasePath = "/sdcard";
+inline constexpr bool kDiskStatusCheckEnabled = true;
+}  // namespace sd
+
+}  // namespace device
+}  // namespace lilygo_device_driver::t_display_p4

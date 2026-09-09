@@ -153,7 +153,7 @@ bool TDisplayP4AirDriver::InitMinimalDrivers() {
   if (minimal_drivers_initialized_) {
     return true;
   }
-  if (!InitPower() || !InitAxp517()) {
+  if (!InitPower() || !InitAxp517() || !InitXl9535()) {
     return false;
   }
   minimal_drivers_initialized_ = true;
@@ -162,7 +162,6 @@ bool TDisplayP4AirDriver::InitMinimalDrivers() {
 
 bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
   bool result = InitMinimalDrivers();
-  result &= InitXl9535();
   result &= InitSgm38121();
   async_init_manager_.Reset();
 
@@ -302,7 +301,7 @@ bool TDisplayP4AirDriver::InitXl9535() {
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 1);
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLed1, 1);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLed, 1);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kAdl161Trig, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kAdl161Rst, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kUsbPhyPowerEn, kOutput);
@@ -310,7 +309,7 @@ bool TDisplayP4AirDriver::InitXl9535() {
       gpio::xl9535::kEsp32p4Esp32c5UartSwitch, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kEsp32c5En, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kEsp32c5Boot, kOutput);
-  result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kLed1, kOutput);
+  result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kLed, kOutput);
 
   if (!result) {
     chip_.xl9535->Deinit(false);
@@ -1123,213 +1122,100 @@ bool TDisplayP4AirDriver::InitScreenBacklight() { return InitSy7200a(); }
 
 bool TDisplayP4AirDriver::InitSpiffs(
     const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf) {
-  esp_vfs_spiffs_conf_t conf = {
+  SpiffsConfig config;
+  config.base_path = base_path;
+  if (!lilygo_device_driver::InitSpiffs(config)) {
+    return false;
+  }
+  spiffs_conf = {
       .base_path = base_path,
-      .partition_label = NULL,
-      .max_files = 5,
-      .format_if_mount_failed = false,
+      .partition_label = config.partition_label,
+      .max_files = config.max_files,
+      .format_if_mount_failed = config.format_if_mount_failed,
   };
-
-  esp_err_t result = esp_vfs_spiffs_register(&conf);
-  if (result != ESP_OK) {
-    if (result == ESP_FAIL) {
-      LogMessage(LogLevel::kError, __FILE__, __LINE__,
-          "Failed to mount or format filesystem (error code: %#X)\n", result);
-    } else if (result == ESP_ERR_NOT_FOUND) {
-      LogMessage(LogLevel::kError, __FILE__, __LINE__,
-          "Failed to find spiffs partition (error code: %#X)\n", result);
-    } else {
-      LogMessage(LogLevel::kError, __FILE__, __LINE__,
-          "Failed to initialize spiffs (error code: %#X)\n", result);
-    }
-    return false;
-  }
-
-  size_t total = 0;
-  size_t used = 0;
-  result = esp_spiffs_info(conf.partition_label, &total, &used);
-  if (result != ESP_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "Failed to get spiffs partition information (error code: %#X). "
-        "formatting...\n",
-        result);
-    esp_spiffs_format(conf.partition_label);
-    return false;
-  }
-
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-      "Partition size: total: %zu bytes, used: %zu bytes\n", total, used);
-
-  if (used > total) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "Number of used bytes cannot be larger than total performing "
-        "esp_spiffs_check\n");
-    result = esp_spiffs_check(conf.partition_label);
-    if (result != ESP_OK) {
-      LogMessage(LogLevel::kError, __FILE__, __LINE__,
-          "esp_spiffs_check failed (error code: %#X)\n", result);
-      return false;
-    }
-
-    LogMessage(
-        LogLevel::kInfo, __FILE__, __LINE__, "esp_spiffs_check success\n");
-  }
-
-  spiffs_conf = conf;
   return true;
 }
 
 bool TDisplayP4AirDriver::InitSdmmc(const char* base_path, int max_freq_khz) {
-  if (base_path == nullptr || base_path[0] == '\0') {
+  if (base_path == nullptr || base_path[0] == '\0' || max_freq_khz <= 0) {
     return false;
   }
-  if (sd_card_ != nullptr && !DeinitSdmmc()) {
+  if (sd_card_.IsMounted() && !DeinitSdmmc()) {
     return false;
   }
   if (!status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
     return false;
   }
   bool power_enabled = true;
-  power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
+  power_enabled &= chip_.xl9535->GpioWrite(
+      gpio::xl9535::kSdPowerEn, 0);
   power_enabled &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kSdPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
+  power_enabled &= chip_.xl9535->GpioWrite(
+      gpio::xl9535::kSdPowerEn, 1);
   if (!power_enabled) {
-    return false;
-  }
-
-  esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-      .format_if_mount_failed = false,
-      .max_files = 5,
-      .allocation_unit_size = 16 * 1024,
-      .disk_status_check_enable = false,
-      .use_one_fat = false,
-  };
-
-  sdmmc_host_t host = SDMMC_HOST_DEFAULT();
-  host.slot = SDMMC_HOST_SLOT_0;
-  host.max_freq_khz = max_freq_khz;
-
-  sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-  slot_config.width = 4;
-  slot_config.clk = static_cast<gpio_num_t>(gpio::sd::kSdioClk);
-  slot_config.cmd = static_cast<gpio_num_t>(gpio::sd::kSdioCmd);
-  slot_config.d0 = static_cast<gpio_num_t>(gpio::sd::kSdioD0);
-  slot_config.d1 = static_cast<gpio_num_t>(gpio::sd::kSdioD1);
-  slot_config.d2 = static_cast<gpio_num_t>(gpio::sd::kSdioD2);
-  slot_config.d3 = static_cast<gpio_num_t>(gpio::sd::kSdioD3);
-  slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
-
-  sdmmc_card_t* card = nullptr;
-  esp_err_t result = esp_vfs_fat_sdmmc_mount(
-      base_path, &host, &slot_config, &mount_config, &card);
-  if (result != ESP_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "esp_vfs_fat_sdmmc_mount failed (error code: %#X)\n", result);
-    status_.sd_card.init_flag = false;
-    sd_card_ = nullptr;
-    sd_card_base_path_.clear();
-    sd_card_uses_spi_ = false;
     chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
     return false;
   }
 
-  sdmmc_card_print_info(stdout, card);
-  sd_card_ = card;
-  sd_card_base_path_ = base_path;
-  sd_card_uses_spi_ = false;
-  status_.sd_card.init_flag = true;
-  return true;
+  SdCard::SdmmcConfig config;
+  config.host.slot = SDMMC_HOST_SLOT_0;
+  config.host.max_freq_khz = max_freq_khz;
+  config.slot.width = 4;
+  config.slot.clk = static_cast<gpio_num_t>(gpio::sd::kSdioClk);
+  config.slot.cmd = static_cast<gpio_num_t>(gpio::sd::kSdioCmd);
+  config.slot.d0 = static_cast<gpio_num_t>(gpio::sd::kSdioD0);
+  config.slot.d1 = static_cast<gpio_num_t>(gpio::sd::kSdioD1);
+  config.slot.d2 = static_cast<gpio_num_t>(gpio::sd::kSdioD2);
+  config.slot.d3 = static_cast<gpio_num_t>(gpio::sd::kSdioD3);
+  config.slot.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
+
+  const bool result = sd_card_.InitSdmmc(base_path, config);
+  status_.sd_card.init_flag = sd_card_.IsMounted();
+  if (!result) {
+    chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
+  }
+  return result;
 }
 
 bool TDisplayP4AirDriver::InitSdspi(
     const char* base_path, spi_host_device_t host_id, int max_freq_khz) {
-  if (base_path == nullptr || base_path[0] == '\0') {
+  if (base_path == nullptr || base_path[0] == '\0' || max_freq_khz <= 0) {
     return false;
   }
-  if (sd_card_ != nullptr && !DeinitSdmmc()) {
+  if (sd_card_.IsMounted() && !DeinitSdmmc()) {
     return false;
   }
   if (!status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
     return false;
   }
   bool power_enabled = true;
-  power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
+  power_enabled &= chip_.xl9535->GpioWrite(
+      gpio::xl9535::kSdPowerEn, 0);
   power_enabled &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kSdPowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 1);
+  power_enabled &= chip_.xl9535->GpioWrite(
+      gpio::xl9535::kSdPowerEn, 1);
   if (!power_enabled) {
-    return false;
-  }
-
-  esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-      .format_if_mount_failed = false,
-      .max_files = 5,
-      .allocation_unit_size = 16 * 1024,
-      .disk_status_check_enable = false,
-      .use_one_fat = false,
-  };
-
-  sdmmc_host_t host = SDSPI_HOST_DEFAULT();
-  host.slot = host_id;
-  host.max_freq_khz = max_freq_khz;
-
-  spi_bus_config_t bus_config = {
-      .mosi_io_num = gpio::sd::kMosi,
-      .miso_io_num = gpio::sd::kMiso,
-      .sclk_io_num = gpio::sd::kSclk,
-      .quadwp_io_num = -1,
-      .quadhd_io_num = -1,
-      .data4_io_num = -1,
-      .data5_io_num = -1,
-      .data6_io_num = -1,
-      .data7_io_num = -1,
-      .data_io_default_level = 0,
-      .max_transfer_sz = 0,
-      .flags = SPICOMMON_BUSFLAG_MASTER,
-      .isr_cpu_id = ESP_INTR_CPU_AFFINITY_AUTO,
-      .intr_flags = 0,
-  };
-
-  esp_err_t result =
-      spi_bus_initialize(host_id, &bus_config, SDSPI_DEFAULT_DMA);
-  if (result != ESP_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "spi_bus_initialize failed (error code: %#X)\n", result);
-    status_.sd_card.init_flag = false;
-    sd_card_ = nullptr;
-    sd_card_base_path_.clear();
-    sd_card_uses_spi_ = false;
     chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
     return false;
   }
 
-  sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
-  slot_config.host_id = host_id;
-  slot_config.gpio_cs = static_cast<gpio_num_t>(gpio::sd::kCs);
+  SdCard::SdspiConfig config;
+  config.host.slot = host_id;
+  config.host.max_freq_khz = max_freq_khz;
+  config.slot.host_id = host_id;
+  config.slot.gpio_cs = static_cast<gpio_num_t>(gpio::sd::kCs);
+  config.bus.mosi_io_num = gpio::sd::kMosi;
+  config.bus.miso_io_num = gpio::sd::kMiso;
+  config.bus.sclk_io_num = gpio::sd::kSclk;
 
-  sdmmc_card_t* card = nullptr;
-  result = esp_vfs_fat_sdspi_mount(
-      base_path, &host, &slot_config, &mount_config, &card);
-  if (result != ESP_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "esp_vfs_fat_sdspi_mount failed (error code: %#X)\n", result);
-    status_.sd_card.init_flag = false;
-    sd_card_ = nullptr;
-    sd_card_base_path_.clear();
-    sd_card_uses_spi_ = false;
-    spi_bus_free(host_id);
+  const bool result = sd_card_.InitSdspi(base_path, config);
+  status_.sd_card.init_flag = sd_card_.IsMounted();
+  if (!result) {
     chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
-    return false;
   }
-
-  sdmmc_card_print_info(stdout, card);
-  sd_card_ = card;
-  sd_card_base_path_ = base_path;
-  sd_card_uses_spi_ = true;
-  sd_card_spi_host_id_ = host_id;
-  status_.sd_card.init_flag = true;
-  return true;
+  return result;
 }
 
 bool TDisplayP4AirDriver::DeinitBhi260ap() {
@@ -1496,42 +1382,17 @@ bool TDisplayP4AirDriver::DeinitScreenBacklight() {
 }
 
 bool TDisplayP4AirDriver::DeinitSdmmc(bool release_bus) {
-  if (sd_card_ == nullptr) {
-    status_.sd_card.init_flag = false;
-    sd_card_base_path_.clear();
-    sd_card_uses_spi_ = false;
-    return !status_.xl9535.init_flag || chip_.xl9535 == nullptr ||
-           chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
-  }
-
-  const bool uses_spi = sd_card_uses_spi_;
-  const spi_host_device_t spi_host_id = sd_card_spi_host_id_;
-  const esp_err_t result =
-      esp_vfs_fat_sdcard_unmount(sd_card_base_path_.c_str(), sd_card_);
-  if (result != ESP_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "esp_vfs_fat_sdcard_unmount failed (error code: %#X)\n", result);
-    status_.sd_card.init_flag = false;
+  bool result = sd_card_.Deinit(release_bus);
+  status_.sd_card.init_flag = sd_card_.IsMounted();
+  // 卸载失败时保留供电，允许后续重试。
+  if (sd_card_.IsMounted()) {
     return false;
   }
-
-  sd_card_ = nullptr;
-  sd_card_base_path_.clear();
-  sd_card_uses_spi_ = false;
-  status_.sd_card.init_flag = false;
-  bool deinit_result = true;
-  if (uses_spi && release_bus) {
-    const esp_err_t spi_result = spi_bus_free(spi_host_id);
-    if (spi_result != ESP_OK) {
-      LogMessage(LogLevel::kError, __FILE__, __LINE__,
-          "spi_bus_free failed (error code: %#X)\n", spi_result);
-      deinit_result = false;
-    }
-  }
   if (status_.xl9535.init_flag && chip_.xl9535 != nullptr) {
-    deinit_result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
+    result &= chip_.xl9535->GpioWrite(
+        gpio::xl9535::kSdPowerEn, 0);
   }
-  return deinit_result;
+  return result;
 }
 
 bool TDisplayP4AirDriver::IsAxp517Ready() const {
@@ -1598,8 +1459,7 @@ bool TDisplayP4AirDriver::IsScreenReady() const {
 }
 
 bool TDisplayP4AirDriver::IsSdmmcReady() const {
-  return status_.sd_card.init_flag && sd_card_ != nullptr &&
-         sdmmc_get_status(sd_card_) == ESP_OK;
+  return status_.sd_card.init_flag && sd_card_.IsReady();
 }
 
 bool TDisplayP4AirDriver::SetNs4150Enabled(bool enabled) {
@@ -1613,7 +1473,7 @@ bool TDisplayP4AirDriver::SetLedEnabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
-  return chip_.xl9535->GpioWrite(gpio::xl9535::kLed1, enabled ? 1 : 0);
+  return chip_.xl9535->GpioWrite(gpio::xl9535::kLed, enabled ? 1 : 0);
 }
 
 bool TDisplayP4AirDriver::SetAw86224Standby() {
@@ -1797,6 +1657,11 @@ bool TDisplayP4AirDriver::SetUsbHostPowerEnabled(bool enabled) {
 
 bool TDisplayP4AirDriver::PrepareMinimalDriversForPowerOff() {
   bool result = true;
+  if (IsXl9535Ready()) {
+    result &= SetLedEnabled(false);
+    result &= chip_.xl9535->Deinit(false);
+    status_.xl9535.init_flag = false;
+  }
   if (status_.axp517.init_flag && chip_.axp517 != nullptr) {
     result &= chip_.axp517->Deinit(false);
     status_.axp517.init_flag = false;
@@ -1844,11 +1709,10 @@ bool TDisplayP4AirDriver::PrepareDriversForPowerOff() {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 1);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLed1, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, 0);
   }
 
-  result &= DeinitPower();
+  result &= PrepareMinimalDriversForPowerOff();
   return result;
 }
 

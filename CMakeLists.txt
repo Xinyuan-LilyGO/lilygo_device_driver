@@ -46,17 +46,24 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_CAN485_C5)
             "./src/device/t_can485_c5/"
         )
 elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
+    if(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+        set(p4_version_dir "./src/device/t_display_p4/v2/")
+        list(APPEND requires "esp_codec_dev")
+    else()
+        set(p4_version_dir "./src/device/t_display_p4/v1/")
+        list(APPEND requires "stsw-st25rfal002_cpp_bus_driver")
+    endif()
     set(
             src_dirs
             "./src/"
             "./src/chip/esp32p4/"
             "./src/device/common/"
             "./src/device/t_display_p4/"
+            "${p4_version_dir}"
         )
     list(APPEND requires
             "cpp_bus_driver"
-            "usp_cpp_bus_driver"
-            "stsw-st25rfal002_cpp_bus_driver")
+            "usp_cpp_bus_driver")
 endif()
 
 # 所有设备共用独立日志模块。
