@@ -8,4 +8,4 @@
 
 #pragma once
 
-#include "t_spe_config.h"
+#include "device/t_spe/config.h"

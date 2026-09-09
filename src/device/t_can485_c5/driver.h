@@ -8,4 +8,4 @@
 
 #pragma once
 
-#include "t_can485_c5_config.h"
+#include "device/t_can485_c5/config.h"

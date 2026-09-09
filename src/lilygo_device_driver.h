@@ -12,19 +12,19 @@
 #include "core/logger.h"
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4)
-#include "t_glasses_p4_driver.h"
+#include "device/t_glasses_p4/driver.h"
 
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR)
-#include "t_display_p4_air_driver.h"
+#include "device/t_display_p4_air/driver.h"
 
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_T_SPE)
-#include "t_spe_driver.h"
+#include "device/t_spe/driver.h"
 
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_T_CAN485_C5)
-#include "t_can485_c5_driver.h"
+#include "device/t_can485_c5/driver.h"
 
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
-#include "t_display_p4_driver.h"
+#include "device/t_display_p4/driver.h"
 
 #else
 #error "Missing required macro definition."

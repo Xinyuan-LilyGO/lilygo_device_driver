@@ -5,7 +5,7 @@
  * @LastEditTime: 2026-09-02 17:16:04
  * @License: GPL 3.0
  */
-#include "t_display_p4_air_driver.h"
+#include "device/t_display_p4_air/driver.h"
 
 #include <cstdio>
 

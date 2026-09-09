@@ -24,7 +24,7 @@
 #include "esp_spiffs.h"
 #include "sdmmc_cmd.h"
 #include "stsw_st25rfal002_cpp_bus_driver.h"
-#include "t_display_p4_air_config.h"
+#include "device/t_display_p4_air/config.h"
 #include "usp_cpp_bus_driver.h"
 
 namespace lilygo_device_driver {

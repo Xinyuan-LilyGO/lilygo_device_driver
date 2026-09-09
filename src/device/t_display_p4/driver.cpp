@@ -5,7 +5,7 @@
  * @LastEditTime: 2026-09-02 17:15:59
  * @License: GPL 3.0
  */
-#include "t_display_p4_driver.h"
+#include "device/t_display_p4/driver.h"
 
 #include <array>
 #include <cstdint>

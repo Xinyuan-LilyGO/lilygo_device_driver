@@ -4,7 +4,7 @@
  * @Date: 2026-01-22 13:58:49
  * @License: GPL 3.0
  */
-#include "t_glasses_p4_driver.h"
+#include "device/t_glasses_p4/driver.h"
 
 #include <cstdio>
 

@@ -19,7 +19,7 @@
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
 #include "lr20xx/lr20xx_driver.h"
-#include "t_glasses_p4_config.h"
+#include "device/t_glasses_p4/config.h"
 
 namespace lilygo_device_driver {
 namespace t_glasses_p4::device {

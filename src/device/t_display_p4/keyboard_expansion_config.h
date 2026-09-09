@@ -10,7 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "t_display_p4_config.h"
+#include "device/t_display_p4/config.h"
 
 namespace lilygo_device_driver::t_display_p4 {
 namespace keyboard_expansion {
