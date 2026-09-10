@@ -216,17 +216,19 @@ bool TDisplayP4Driver::InitMinimalDrivers() {
     return true;
   }
 
-  bool result = true;
-  result &= InitXl9535();
-  result &= InitPower();
-  result &= InitSgm38121();
-  result &= InitBq27220();
-  minimal_drivers_initialized_ = result;
-  return result;
+  if (!InitXl9535() || !InitPower()) {
+    return false;
+  }
+  minimal_drivers_initialized_ = true;
+  return true;
 }
 
 bool TDisplayP4Driver::InitDrivers(InitMode mode) {
-  bool result = InitMinimalDrivers();
+  if (!InitMinimalDrivers()) {
+    return false;
+  }
+  bool result = InitBq27220();
+  result &= InitSgm38121();
   async_init_manager_.Reset();
 
   if (mode == InitMode::kAsync) {

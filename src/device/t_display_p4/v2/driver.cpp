@@ -973,10 +973,10 @@ void TDisplayP4Driver::CreateDrivers() {
 }
 
 bool TDisplayP4Driver::InitDrivers(InitMode mode) {
-  if (!InitMinimalDrivers() || !InitSgm38121()) {
+  if (!InitMinimalDrivers()) {
     return false;
   }
-  bool result = true;
+  bool result = InitSgm38121();
   async_init_manager_.Reset();
 
   if (mode == InitMode::kAsync) {

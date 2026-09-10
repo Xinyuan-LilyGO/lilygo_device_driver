@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 V2 板级硬件配置
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-07-11 14:47:34
+ * @LastEditTime: 2026-09-10 11:54:28
  * @License: GPL 3.0
  */
 
@@ -95,8 +95,8 @@ inline constexpr int kScl = i2c::kPort1Scl;
 namespace es8389 {
 inline constexpr int kSda = i2c::kPort1Sda;
 inline constexpr int kScl = i2c::kPort1Scl;
-inline constexpr int kAdcData = 22;
-inline constexpr int kDacData = 21;
+inline constexpr int kAdcData = 21;
+inline constexpr int kDacData = 22;
 inline constexpr int kBclk = 23;
 inline constexpr int kMclk = 13;
 inline constexpr int kWsLrck = 20;
