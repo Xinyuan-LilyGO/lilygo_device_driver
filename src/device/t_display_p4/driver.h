@@ -416,6 +416,7 @@ class TDisplayP4Driver {
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
   bool InitAxp517();
   bool InitEs8389();
+  bool InitUsbHostPower();
 #else
   bool InitBq27220();
   bool InitPt4103();
@@ -489,7 +490,9 @@ class TDisplayP4Driver {
   bool SetScreenSleep(bool sleep);
   bool SetLr2021OperatingMode(Lr2021OperatingMode mode);
   bool SetCameraPowerEnabled(bool enabled);
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
   bool SetUsbHostPowerEnabled(bool enabled);
+#endif
   bool PrepareDriversForPowerOff();
 
   /**

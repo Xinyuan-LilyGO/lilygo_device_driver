@@ -44,6 +44,49 @@ bool TDisplayP4Driver::Init(InitMode mode) {
   return result;
 }
 
+bool TDisplayP4Driver::InitUsbHostPower() {
+  if (!status_.axp517.init_flag || !status_.xl9535.init_flag) {
+    return false;
+  }
+  // 先断开 Type-A 负载并关闭 Boost，再配置电源和输出引脚。
+  if (!SetUsbHostPowerEnabled(false) ||
+      !chip_.xl9535->SetGpioMode(gpio::xl9535::kUsbHostPowerEn,
+          cpp_bus_driver::Xl95x5::Mode::kOutput) ||
+      !chip_.axp517->SetForceRbfetEnable(false) ||
+      !chip_.axp517->SetPdRole(false, false) ||
+      !chip_.axp517->SetBoostVoltage(5000)) {
+    SetUsbHostPowerEnabled(false);
+    return false;
+  }
+  return true;
+}
+
+bool TDisplayP4Driver::SetUsbHostPowerEnabled(bool enabled) {
+  if (!enabled) {
+    bool result = true;
+    if (status_.xl9535.init_flag) {
+      result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbHostPowerEn, 0);
+    }
+    if (status_.axp517.init_flag) {
+      result &= chip_.axp517->SetBoostEnable(false);
+    }
+    return result;
+  }
+  if (!status_.axp517.init_flag || !status_.xl9535.init_flag) {
+    return false;
+  }
+  if (!chip_.axp517->SetBoostEnable(true)) {
+    SetUsbHostPowerEnabled(false);
+    return false;
+  }
+  // RBFET 通向 Type-C 输入，保持关闭。
+  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kUsbHostPowerEn, 1)) {
+    SetUsbHostPowerEnabled(false);
+    return false;
+  }
+  return true;
+}
+
 bool TDisplayP4Driver::InitMinimal() {
   CreateDrivers();
   // 初始化失败保留公共电源，允许后续重试。
@@ -109,7 +152,6 @@ bool TDisplayP4Driver::InitXl9535() {
       {gpio::xl9535::kNs4150En, 0},
       {gpio::xl9535::kTouchRst, device::xl9535::kResetAsserted},
       {gpio::xl9535::kLed, 1},
-      {gpio::xl9535::kUsbPhyPowerEn, 1},
       {gpio::xl9535::kLr2021Rst, device::xl9535::kResetAsserted},
       {gpio::xl9535::kLr2021PowerEn, 0},
       {gpio::xl9535::kSdPowerEn, 0},

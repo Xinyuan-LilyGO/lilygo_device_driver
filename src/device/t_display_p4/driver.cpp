@@ -744,12 +744,6 @@ bool TDisplayP4Driver::SetCameraPowerEnabled(bool enabled) {
   return result;
 }
 
-bool TDisplayP4Driver::SetUsbHostPowerEnabled(bool enabled) {
-  if (!status_.xl9535.init_flag) {
-    return !enabled;
-  }
-  return chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, enabled ? 1 : 0);
-}
 
 bool TDisplayP4Driver::DetectScreenType() {
   status_.gt9895.init_flag = false;

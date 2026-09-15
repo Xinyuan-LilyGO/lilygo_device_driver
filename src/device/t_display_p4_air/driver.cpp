@@ -295,16 +295,12 @@ bool TDisplayP4AirDriver::InitXl9535() {
   bool result = true;
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Trig, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Rst, 0);
-  // ESP32-P4 只有在 USB PHY 电源保持开启时才能降低功耗；关闭该电源会
-  // 产生约 20 mA 功耗，因此初始化后默认保持开启。
-  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 1);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLed, 1);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kAdl161Trig, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kAdl161Rst, kOutput);
-  result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kUsbPhyPowerEn, kOutput);
   result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kEsp32p4Esp32c5UartSwitch, kOutput);
   result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kEsp32c5En, kOutput);
@@ -1652,7 +1648,8 @@ bool TDisplayP4AirDriver::SetUsbHostPowerEnabled(bool enabled) {
   if (!status_.xl9535.init_flag) {
     return !enabled;
   }
-  return chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, enabled ? 1 : 0);
+  (void)enabled;
+  return true;
 }
 
 bool TDisplayP4AirDriver::PrepareMinimalDriversForPowerOff() {

@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 V2 板级硬件配置
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-09-10 11:54:28
+ * @LastEditTime: 2026-09-15 10:33:20
  * @License: GPL 3.0
  */
 
@@ -64,9 +64,9 @@ inline constexpr auto kEsp32c5Boot = cpp_bus_driver::Xl95x5::Pin::kIo4;
 inline constexpr auto kEsp32c5En = cpp_bus_driver::Xl95x5::Pin::kIo5;
 inline constexpr auto kScreenRst = cpp_bus_driver::Xl95x5::Pin::kIo6;
 inline constexpr auto kNs4150En = cpp_bus_driver::Xl95x5::Pin::kIo7;
+inline constexpr auto kUsbHostPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo10;
 inline constexpr auto kTouchRst = cpp_bus_driver::Xl95x5::Pin::kIo11;
 inline constexpr auto kLed = cpp_bus_driver::Xl95x5::Pin::kIo12;
-inline constexpr auto kUsbPhyPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo13;
 inline constexpr auto kLr2021Rst = cpp_bus_driver::Xl95x5::Pin::kIo15;
 inline constexpr auto kLr2021PowerEn = cpp_bus_driver::Xl95x5::Pin::kIo16;
 inline constexpr auto kSdPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo17;

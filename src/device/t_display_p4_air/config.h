@@ -65,7 +65,6 @@ inline constexpr auto kBhi260apRst = cpp_bus_driver::Xl95x5::Pin::kIo2;
 inline constexpr auto kAdl161Trig = cpp_bus_driver::Xl95x5::Pin::kIo3;
 inline constexpr auto kAdl161Rst = cpp_bus_driver::Xl95x5::Pin::kIo4;
 inline constexpr auto kLr1121PowerEn = cpp_bus_driver::Xl95x5::Pin::kIo5;
-inline constexpr auto kUsbPhyPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo10;
 inline constexpr auto kEsp32p4Esp32c5UartSwitch =
     cpp_bus_driver::Xl95x5::Pin::kIo11;
 inline constexpr auto kEsp32c5En = cpp_bus_driver::Xl95x5::Pin::kIo12;
