@@ -186,7 +186,7 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
           }
           self->async_init_manager_.FinishTask();
         },
-        "InitScreenImuTask", 8192, this, 3);
+        "InitDisplayBhi260apTask", 8192, this, 3);
 
     result &= async_init_manager_.StartTask(
         [](void* arg) {

@@ -15,6 +15,7 @@
 #include "driver/sdspi_host.h"
 #include "driver/spi_master.h"
 #include "esp_vfs_fat.h"
+#include "firmware/bhi260ap/BHI260AP.fw.h"
 #include "sdmmc_cmd.h"
 
 namespace lilygo_device_driver {
@@ -152,6 +153,7 @@ bool TDisplayP4Driver::InitXl9535() {
       {gpio::xl9535::kNs4150En, 0},
       {gpio::xl9535::kTouchRst, device::xl9535::kResetAsserted},
       {gpio::xl9535::kLed, 1},
+      {gpio::xl9535::kBhi260apRst, device::xl9535::kResetAsserted},
       {gpio::xl9535::kLr2021Rst, device::xl9535::kResetAsserted},
       {gpio::xl9535::kLr2021PowerEn, 0},
       {gpio::xl9535::kSdPowerEn, 0},
@@ -175,10 +177,89 @@ bool TDisplayP4Driver::InitXl9535() {
   return result;
 }
 
-bool TDisplayP4Driver::InitIcm20948() {
-  // 暂时不添加 BHI260AP、QMC6309 的驱动，后续硬件替换为 ICM20948 后再接入。
-  // 当前仅预留接口，不将设备标记为就绪。
-  return false;
+bool TDisplayP4Driver::InitBhi260ap() {
+  CreateDrivers();
+  if (IsBhi260apReady()) {
+    return true;
+  }
+  if (!InitPower() || !InitXl9535()) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBhi260ap failed\n");
+    return false;
+  }
+
+  bool result = chip_.xl9535->GpioWrite(
+      gpio::xl9535::kBhi260apRst, device::xl9535::kResetAsserted);
+  result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kBhi260apRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  if (result) {
+    platform_hal_->DelayMs(2);
+    result = chip_.xl9535->GpioWrite(
+        gpio::xl9535::kBhi260apRst, device::xl9535::kResetReleased);
+  }
+  if (result) {
+    platform_hal_->DelayMs(120);
+    result = chip_.bhi260ap->Init(device::bhi260ap::kI2cFrequencyHz);
+  }
+  if (result) {
+    result = chip_.bhi260ap->BootFromRam(bhy2_firmware_image,
+        static_cast<uint32_t>(sizeof(bhy2_firmware_image)));
+  }
+  status_.bhi260ap.init_flag = result;
+  if (result) {
+    result = SetBhi260apSleep(true);
+  }
+  status_.bhi260ap.init_flag = result;
+  if (result) {
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "InitBhi260ap success (kernel version: %u)\n",
+        static_cast<unsigned int>(chip_.bhi260ap->kernel_version()));
+  } else {
+    const int8_t last_error = chip_.bhi260ap->last_error();
+    chip_.bhi260ap->Deinit(false);
+    chip_.xl9535->GpioWrite(
+        gpio::xl9535::kBhi260apRst, device::xl9535::kResetAsserted);
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitBhi260ap failed (error code: %d)\n", static_cast<int>(last_error));
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::InitQmc6309() {
+  CreateDrivers();
+  if (IsQmc6309Ready()) {
+    return true;
+  }
+  if (!InitPower() || !bus_.qmc6309_i2c_bus->InitBus()) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitQmc6309 failed\n");
+    return false;
+  }
+
+  if (chip_.qmc6309 == nullptr) {
+    chip_.qmc6309 = std::make_unique<SensorQMC6309>();
+  }
+  bool result = chip_.qmc6309->begin(
+      bus_.qmc6309_i2c_bus->bus_handle(), device::qmc6309::kI2cAddress);
+  if (result) {
+    chip_.qmc6309->setOffset(0, 0, 0);
+    // SensorLib 0.4.1 的 ODR 接口写入了 0x0A 而非 0x0B。
+    // 使用不依赖 ODR 的连续测量模式，并显式覆盖默认 OSR/LPF 配置。
+    result = chip_.qmc6309->setOperationMode(OperationMode::SUSPEND) &&
+             chip_.qmc6309->setFullScaleRange(MagFullScaleRange::FS_8G) &&
+             chip_.qmc6309->setOversamplingRate(MagOverSampleRatio::OSR_8) &&
+             chip_.qmc6309->setLowPassFilter(MagLowPassFilter::LPF_8) &&
+             chip_.qmc6309->setSetResetMode(
+                 SensorQMC6309::MagSetResetMode::SET_AND_RESET_ON);
+    if (!result) {
+      chip_.qmc6309->setOperationMode(OperationMode::SUSPEND);
+    }
+  }
+  status_.qmc6309.init_flag = result;
+  if (!result) {
+    chip_.qmc6309.reset();
+  }
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitQmc6309 success\n" : "InitQmc6309 failed\n");
+  return result;
 }
 
 bool TDisplayP4Driver::InitSy7200a() {
@@ -697,7 +778,27 @@ bool TDisplayP4Driver::DeinitEs8389() {
   return result;
 }
 
-bool TDisplayP4Driver::DeinitIcm20948() {
+bool TDisplayP4Driver::DeinitBhi260ap() {
+  bool result = true;
+  if (chip_.bhi260ap != nullptr && chip_.bhi260ap->initialized()) {
+    result &= SetBhi260apSleep(true);
+    result &= chip_.bhi260ap->Deinit(false);
+  }
+  if (IsXl9535Ready()) {
+    result &= chip_.xl9535->GpioWrite(
+        gpio::xl9535::kBhi260apRst, device::xl9535::kResetAsserted);
+  }
+  status_.bhi260ap.init_flag = false;
+  return result;
+}
+
+bool TDisplayP4Driver::DeinitQmc6309() {
+  if (!SetQmc6309Sleep(true)) {
+    return false;
+  }
+  // SensorLib 通过析构释放设备句柄，保留共用的 I2C2 总线。
+  chip_.qmc6309.reset();
+  status_.qmc6309.init_flag = false;
   return true;
 }
 
@@ -745,8 +846,13 @@ bool TDisplayP4Driver::IsAxp517Ready() const {
   return status_.axp517.init_flag && chip_.axp517 != nullptr;
 }
 
-bool TDisplayP4Driver::IsIcm20948Ready() const {
-  return false;
+bool TDisplayP4Driver::IsBhi260apReady() const {
+  return status_.bhi260ap.init_flag && chip_.bhi260ap != nullptr &&
+         chip_.bhi260ap->initialized() && chip_.bhi260ap->firmware_running();
+}
+
+bool TDisplayP4Driver::IsQmc6309Ready() const {
+  return status_.qmc6309.init_flag && chip_.qmc6309 != nullptr;
 }
 
 bool TDisplayP4Driver::IsEs8389Ready() const {
@@ -775,8 +881,34 @@ bool TDisplayP4Driver::IsScreenReady() const {
   }
 }
 
-bool TDisplayP4Driver::SetIcm20948Sleep(bool) {
-  return false;
+bool TDisplayP4Driver::SetBhi260apSleep(bool sleep) {
+  if (!IsBhi260apReady()) {
+    return sleep;
+  }
+
+  struct bhy2_dev* context = chip_.bhi260ap->context();
+  uint8_t host_interface_control = 0;
+  if (context == nullptr ||
+      bhy2_get_host_intf_ctrl(&host_interface_control, context) != BHY2_OK) {
+    return false;
+  }
+  if (sleep) {
+    host_interface_control |= BHY2_HIF_CTRL_AP_SUSPENDED;
+  } else {
+    host_interface_control &= static_cast<uint8_t>(~BHY2_HIF_CTRL_AP_SUSPENDED);
+  }
+  return bhy2_set_host_intf_ctrl(host_interface_control, context) == BHY2_OK;
+}
+
+bool TDisplayP4Driver::SetQmc6309Sleep(bool sleep) {
+  if (!IsQmc6309Ready()) {
+    return sleep;
+  }
+  if (!chip_.qmc6309->setOperationMode(OperationMode::SUSPEND)) {
+    return false;
+  }
+  return sleep || chip_.qmc6309->setOperationMode(
+                      OperationMode::CONTINUOUS_MEASUREMENT);
 }
 
 bool TDisplayP4Driver::SetEs8389OperatingMode(Es8389OperatingMode mode) {
@@ -869,6 +1001,11 @@ bool TDisplayP4Driver::SetEsp32c5PowerEnabled(bool enabled) {
 
 bool TDisplayP4Driver::PrepareMinimalDriversForPowerOff() {
   bool result = true;
+  result &= DeinitBhi260ap();
+  result &= DeinitQmc6309();
+  if (!result) {
+    return false;
+  }
   if (IsXl9535Ready()) {
     result &= SetLedEnabled(false);
     result &= chip_.xl9535->Deinit(false);
@@ -898,7 +1035,8 @@ bool TDisplayP4Driver::PrepareDriversForPowerOff() {
   result &= DeinitScreenBacklight();
   result &= DeinitTouch();
   result &= DeinitScreen();
-  result &= DeinitIcm20948();
+  result &= DeinitBhi260ap();
+  result &= DeinitQmc6309();
   result &= DeinitAw86224();
   result &= DeinitEs8389();
   result &= DeinitLr2021();
@@ -964,6 +1102,10 @@ void TDisplayP4Driver::CreateDrivers() {
 
   bus_.axp517_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
+  bus_.bhi260ap_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
+  bus_.qmc6309_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.hi8561_i2c_touch_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.gt9895_i2c_touch_bus =
@@ -987,6 +1129,9 @@ void TDisplayP4Driver::CreateDrivers() {
 
   chip_.axp517 = std::make_unique<cpp_bus_driver::Axp517>(
       bus_.axp517_i2c_bus, device::axp517::kI2cAddress);
+  chip_.bhi260ap = std::make_unique<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy>(
+      bus_.bhi260ap_i2c_bus, device::bhi260ap::kI2cAddress);
+  chip_.qmc6309 = std::make_unique<SensorQMC6309>();
   chip_.xl9535 = std::make_unique<cpp_bus_driver::Xl95x5>(
       bus_.xl9535_i2c_bus, device::xl9535::kI2cAddress);
   chip_.sgm38121 = std::make_unique<cpp_bus_driver::Sgm38121>(
@@ -1032,9 +1177,17 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
             self->InitScreenBacklight();
           }
 
+          // BHI260AP 与触摸控制器共享 I2C，两个初始化流程
+          // 必须依次完成，避免并发占用同一条总线。
+          // 屏幕已可用后降低任务优先级，避免上传传感器固件时
+          // 抢占界面刷新并造成启动动画停顿。
+          if (!self->async_init_manager_.stop_requested()) {
+            vTaskPrioritySet(nullptr, tskIDLE_PRIORITY);
+            self->InitBhi260ap();
+          }
           self->async_init_manager_.FinishTask();
         },
-        "InitScreenTask", 8192, this, 3);
+        "InitDisplayBhi260apTask", 8192, this, 3);
 
     result &= async_init_manager_.StartTask(
         [](void* arg) {
@@ -1045,6 +1198,16 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
           self->async_init_manager_.FinishTask();
         },
         "InitAw86224Task", 4096, this, 3);
+
+    result &= async_init_manager_.StartTask(
+        [](void* arg) {
+          auto* self = static_cast<TDisplayP4Driver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitQmc6309();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitQmc6309Task", 4096, this, 3);
 
     result &= async_init_manager_.StartTask(
         [](void* arg) {
@@ -1085,7 +1248,8 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
       result &= InitScreenBacklight();
     }
 
-    // result &= InitIcm20948();
+    result &= InitBhi260ap();
+    result &= InitQmc6309();
 
     result &= InitAw86224();
     result &= InitLr2021();

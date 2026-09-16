@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 V2 板级硬件配置
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-09-15 10:33:20
+ * @LastEditTime: 2026-09-15 15:48:24
  * @License: GPL 3.0
  */
 
@@ -67,6 +67,7 @@ inline constexpr auto kNs4150En = cpp_bus_driver::Xl95x5::Pin::kIo7;
 inline constexpr auto kUsbHostPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo10;
 inline constexpr auto kTouchRst = cpp_bus_driver::Xl95x5::Pin::kIo11;
 inline constexpr auto kLed = cpp_bus_driver::Xl95x5::Pin::kIo12;
+inline constexpr auto kBhi260apRst = cpp_bus_driver::Xl95x5::Pin::kIo14;
 inline constexpr auto kLr2021Rst = cpp_bus_driver::Xl95x5::Pin::kIo15;
 inline constexpr auto kLr2021PowerEn = cpp_bus_driver::Xl95x5::Pin::kIo16;
 inline constexpr auto kSdPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo17;
@@ -91,6 +92,17 @@ namespace aw86224 {
 inline constexpr int kSda = i2c::kPort1Sda;
 inline constexpr int kScl = i2c::kPort1Scl;
 }  // namespace aw86224
+
+namespace bhi260ap {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
+inline constexpr int kInt = 51;
+}  // namespace bhi260ap
+
+namespace qmc6309 {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
+}  // namespace qmc6309
 
 namespace es8389 {
 inline constexpr int kSda = i2c::kPort1Sda;
@@ -168,7 +180,7 @@ namespace xl9535 {
 inline constexpr uint8_t kI2cAddress = 0x20;
 inline constexpr int kSdPowerEnabled = 1;
 inline constexpr int kSdPowerDisabled = 0;
-// 屏幕、触摸和 LR2021 的复位控制经 NMOS 反相。
+// 屏幕、触摸、BHI260AP 和 LR2021 的复位控制经 NMOS 反相。
 inline constexpr int kResetAsserted = 1;
 inline constexpr int kResetReleased = 0;
 }  // namespace xl9535
@@ -181,6 +193,15 @@ inline constexpr uint32_t kPwmFrequencyHz = 20000;
 namespace axp517 {
 inline constexpr uint8_t kI2cAddress = 0x34;
 }  // namespace axp517
+
+namespace bhi260ap {
+inline constexpr uint8_t kI2cAddress = 0x29;
+inline constexpr uint32_t kI2cFrequencyHz = 400000;
+}  // namespace bhi260ap
+
+namespace qmc6309 {
+inline constexpr uint8_t kI2cAddress = 0x7C;
+}  // namespace qmc6309
 
 namespace aw86224 {
 inline constexpr uint8_t kI2cAddress = 0x58;

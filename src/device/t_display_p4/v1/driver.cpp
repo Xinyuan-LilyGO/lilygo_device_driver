@@ -45,9 +45,9 @@ void TDisplayP4Driver::CreateDrivers() {
   status_.lr2021.init_flag = false;
 
   bus_.xl9535_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
-      gpio::i2c::kPort1Sda, gpio::i2c::kPort1Scl, I2C_NUM_0);
+      gpio::xl9535::kSda, gpio::xl9535::kScl, I2C_NUM_0);
   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
-      gpio::i2c::kPort2Sda, gpio::i2c::kPort2Scl, I2C_NUM_1);
+      gpio::sgm38121::kSda, gpio::sgm38121::kScl, I2C_NUM_1);
   bus_.radio_spi_bus =
       std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::spi::kPort1Mosi,
           gpio::spi::kPort1Sclk, gpio::spi::kPort1Miso, SPI2_HOST, 0);

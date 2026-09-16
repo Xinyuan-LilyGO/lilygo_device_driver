@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-09-02 17:16:01
+ * @LastEditTime: 2026-09-15 16:08:29
  * @License: GPL 3.0
  */
 
@@ -24,6 +24,8 @@
 #include "usp_cpp_bus_driver.h"
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+#include "SensorQMC6309.hpp"
+#include "bhi2xy_sensorapi_cpp_bus_driver.h"
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
 #else
@@ -203,6 +205,8 @@ class TDisplayP4Driver {
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
     std::shared_ptr<cpp_bus_driver::HardwareI2c> axp517_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> bhi260ap_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> qmc6309_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> lr2021_spi_bus;
 #else
@@ -235,6 +239,8 @@ class TDisplayP4Driver {
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
     std::unique_ptr<cpp_bus_driver::Axp517> axp517;
+    std::unique_ptr<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy> bhi260ap;
+    std::unique_ptr<SensorQMC6309> qmc6309;
 #else
     std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
     std::unique_ptr<cpp_bus_driver::Pcf8563x> pcf8563;
@@ -300,6 +306,14 @@ class TDisplayP4Driver {
     struct {
       bool init_flag = false;
     } axp517;
+
+    struct {
+      bool init_flag = false;
+    } bhi260ap;
+
+    struct {
+      bool init_flag = false;
+    } qmc6309;
 
     struct {
       bool init_flag = false;
@@ -411,13 +425,15 @@ class TDisplayP4Driver {
   bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
   bool InitSdspi(const char* base_path, spi_host_device_t host_id,
       int max_freq_khz = SDMMC_FREQ_DEFAULT);
-  bool InitIcm20948();
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
   bool InitAxp517();
+  bool InitBhi260ap();
+  bool InitQmc6309();
   bool InitEs8389();
   bool InitUsbHostPower();
 #else
+  bool InitIcm20948();
   bool InitBq27220();
   bool InitPt4103();
   bool InitPcf8563();
@@ -439,12 +455,14 @@ class TDisplayP4Driver {
   bool DeinitL76k();
   bool DeinitLr2021();
   bool DeinitSdmmc(bool release_bus = true);
-  bool DeinitIcm20948();
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
   bool DeinitEs8389();
+  bool DeinitBhi260ap();
+  bool DeinitQmc6309();
   bool DeinitPower();
 #else
+  bool DeinitIcm20948();
   bool DeinitEs8311();
   bool DeinitSx1262();
   bool DeinitRadio();
@@ -465,13 +483,15 @@ class TDisplayP4Driver {
   bool IsSy7200aReady() const;
   bool IsScreenReady() const;
   bool IsTouchReady() const;
-  bool IsIcm20948Ready() const;
   bool IsSdmmcReady() const;
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
   bool IsAxp517Ready() const;
+  bool IsBhi260apReady() const;
+  bool IsQmc6309Ready() const;
   bool IsEs8389Ready() const;
 #else
+  bool IsIcm20948Ready() const;
   bool IsBq27220Ready() const;
   bool IsPt4103Ready() const;
   bool IsPcf8563Ready() const;
@@ -495,19 +515,14 @@ class TDisplayP4Driver {
 #endif
   bool PrepareDriversForPowerOff();
 
-  /**
-   * @brief 设置惯性传感器休眠状态
-   * @param sleep true 进入休眠，false 退出休眠
-   * @return 设置成功返回 true，失败或驱动未接入时返回 false
-   * @note V2 暂未接入此驱动。
-   */
-  bool SetIcm20948Sleep(bool sleep);
-
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
   bool SetEs8389OperatingMode(Es8389OperatingMode mode);
+  bool SetBhi260apSleep(bool sleep);
+  bool SetQmc6309Sleep(bool sleep);
   bool SetEsp32c5PowerEnabled(bool enabled);
   bool PrepareMinimalDriversForPowerOff();
 #else
+  bool SetIcm20948Sleep(bool sleep);
   bool SetEs8311OperatingMode(Es8311OperatingMode mode);
   bool SetSx1262OperatingMode(Sx1262OperatingMode mode);
   bool SetCc1101OperatingMode(Cc1101OperatingMode mode);
