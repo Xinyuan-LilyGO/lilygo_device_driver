@@ -151,6 +151,7 @@ bool TDisplayP4Driver::InitXl9535() {
       {gpio::xl9535::kEsp32c5En, 0},
       {gpio::xl9535::kScreenRst, device::xl9535::kResetAsserted},
       {gpio::xl9535::kNs4150En, 0},
+      {gpio::xl9535::kUsbHostPowerEn, 0},
       {gpio::xl9535::kTouchRst, device::xl9535::kResetAsserted},
       {gpio::xl9535::kLed, 1},
       {gpio::xl9535::kBhi260apRst, device::xl9535::kResetAsserted},
@@ -1001,6 +1002,8 @@ bool TDisplayP4Driver::SetEsp32c5PowerEnabled(bool enabled) {
 
 bool TDisplayP4Driver::PrepareMinimalDriversForPowerOff() {
   bool result = true;
+  // 在释放 AXP517 与 XL9535 前关闭 Type-A 负载及 Boost。
+  result &= SetUsbHostPowerEnabled(false);
   result &= DeinitBhi260ap();
   result &= DeinitQmc6309();
   if (!result) {
