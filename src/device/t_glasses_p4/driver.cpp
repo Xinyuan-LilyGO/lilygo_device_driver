@@ -159,7 +159,7 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
         [](void* arg) {
           auto* self = static_cast<TGlassesP4Driver*>(arg);
           if (!self->async_init_manager_.stop_requested()) {
-            self->InitScreen();
+            self->InitS023msafjf10111e1();
           }
           self->async_init_manager_.FinishTask();
         },
@@ -197,7 +197,7 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     //     },
     //     "PeripheralTask", 4096, this, 3);
   } else {
-    result &= InitScreen();
+    result &= InitS023msafjf10111e1();
     // result &= InitBq27220();
     // result &= InitAw86224();
     result &= InitLr2021();
@@ -217,7 +217,7 @@ bool TGlassesP4Driver::InitBq25896() {
   if (!result) {
     chip_.bq25896->Deinit(false);
   }
-  status_.bq25896.init_flag = result;
+  chip_status_.bq25896.init_flag = result;
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitBq25896 success\n" : "InitBq25896 failed\n");
   return result;
@@ -274,7 +274,7 @@ bool TGlassesP4Driver::InitSgm38121() {
   } else {
     chip_.sgm38121->Deinit(false);
   }
-  status_.sgm38121.init_flag = result;
+  chip_status_.sgm38121.init_flag = result;
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitSgm38121 success\n" : "InitSgm38121 failed\n");
   return result;
@@ -284,21 +284,43 @@ bool TGlassesP4Driver::InitS023msafjf10111e1() {
   if (IsS023msafjf10111e1Ready()) {
     return true;
   }
-  if (!power_initialized_ || !IsSgm38121Ready() ||
-      chip_.s023msafjf10111e1 == nullptr || !chip_.s023msafjf10111e1->Init()) {
-    LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "InitS023msafjf10111e1 failed\n");
-    return false;
+  if (!chip_status_.s023msafjf10111e1.init_flag ||
+      chip_.s023msafjf10111e1 == nullptr) {
+    if (!power_initialized_ || !IsSgm38121Ready() ||
+        chip_.s023msafjf10111e1 == nullptr ||
+        !chip_.s023msafjf10111e1->Init()) {
+      LogMessage(LogLevel::kError, __FILE__, __LINE__,
+          "InitS023msafjf10111e1 failed\n");
+      return false;
+    }
+    bool result = chip_.s023msafjf10111e1->SetBrightnessGain(0);
+    // 设置屏幕的默认显示方向。
+    result &= chip_.s023msafjf10111e1->SetMirror(kDefaultScreenMirror);
+    result &= chip_.s023msafjf10111e1->SetPixelShift(0, 0);
+    result &= chip_.s023msafjf10111e1->SetBistEnabled(false);
+    if (!result) {
+      chip_.s023msafjf10111e1->Deinit(false);
+    }
+    chip_status_.s023msafjf10111e1.init_flag = result;
+    if (!result) {
+      LogMessage(LogLevel::kError, __FILE__, __LINE__,
+          "InitS023msafjf10111e1 failed\n");
+      return false;
+    }
   }
-  bool result = chip_.s023msafjf10111e1->SetBrightnessGain(0);
-  // 设置屏幕的默认显示方向。
-  result &= chip_.s023msafjf10111e1->SetMirror(kDefaultScreenMirror);
-  result &= chip_.s023msafjf10111e1->SetPixelShift(0, 0);
-  result &= chip_.s023msafjf10111e1->SetBistEnabled(false);
+
+  const auto& screen = screen_info();
+  bus_.screen_mipi_bus = std::make_shared<cpp_bus_driver::HardwareMipi>(
+      screen.width, screen.height, screen.mipi_dsi_hsync, screen.mipi_dsi_hbp,
+      screen.mipi_dsi_hfp, screen.mipi_dsi_vsync, screen.mipi_dsi_vbp,
+      screen.mipi_dsi_vfp, screen.data_lane_num,
+      cpp_bus_driver::HardwareMipi::ColorFormat::kRgb888);
+  const bool result = bus_.screen_mipi_bus->Init(screen.mipi_dsi_dpi_clk_mhz,
+                          screen.lane_bit_rate_mbps) &&
+                      bus_.screen_mipi_bus->StartTransmit();
   if (!result) {
-    chip_.s023msafjf10111e1->Deinit(false);
+    DeinitS023msafjf10111e1();
   }
-  status_.s023msafjf10111e1.init_flag = result;
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitS023msafjf10111e1 success\n"
              : "InitS023msafjf10111e1 failed\n");
@@ -395,7 +417,7 @@ bool TGlassesP4Driver::InitEs8389() {
         "InitEs8389 failed (codec device)\n");
     return false;
   }
-  status_.es8389.init_flag = true;
+  chip_status_.es8389.init_flag = true;
   bool result = SetEs8389OperatingMode(Es8389OperatingMode::kActive);
   if (result) {
     result &= esp_codec_dev_set_out_vol(es8389_output_codec_dev_, 100) ==
@@ -407,7 +429,7 @@ bool TGlassesP4Driver::InitEs8389() {
   if (!result) {
     DeinitEs8389();
   }
-  status_.es8389.init_flag = result;
+  chip_status_.es8389.init_flag = result;
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitEs8389 success\n" : "InitEs8389 failed\n");
   return result;
@@ -531,7 +553,7 @@ bool TGlassesP4Driver::InitLr2021() {
     return false;
   }
 
-  status_.lr2021.init_flag = true;
+  chip_status_.lr2021.init_flag = true;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
       "InitLr2021 success (fw: %u.%u)\n",
       static_cast<unsigned>(version.major),
@@ -565,30 +587,6 @@ bool TGlassesP4Driver::InitPower() {
   return true;
 }
 
-bool TGlassesP4Driver::InitScreen() {
-  if (IsScreenReady()) {
-    return true;
-  }
-  if (!InitS023msafjf10111e1()) {
-    return false;
-  }
-  const auto& screen = screen_info();
-  bus_.screen_mipi_bus = std::make_shared<cpp_bus_driver::HardwareMipi>(
-      screen.width, screen.height, screen.mipi_dsi_hsync, screen.mipi_dsi_hbp,
-      screen.mipi_dsi_hfp, screen.mipi_dsi_vsync, screen.mipi_dsi_vbp,
-      screen.mipi_dsi_vfp, screen.data_lane_num,
-      cpp_bus_driver::HardwareMipi::ColorFormat::kRgb888);
-  const bool result = bus_.screen_mipi_bus->Init(screen.mipi_dsi_dpi_clk_mhz,
-                          screen.lane_bit_rate_mbps) &&
-                      bus_.screen_mipi_bus->StartTransmit();
-  if (!result) {
-    DeinitScreen();
-  }
-  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
-      result ? "InitScreen success\n" : "InitScreen failed\n");
-  return result;
-}
-
 bool TGlassesP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
   if (base_path == nullptr || base_path[0] == '\0' || max_freq_khz <= 0) {
     return false;
@@ -613,7 +611,7 @@ bool TGlassesP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
   config.slot.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
   const bool result = sd_card_.InitSdmmc(base_path, config);
-  status_.sd_card.init_flag = sd_card_.IsMounted();
+  chip_status_.sd_card.init_flag = sd_card_.IsMounted();
   return result;
 }
 
@@ -650,7 +648,7 @@ bool TGlassesP4Driver::DeinitEs8389() {
   if (bus_.es8389_i2s_bus != nullptr) {
     result &= bus_.es8389_i2s_bus->Deinit();
   }
-  status_.es8389.init_flag = false;
+  chip_status_.es8389.init_flag = false;
   es8389_operating_mode_ = Es8389OperatingMode::kSleep;
   return result;
 }
@@ -662,13 +660,13 @@ bool TGlassesP4Driver::DeinitLr2021() {
     result &= chip_.lr2021->Deinit(false);
     result &= platform_hal_->GpioWrite(gpio::lr2021::kRst, 0);
   }
-  status_.lr2021.init_flag = false;
+  chip_status_.lr2021.init_flag = false;
   return result;
 }
 
 bool TGlassesP4Driver::DeinitSdmmc() {
   bool result = sd_card_.Deinit();
-  status_.sd_card.init_flag = sd_card_.IsMounted();
+  chip_status_.sd_card.init_flag = sd_card_.IsMounted();
   return result;
 }
 
@@ -686,51 +684,51 @@ bool TGlassesP4Driver::DeinitPower() {
   return result;
 }
 
-bool TGlassesP4Driver::DeinitScreen() {
+bool TGlassesP4Driver::DeinitS023msafjf10111e1() {
   bool result = true;
-  if (IsS023msafjf10111e1Ready()) {
+  // MIPI 初始化失败时也需要关闭已经初始化的屏幕芯片。
+  const bool chip_initialized = chip_status_.s023msafjf10111e1.init_flag &&
+                                chip_.s023msafjf10111e1 != nullptr;
+  if (chip_initialized) {
     result &= chip_.s023msafjf10111e1->SetBrightnessGain(0);
   }
   if (bus_.screen_mipi_bus != nullptr) {
     result &= bus_.screen_mipi_bus->Deinit();
     bus_.screen_mipi_bus.reset();
   }
-  if (IsS023msafjf10111e1Ready()) {
+  if (chip_initialized) {
     result &= chip_.s023msafjf10111e1->Deinit(false);
   }
-  status_.s023msafjf10111e1.init_flag = false;
+  chip_status_.s023msafjf10111e1.init_flag = false;
   return result;
 }
 
 bool TGlassesP4Driver::IsEs8389Ready() const {
-  return status_.es8389.init_flag && es8389_input_codec_dev_ != nullptr &&
+  return chip_status_.es8389.init_flag && es8389_input_codec_dev_ != nullptr &&
          es8389_output_codec_dev_ != nullptr;
 }
 
 bool TGlassesP4Driver::IsSdmmcReady() const {
-  return status_.sd_card.init_flag && sd_card_.IsReady();
+  return chip_status_.sd_card.init_flag && sd_card_.IsReady();
 }
 
 bool TGlassesP4Driver::IsBq25896Ready() const {
-  return status_.bq25896.init_flag && chip_.bq25896 != nullptr;
+  return chip_status_.bq25896.init_flag && chip_.bq25896 != nullptr;
 }
 
 bool TGlassesP4Driver::IsSgm38121Ready() const {
-  return status_.sgm38121.init_flag && chip_.sgm38121 != nullptr;
+  return chip_status_.sgm38121.init_flag && chip_.sgm38121 != nullptr;
 }
 
 bool TGlassesP4Driver::IsS023msafjf10111e1Ready() const {
-  return status_.s023msafjf10111e1.init_flag &&
-         chip_.s023msafjf10111e1 != nullptr;
+  return chip_status_.s023msafjf10111e1.init_flag &&
+         chip_.s023msafjf10111e1 != nullptr &&
+         bus_.screen_mipi_bus != nullptr &&
+         bus_.screen_mipi_bus->device_handle() != nullptr;
 }
 
 bool TGlassesP4Driver::IsLr2021Ready() const {
-  return status_.lr2021.init_flag && chip_.lr2021 != nullptr;
-}
-
-bool TGlassesP4Driver::IsScreenReady() const {
-  return IsS023msafjf10111e1Ready() && bus_.screen_mipi_bus != nullptr &&
-         bus_.screen_mipi_bus->device_handle() != nullptr;
+  return chip_status_.lr2021.init_flag && chip_.lr2021 != nullptr;
 }
 
 bool TGlassesP4Driver::SetEs8389OperatingMode(Es8389OperatingMode mode) {
@@ -830,7 +828,7 @@ bool TGlassesP4Driver::PrepareMinimalDriversForPowerOff() {
     // 仅解除驱动和总线初始化，保留充电配置，不断开电池供电。
     result &= chip_.bq25896->Deinit(false);
   }
-  status_.bq25896.init_flag = false;
+  chip_status_.bq25896.init_flag = false;
   result &= DeinitPower();
   minimal_drivers_initialized_ = false;
   return result;
@@ -843,7 +841,7 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
     return false;
   }
   bool result = true;
-  result &= DeinitScreen();
+  result &= DeinitS023msafjf10111e1();
   // 外围关机参考，恢复外围后应在关闭公共电源前执行。
   // result &= DeinitAw86224();
   result &= DeinitEs8389();
@@ -853,7 +851,7 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
   // result &= SetEsp32c5PowerEnabled(false);
   // if (IsBq27220Ready()) {
   //   result &= chip_.bq27220->Deinit(false);
-  //   status_.bq27220.init_flag = false;
+  //   chip_status_.bq27220.init_flag = false;
   // }
   if (IsSgm38121Ready()) {
     result &= chip_.sgm38121->SetChannelStatus(
@@ -861,7 +859,7 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
         cpp_bus_driver::Sgm38121::Status::kOff);
     result &= chip_.sgm38121->Deinit(false);
   }
-  status_.sgm38121.init_flag = false;
+  chip_status_.sgm38121.init_flag = false;
   result &= PrepareMinimalDriversForPowerOff();
   return result;
 }
@@ -919,7 +917,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   if (!result) {
 //     chip_.bq27220->Deinit(false);
 //   }
-//   status_.bq27220.init_flag = result;
+//   chip_status_.bq27220.init_flag = result;
 //   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
 //       "InitBq27220 %s\n", result ? "success" : "failed");
 //   return result;
@@ -957,8 +955,8 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //     return false;
 //   }
 //   if (!chip_.aw86224->Init(device::aw86224::kI2cFrequencyHz)) {
-//     status_.aw86224.init_flag = false;
-//     status_.aw86224.ram_waveform_selection =
+//     chip_status_.aw86224.init_flag = false;
+//     chip_status_.aw86224.ram_waveform_selection =
 //         cpp_bus_driver::Aw862xx::RamWaveformSelection();
 //     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAw86224 failed\n");
 //     return false;
@@ -973,8 +971,8 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //     chip_.aw86224->Deinit(false);
 //   }
 //
-//   status_.aw86224.init_flag = result;
-//   status_.aw86224.ram_waveform_selection =
+//   chip_status_.aw86224.init_flag = result;
+//   chip_status_.aw86224.ram_waveform_selection =
 //       result ? selection : cpp_bus_driver::Aw862xx::RamWaveformSelection();
 //   if (result) {
 //     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitAw86224 success\n");
@@ -987,22 +985,22 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //
 // bool TGlassesP4Driver::DeinitAw86224() {
 //   bool result = true;
-//   if (status_.aw86224.init_flag && chip_.aw86224 != nullptr) {
+//   if (chip_status_.aw86224.init_flag && chip_.aw86224 != nullptr) {
 //     result &= chip_.aw86224->StopRamPlaybackWaveform();
 //     result &= chip_.aw86224->Deinit(false);
 //   }
-//   status_.aw86224.init_flag = false;
-//   status_.aw86224.ram_waveform_selection = {};
+//   chip_status_.aw86224.init_flag = false;
+//   chip_status_.aw86224.ram_waveform_selection = {};
 //   return result;
 // }
 //
 //
 // bool TGlassesP4Driver::IsBq27220Ready() const {
-//   return status_.bq27220.init_flag && chip_.bq27220 != nullptr;
+//   return chip_status_.bq27220.init_flag && chip_.bq27220 != nullptr;
 // }
 //
 // bool TGlassesP4Driver::IsAw86224Ready() const {
-//   return status_.aw86224.init_flag && chip_.aw86224 != nullptr;
+//   return chip_status_.aw86224.init_flag && chip_.aw86224 != nullptr;
 // }
 //
 //
@@ -1036,7 +1034,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   config.bus.sclk_io_num = gpio::sd::kSclk;
 //
 //   const bool result = sd_card_.InitSdspi(base_path, config);
-//   status_.sd_card.init_flag = sd_card_.IsMounted();
+//   chip_status_.sd_card.init_flag = sd_card_.IsMounted();
 //   return result;
 // }
 //
@@ -1129,7 +1127,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //         [](void* arg) {
 //           auto* self = static_cast<TGlassesP4Driver*>(arg);
 //           if (!self->async_init_manager_.stop_requested()) {
-//             self->InitScreen();
+//             self->InitS023msafjf10111e1();
 //           }
 //           self->async_init_manager_.FinishTask();
 //         },
@@ -1177,7 +1175,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //         },
 //         "InitSdmmcTask", 4096, this, 3);
 //   } else {
-//     result &= InitScreen();
+//     result &= InitS023msafjf10111e1();
 //     InitBq27220();
 //     result &= InitAw86224();
 //     bool es8311_initialized = InitEs8311();
@@ -1189,11 +1187,11 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //
 //     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
 //
-//     result &= status_.sy6970.init_flag;
-//     result &= status_.sgm38121.init_flag;
-//     result &= status_.bq27220.init_flag;
-//     result &= status_.aw86224.init_flag;
-//     result &= status_.es8311.init_flag;
+//     result &= chip_status_.sy6970.init_flag;
+//     result &= chip_status_.sgm38121.init_flag;
+//     result &= chip_status_.bq27220.init_flag;
+//     result &= chip_status_.aw86224.init_flag;
+//     result &= chip_status_.es8311.init_flag;
 //   }
 //
 //   return result;
@@ -1201,12 +1199,12 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //
 // bool TGlassesP4Driver::InitSy6970() {
 //   if (!chip_.sy6970->Init()) {
-//     status_.sy6970.init_flag = false;
+//     chip_status_.sy6970.init_flag = false;
 //     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSy6970 failed\n");
 //     return false;
 //   }
 //
-//   status_.sy6970.init_flag = true;
+//   chip_status_.sy6970.init_flag = true;
 //   LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSy6970 success\n");
 //   return true;
 // }
@@ -1214,7 +1212,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 // 旧版电量计参数写入参考；恢复前需核对实际电池容量和 NTC 配置。
 // bool TGlassesP4Driver::InitBq27220() {
 //   if (!chip_.bq27220->Init()) {
-//     status_.bq27220.init_flag = false;
+//     chip_status_.bq27220.init_flag = false;
 //     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBq27220 failed\n");
 //     return false;
 //   }
@@ -1230,7 +1228,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   result &= chip_.bq27220->SetTemperatureMode(
 //       cpp_bus_driver::Bq27220::TemperatureMode::kExternalNtc);
 //
-//   status_.bq27220.init_flag = result;
+//   chip_status_.bq27220.init_flag = result;
 //   if (result) {
 //     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitBq27220 success\n");
 //   } else {
@@ -1245,7 +1243,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //     return true;
 //   }
 //
-//   status_.es8311.init_flag = false;
+//   chip_status_.es8311.init_flag = false;
 //   if (chip_.es8311 == nullptr || !chip_.es8311->Init() ||
 //       !chip_.es8311->Init(device::es8311::kMclkMultiple,
 //           device::es8311::kSampleRate, device::es8311::kBitsPerSample)) {
@@ -1290,7 +1288,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   if (!result) {
 //     chip_.es8311->Deinit(false);
 //   }
-//   status_.es8311.init_flag = result;
+//   chip_status_.es8311.init_flag = result;
 //   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
 //       result ? "InitEs8311 success\n" : "InitEs8311 failed\n");
 //   return result;
@@ -1298,24 +1296,24 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //
 // bool TGlassesP4Driver::DeinitEs8311() {
 //   bool result = true;
-//   if (status_.es8311.init_flag && chip_.es8311 != nullptr) {
+//   if (chip_status_.es8311.init_flag && chip_.es8311 != nullptr) {
 //     result &= SetEs8311OperatingMode(Es8311OperatingMode::kSleep);
 //     result &= chip_.es8311->Deinit(false);
 //   }
-//   status_.es8311.init_flag = false;
+//   chip_status_.es8311.init_flag = false;
 //   return result;
 // }
 //
 // bool TGlassesP4Driver::IsSy6970Ready() const {
-//   return status_.sy6970.init_flag && chip_.sy6970 != nullptr;
+//   return chip_status_.sy6970.init_flag && chip_.sy6970 != nullptr;
 // }
 //
 // bool TGlassesP4Driver::IsEs8311Ready() const {
-//   return status_.es8311.init_flag && chip_.es8311 != nullptr;
+//   return chip_status_.es8311.init_flag && chip_.es8311 != nullptr;
 // }
 //
 // bool TGlassesP4Driver::SetEs8311OperatingMode(Es8311OperatingMode mode) {
-//   if (!status_.es8311.init_flag) {
+//   if (!chip_status_.es8311.init_flag) {
 //     return mode == Es8311OperatingMode::kSleep;
 //   }
 //   const bool playback_enabled = mode == Es8311OperatingMode::kPlayback ||
@@ -1385,7 +1383,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //
 // bool TGlassesP4Driver::InitSgm38121() {
 //   if (chip_.sgm38121 == nullptr || !chip_.sgm38121->Init()) {
-//     status_.sgm38121.init_flag = false;
+//     chip_status_.sgm38121.init_flag = false;
 //     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSgm38121
 //     failed\n"); return false;
 //   }
@@ -1436,7 +1434,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
 // #endif
 //
-//   status_.sgm38121.init_flag = result;
+//   chip_status_.sgm38121.init_flag = result;
 //   if (!result) {
 //     chip_.sgm38121->Deinit(false);
 //   }
@@ -1458,7 +1456,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   }
 //
 //   bool result = true;
-//   result &= DeinitScreen();
+//   result &= DeinitS023msafjf10111e1();
 //   result &= DeinitAw86224();
 //   result &= DeinitEs8311();
 //   result &= SetCameraPowerEnabled(false);

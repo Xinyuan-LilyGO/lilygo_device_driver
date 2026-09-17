@@ -52,8 +52,8 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
                 "bhi2xy_sensorapi_cpp_bus_driver")
     else()
         set(p4_version_dir "./src/device/t_display_p4/v1/")
-        list(APPEND requires "stsw-st25rfal002_cpp_bus_driver")
     endif()
+    list(APPEND requires "stsw-st25rfal002_cpp_bus_driver")
     set(
             src_dirs
             "./src/"

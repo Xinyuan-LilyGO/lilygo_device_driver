@@ -254,7 +254,7 @@ bool TDisplayP4AirDriver::InitAxp517() {
     return true;
   }
   if (!chip_.axp517->Init()) {
-    status_.axp517.init_flag = false;
+    chip_status_.axp517.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAxp517 failed\n");
     return false;
   }
@@ -274,7 +274,7 @@ bool TDisplayP4AirDriver::InitAxp517() {
   result &= chip_.axp517->SetTypeCDetectEnable(true);
   result &= chip_.axp517->SetVbusDetectEnable(true);
   result &= chip_.axp517->SetPdRole(false, false);
-  status_.axp517.init_flag = result;
+  chip_status_.axp517.init_flag = result;
   if (!result) {
     chip_.axp517->Deinit(false);
   }
@@ -284,7 +284,7 @@ bool TDisplayP4AirDriver::InitAxp517() {
 }
 
 bool TDisplayP4AirDriver::InitXl9535() {
-  status_.xl9535.init_flag = false;
+  chip_status_.xl9535.init_flag = false;
   if (chip_.xl9535 == nullptr || !chip_.xl9535->Init()) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitXl9535 failed\n");
     return false;
@@ -313,14 +313,14 @@ bool TDisplayP4AirDriver::InitXl9535() {
     return false;
   }
 
-  status_.xl9535.init_flag = true;
+  chip_status_.xl9535.init_flag = true;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitXl9535 success\n");
   return true;
 }
 
 bool TDisplayP4AirDriver::InitSgm38121() {
   if (chip_.sgm38121 == nullptr || !chip_.sgm38121->Init()) {
-    status_.sgm38121.init_flag = false;
+    chip_status_.sgm38121.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSgm38121 failed\n");
     return false;
   }
@@ -357,7 +357,7 @@ bool TDisplayP4AirDriver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
 #endif
 
-  status_.sgm38121.init_flag = result;
+  chip_status_.sgm38121.init_flag = result;
   if (!result) {
     chip_.sgm38121->Deinit(false);
   }
@@ -374,13 +374,13 @@ bool TDisplayP4AirDriver::InitBhi260ap() {
     return true;
   }
   if (chip_.bhi260ap == nullptr || bus_.bhi260ap_i2c_bus == nullptr) {
-    status_.bhi260ap.init_flag = false;
+    chip_status_.bhi260ap.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBhi260ap failed\n");
     return false;
   }
 
-  if (!status_.xl9535.init_flag) {
-    status_.bhi260ap.init_flag = false;
+  if (!chip_status_.xl9535.init_flag) {
+    chip_status_.bhi260ap.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBhi260ap failed\n");
     return false;
   }
@@ -390,13 +390,13 @@ bool TDisplayP4AirDriver::InitBhi260ap() {
   reset_pin_initialized &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kBhi260apRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   if (!reset_pin_initialized) {
-    status_.bhi260ap.init_flag = false;
+    chip_status_.bhi260ap.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBhi260ap failed\n");
     return false;
   }
   platform_hal_->DelayMs(2);
   if (!chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 1)) {
-    status_.bhi260ap.init_flag = false;
+    chip_status_.bhi260ap.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBhi260ap failed\n");
     return false;
   }
@@ -419,7 +419,7 @@ bool TDisplayP4AirDriver::InitBhi260ap() {
           bhy2_set_host_intf_ctrl(host_interface_control, context) == BHY2_OK;
     }
   }
-  status_.bhi260ap.init_flag = result;
+  chip_status_.bhi260ap.init_flag = result;
 
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
@@ -441,7 +441,7 @@ bool TDisplayP4AirDriver::InitQmc6310n() {
   }
   if (chip_.qmc6310n == nullptr || bus_.qmc6310n_i2c_bus == nullptr ||
       !bus_.qmc6310n_i2c_bus->InitBus()) {
-    status_.qmc6310n.init_flag = false;
+    chip_status_.qmc6310n.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitQmc6310n failed\n");
     return false;
   }
@@ -455,7 +455,7 @@ bool TDisplayP4AirDriver::InitQmc6310n() {
         MagOverSampleRatio::OSR_1, MagDownSampleRatio::DSR_1);
     result &= chip_.qmc6310n->setOperationMode(OperationMode::SUSPEND);
   }
-  status_.qmc6310n.init_flag = result;
+  chip_status_.qmc6310n.init_flag = result;
 
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitQmc6310n success\n" : "InitQmc6310n failed\n");
@@ -464,7 +464,7 @@ bool TDisplayP4AirDriver::InitQmc6310n() {
 
 bool TDisplayP4AirDriver::InitHi8561() {
   if (chip_.hi8561 == nullptr) {
-    status_.hi8561.init_flag = false;
+    chip_status_.hi8561.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561 failed\n");
     return false;
   }
@@ -479,7 +479,7 @@ bool TDisplayP4AirDriver::InitHi8561() {
   if (!result) {
     chip_.hi8561->Deinit();
   }
-  status_.hi8561.init_flag = result;
+  chip_status_.hi8561.init_flag = result;
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitHi8561 success\n" : "InitHi8561 failed\n");
   return result;
@@ -490,8 +490,8 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
     return true;
   }
 
-  status_.hi8561_touch.init_flag = false;
-  if (!status_.xl9535.init_flag || chip_.hi8561_touch == nullptr ||
+  chip_status_.hi8561_touch.init_flag = false;
+  if (!chip_status_.xl9535.init_flag || chip_.hi8561_touch == nullptr ||
       bus_.hi8561_i2c_touch_bus == nullptr) {
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
@@ -518,7 +518,7 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
   platform_hal_->DelayMs(100);
 
   if (chip_.hi8561_touch->Init(device::hi8561::kI2cFrequencyHz)) {
-    status_.hi8561_touch.init_flag = true;
+    chip_status_.hi8561_touch.init_flag = true;
     LogMessage(
         LogLevel::kInfo, __FILE__, __LINE__, "InitHi8561Touch success\n");
     return true;
@@ -531,11 +531,11 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
 
 bool TDisplayP4AirDriver::InitSy7200a() {
   if (chip_.sy7200a != nullptr && chip_.sy7200a->IsInitialized()) {
-    status_.sy7200a.init_flag = true;
+    chip_status_.sy7200a.init_flag = true;
     return true;
   }
   if (chip_.sy7200a == nullptr) {
-    status_.sy7200a.init_flag = false;
+    chip_status_.sy7200a.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSy7200a failed\n");
     return false;
   }
@@ -545,12 +545,12 @@ bool TDisplayP4AirDriver::InitSy7200a() {
   config.channel = LEDC_CHANNEL_0;
   config.frequency_hz = device::sy7200a::kPwmFrequencyHz;
   if (!chip_.sy7200a->Init(config)) {
-    status_.sy7200a.init_flag = false;
+    chip_status_.sy7200a.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSy7200a failed\n");
     return false;
   }
 
-  status_.sy7200a.init_flag = true;
+  chip_status_.sy7200a.init_flag = true;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSy7200a success\n");
   return true;
 }
@@ -560,8 +560,8 @@ bool TDisplayP4AirDriver::InitAw86224() {
     return true;
   }
   if (!chip_.aw86224->Init(device::aw86224::kI2cFrequencyHz)) {
-    status_.aw86224.init_flag = false;
-    status_.aw86224.ram_waveform_info =
+    chip_status_.aw86224.init_flag = false;
+    chip_status_.aw86224.ram_waveform_info =
         cpp_bus_driver::Aw862xx::RamWaveformInfo();
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAw86224 failed\n");
     return false;
@@ -586,14 +586,14 @@ bool TDisplayP4AirDriver::InitAw86224() {
   if (!result) {
     chip_.aw86224->Deinit(false);
   }
-  status_.aw86224.init_flag = result;
-  status_.aw86224.ram_waveform_info =
+  chip_status_.aw86224.init_flag = result;
+  chip_status_.aw86224.ram_waveform_info =
       cpp_bus_driver::Aw862xx::GetRamWaveformInfo(
           cpp_bus_driver::Aw862xx::RamWaveformLibrary::kRam12k041230_235);
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
         "InitAw86224 success (RAM library: %s)\n",
-        status_.aw86224.ram_waveform_info.name);
+        chip_status_.aw86224.ram_waveform_info.name);
   } else {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAw86224 failed\n");
   }
@@ -605,28 +605,28 @@ bool TDisplayP4AirDriver::InitSt25r3916() {
     return true;
   }
   if (chip_.st25r3916 == nullptr || bus_.st25r3916_i2c_bus == nullptr) {
-    status_.st25r3916.init_flag = false;
-    status_.st25r3916.result = RFAL_ERR_INVALID_HANDLE;
-    status_.st25r3916.platform_error =
+    chip_status_.st25r3916.init_flag = false;
+    chip_status_.st25r3916.result = RFAL_ERR_INVALID_HANDLE;
+    chip_status_.st25r3916.platform_error =
         stsw_st25rfal002_cpp_bus_driver::PlatformError::kInvalidConfiguration;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSt25r3916 failed\n");
     return false;
   }
 
-  status_.st25r3916.result = chip_.st25r3916->Init();
-  status_.st25r3916.platform_error = chip_.st25r3916->platform_error();
-  status_.st25r3916.init_flag =
-      status_.st25r3916.result == RFAL_ERR_NONE &&
-      status_.st25r3916.platform_error ==
+  chip_status_.st25r3916.result = chip_.st25r3916->Init();
+  chip_status_.st25r3916.platform_error = chip_.st25r3916->platform_error();
+  chip_status_.st25r3916.init_flag =
+      chip_status_.st25r3916.result == RFAL_ERR_NONE &&
+      chip_status_.st25r3916.platform_error ==
           stsw_st25rfal002_cpp_bus_driver::PlatformError::kNone &&
       chip_.st25r3916->initialized();
 
-  if (!status_.st25r3916.init_flag) {
+  if (!chip_status_.st25r3916.init_flag) {
     chip_.st25r3916->Deinit(false);
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitSt25r3916 failed (RFAL: %u, platform: %u)\n",
-        static_cast<unsigned int>(status_.st25r3916.result),
-        static_cast<unsigned int>(status_.st25r3916.platform_error));
+        static_cast<unsigned int>(chip_status_.st25r3916.result),
+        static_cast<unsigned int>(chip_status_.st25r3916.platform_error));
     return false;
   }
 
@@ -639,14 +639,14 @@ bool TDisplayP4AirDriver::InitEs8389() {
     return true;
   }
   if ((bus_.xl9535_i2c_bus == nullptr) || (bus_.es8389_i2s_bus == nullptr)) {
-    status_.es8389.init_flag = false;
+    chip_status_.es8389.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
     return false;
   }
 
   i2c_master_bus_handle_t i2c_bus_handle = bus_.xl9535_i2c_bus->bus_handle();
   if (i2c_bus_handle == nullptr) {
-    status_.es8389.init_flag = false;
+    chip_status_.es8389.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
     return false;
   }
@@ -720,8 +720,8 @@ bool TDisplayP4AirDriver::InitEs8389() {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
     return false;
   }
-  if (!status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
-    status_.es8389.init_flag = false;
+  if (!chip_status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
+    chip_status_.es8389.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
     return false;
   }
@@ -828,7 +828,7 @@ bool TDisplayP4AirDriver::InitEs8389() {
   }
   result &= SetNs4150Enabled(false);
   es8389_operating_mode_ = Es8389OperatingMode::kSleep;
-  status_.es8389.init_flag = result;
+  chip_status_.es8389.init_flag = result;
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitEs8389 success\n");
   } else {
@@ -842,8 +842,8 @@ bool TDisplayP4AirDriver::InitLr1121() {
   if (IsLr1121Ready()) {
     return true;
   }
-  status_.lr1121.init_flag = false;
-  if (chip_.lr1121 == nullptr || !status_.xl9535.init_flag) {
+  chip_status_.lr1121.init_flag = false;
+  if (chip_.lr1121 == nullptr || !chip_status_.xl9535.init_flag) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitLr1121 power enable failed\n");
     return false;
@@ -960,13 +960,13 @@ bool TDisplayP4AirDriver::InitLr1121() {
     chip_.lr1121->Deinit();
     platform_hal_->GpioWrite(gpio::lr1121::kRst, 0);
     chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
-    status_.lr1121.init_flag = false;
+    chip_status_.lr1121.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitLr1121 configuration failed\n");
     return false;
   }
 
-  status_.lr1121.init_flag = result;
+  chip_status_.lr1121.init_flag = result;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
       "InitLr1121 success (hw: %u, fw: 0x%04x)\n",
       static_cast<unsigned>(version.hw), static_cast<unsigned>(version.fw));
@@ -978,8 +978,8 @@ bool TDisplayP4AirDriver::InitNrf9151() {
     return true;
   }
   if (chip_.nrf9151 == nullptr || bus_.nrf9151_uart_bus == nullptr ||
-      !status_.xl9535.init_flag) {
-    status_.nrf9151.init_flag = false;
+      !chip_status_.xl9535.init_flag) {
+    chip_status_.nrf9151.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitNrf9151 failed: driver, UART bus, or modem power is "
         "unavailable\n");
@@ -992,7 +992,7 @@ bool TDisplayP4AirDriver::InitNrf9151() {
       gpio::xl9535::kNrf9151En, cpp_bus_driver::Xl95x5::Mode::kOutput);
   power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 1);
   if (!power_enabled) {
-    status_.nrf9151.init_flag = false;
+    chip_status_.nrf9151.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitNrf9151 failed: driver, UART bus, or modem power is "
         "unavailable\n");
@@ -1036,7 +1036,7 @@ bool TDisplayP4AirDriver::InitNrf9151() {
     }
   }
 
-  status_.nrf9151.init_flag = result;
+  chip_status_.nrf9151.init_flag = result;
   if (result) {
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitNrf9151 success\n");
   } else {
@@ -1068,7 +1068,7 @@ bool TDisplayP4AirDriver::InitPower() {
 }
 
 bool TDisplayP4AirDriver::InitScreen() {
-  if (!status_.xl9535.init_flag) {
+  if (!chip_status_.xl9535.init_flag) {
     return false;
   }
   bool reset_pin_initialized = true;
@@ -1139,7 +1139,7 @@ bool TDisplayP4AirDriver::InitSdmmc(const char* base_path, int max_freq_khz) {
   if (sd_card_.IsMounted() && !DeinitSdmmc()) {
     return false;
   }
-  if (!status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
+  if (!chip_status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
     return false;
   }
   bool power_enabled = true;
@@ -1167,7 +1167,7 @@ bool TDisplayP4AirDriver::InitSdmmc(const char* base_path, int max_freq_khz) {
   config.slot.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
   const bool result = sd_card_.InitSdmmc(base_path, config);
-  status_.sd_card.init_flag = sd_card_.IsMounted();
+  chip_status_.sd_card.init_flag = sd_card_.IsMounted();
   if (!result) {
     chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
   }
@@ -1182,7 +1182,7 @@ bool TDisplayP4AirDriver::InitSdspi(
   if (sd_card_.IsMounted() && !DeinitSdmmc()) {
     return false;
   }
-  if (!status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
+  if (!chip_status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
     return false;
   }
   bool power_enabled = true;
@@ -1207,7 +1207,7 @@ bool TDisplayP4AirDriver::InitSdspi(
   config.bus.sclk_io_num = gpio::sd::kSclk;
 
   const bool result = sd_card_.InitSdspi(base_path, config);
-  status_.sd_card.init_flag = sd_card_.IsMounted();
+  chip_status_.sd_card.init_flag = sd_card_.IsMounted();
   if (!result) {
     chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
   }
@@ -1216,73 +1216,73 @@ bool TDisplayP4AirDriver::InitSdspi(
 
 bool TDisplayP4AirDriver::DeinitBhi260ap() {
   bool result = true;
-  if (status_.bhi260ap.init_flag && chip_.bhi260ap != nullptr) {
+  if (chip_status_.bhi260ap.init_flag && chip_.bhi260ap != nullptr) {
     result &= SetBhi260apSleep(true);
     result &= chip_.bhi260ap->Deinit(false);
   }
-  if (status_.xl9535.init_flag) {
+  if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
   }
-  status_.bhi260ap.init_flag = false;
+  chip_status_.bhi260ap.init_flag = false;
   return result;
 }
 
 bool TDisplayP4AirDriver::DeinitQmc6310n() {
   bool result = true;
-  if (status_.qmc6310n.init_flag && chip_.qmc6310n != nullptr) {
+  if (chip_status_.qmc6310n.init_flag && chip_.qmc6310n != nullptr) {
     result = chip_.qmc6310n->setOperationMode(OperationMode::SUSPEND);
   }
-  status_.qmc6310n.init_flag = false;
+  chip_status_.qmc6310n.init_flag = false;
   return result;
 }
 
 bool TDisplayP4AirDriver::DeinitAw86224() {
   bool result = true;
-  if (status_.aw86224.init_flag && chip_.aw86224 != nullptr) {
+  if (chip_status_.aw86224.init_flag && chip_.aw86224 != nullptr) {
     result &= chip_.aw86224->StopRamPlaybackWaveform();
     result &= chip_.aw86224->Deinit(false);
   }
-  status_.aw86224.init_flag = false;
-  status_.aw86224.ram_waveform_info = {};
+  chip_status_.aw86224.init_flag = false;
+  chip_status_.aw86224.ram_waveform_info = {};
   return result;
 }
 
 bool TDisplayP4AirDriver::DeinitSt25r3916() {
-  if (!status_.st25r3916.init_flag) {
+  if (!chip_status_.st25r3916.init_flag) {
     return true;
   }
 
-  status_.st25r3916.result = chip_.st25r3916->Deinit(false);
-  status_.st25r3916.platform_error = chip_.st25r3916->platform_error();
-  status_.st25r3916.init_flag = false;
-  return status_.st25r3916.result == RFAL_ERR_NONE &&
-         status_.st25r3916.platform_error ==
+  chip_status_.st25r3916.result = chip_.st25r3916->Deinit(false);
+  chip_status_.st25r3916.platform_error = chip_.st25r3916->platform_error();
+  chip_status_.st25r3916.init_flag = false;
+  return chip_status_.st25r3916.result == RFAL_ERR_NONE &&
+         chip_status_.st25r3916.platform_error ==
              stsw_st25rfal002_cpp_bus_driver::PlatformError::kNone;
 }
 
 bool TDisplayP4AirDriver::DeinitLr1121() {
   bool result = true;
-  if (status_.lr1121.init_flag && chip_.lr1121 != nullptr) {
+  if (chip_status_.lr1121.init_flag && chip_.lr1121 != nullptr) {
     result &= SetLr1121OperatingMode(Lr1121OperatingMode::kSleep);
     result &= chip_.lr1121->Deinit(false);
     result &= platform_hal_->GpioWrite(gpio::lr1121::kRst, 0);
   }
-  if (status_.xl9535.init_flag) {
+  if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
   }
-  status_.lr1121.init_flag = false;
+  chip_status_.lr1121.init_flag = false;
   return result;
 }
 
 bool TDisplayP4AirDriver::DeinitNrf9151() {
   bool result = true;
-  if (status_.nrf9151.init_flag && chip_.nrf9151 != nullptr) {
+  if (chip_status_.nrf9151.init_flag && chip_.nrf9151 != nullptr) {
     result &= chip_.nrf9151->Deinit();
   }
-  if (status_.xl9535.init_flag) {
+  if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
   }
-  status_.nrf9151.init_flag = false;
+  chip_status_.nrf9151.init_flag = false;
   return result;
 }
 
@@ -1319,7 +1319,7 @@ bool TDisplayP4AirDriver::DeinitEs8389() {
     result &= bus_.es8389_i2s_bus->Deinit();
   }
 
-  status_.es8389.init_flag = false;
+  chip_status_.es8389.init_flag = false;
   es8389_operating_mode_ = Es8389OperatingMode::kSleep;
   return result;
 }
@@ -1340,51 +1340,51 @@ bool TDisplayP4AirDriver::DeinitPower() {
 
 bool TDisplayP4AirDriver::DeinitScreen() {
   bool result = true;
-  if (status_.hi8561.init_flag) {
+  if (chip_status_.hi8561.init_flag) {
     result &= chip_.hi8561->Deinit();
   }
   if (bus_.screen_mipi_bus != nullptr) {
     result &= bus_.screen_mipi_bus->Deinit();
     bus_.screen_mipi_bus.reset();
   }
-  if (status_.xl9535.init_flag) {
+  if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
   }
-  status_.hi8561.init_flag = false;
+  chip_status_.hi8561.init_flag = false;
   return result;
 }
 
 bool TDisplayP4AirDriver::DeinitTouch() {
   bool result = true;
-  if (status_.hi8561_touch.init_flag) {
+  if (chip_status_.hi8561_touch.init_flag) {
     result &= chip_.hi8561_touch->Deinit(false);
   }
-  if (status_.xl9535.init_flag) {
+  if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
   }
-  status_.hi8561_touch.init_flag = false;
+  chip_status_.hi8561_touch.init_flag = false;
   return result;
 }
 
 bool TDisplayP4AirDriver::DeinitScreenBacklight() {
   if (chip_.sy7200a == nullptr || !chip_.sy7200a->IsInitialized()) {
-    status_.sy7200a.init_flag = false;
+    chip_status_.sy7200a.init_flag = false;
     return true;
   }
 
   const bool result = chip_.sy7200a->Deinit();
-  status_.sy7200a.init_flag = chip_.sy7200a->IsInitialized();
+  chip_status_.sy7200a.init_flag = chip_.sy7200a->IsInitialized();
   return result;
 }
 
 bool TDisplayP4AirDriver::DeinitSdmmc(bool release_bus) {
   bool result = sd_card_.Deinit(release_bus);
-  status_.sd_card.init_flag = sd_card_.IsMounted();
+  chip_status_.sd_card.init_flag = sd_card_.IsMounted();
   // 卸载失败时保留供电，允许后续重试。
   if (sd_card_.IsMounted()) {
     return false;
   }
-  if (status_.xl9535.init_flag && chip_.xl9535 != nullptr) {
+  if (chip_status_.xl9535.init_flag && chip_.xl9535 != nullptr) {
     result &= chip_.xl9535->GpioWrite(
         gpio::xl9535::kSdPowerEn, 0);
   }
@@ -1392,81 +1392,89 @@ bool TDisplayP4AirDriver::DeinitSdmmc(bool release_bus) {
 }
 
 bool TDisplayP4AirDriver::IsAxp517Ready() const {
-  return status_.axp517.init_flag && chip_.axp517 != nullptr;
+  return chip_status_.axp517.init_flag && chip_.axp517 != nullptr;
 }
 
 bool TDisplayP4AirDriver::IsXl9535Ready() const {
-  return status_.xl9535.init_flag && chip_.xl9535 != nullptr;
+  return chip_status_.xl9535.init_flag && chip_.xl9535 != nullptr;
 }
 
 bool TDisplayP4AirDriver::IsSgm38121Ready() const {
-  return status_.sgm38121.init_flag && chip_.sgm38121 != nullptr;
+  return chip_status_.sgm38121.init_flag && chip_.sgm38121 != nullptr;
 }
 
 bool TDisplayP4AirDriver::IsBhi260apReady() const {
-  return status_.bhi260ap.init_flag && chip_.bhi260ap != nullptr &&
+  return chip_status_.bhi260ap.init_flag && chip_.bhi260ap != nullptr &&
          chip_.bhi260ap->initialized() && chip_.bhi260ap->firmware_running();
 }
 
 bool TDisplayP4AirDriver::IsQmc6310nReady() const {
-  return status_.qmc6310n.init_flag && chip_.qmc6310n != nullptr;
+  return chip_status_.qmc6310n.init_flag && chip_.qmc6310n != nullptr;
 }
 
 bool TDisplayP4AirDriver::IsHi8561Ready() const {
-  return status_.hi8561.init_flag && chip_.hi8561 != nullptr;
+  return chip_status_.hi8561.init_flag && chip_.hi8561 != nullptr;
 }
 
 bool TDisplayP4AirDriver::IsHi8561TouchReady() const {
-  return status_.hi8561_touch.init_flag && chip_.hi8561_touch != nullptr;
+  return chip_status_.hi8561_touch.init_flag && chip_.hi8561_touch != nullptr;
 }
 
 bool TDisplayP4AirDriver::IsSy7200aReady() const {
-  return status_.sy7200a.init_flag && chip_.sy7200a != nullptr &&
+  return chip_status_.sy7200a.init_flag && chip_.sy7200a != nullptr &&
          chip_.sy7200a->IsInitialized();
 }
 
 bool TDisplayP4AirDriver::IsAw86224Ready() const {
-  return status_.aw86224.init_flag && chip_.aw86224 != nullptr;
+  return chip_status_.aw86224.init_flag && chip_.aw86224 != nullptr;
 }
 
 bool TDisplayP4AirDriver::IsSt25r3916Ready() const {
-  return status_.st25r3916.init_flag && chip_.st25r3916 != nullptr &&
+  return chip_status_.st25r3916.init_flag && chip_.st25r3916 != nullptr &&
          chip_.st25r3916->initialized();
 }
 
 bool TDisplayP4AirDriver::IsEs8389Ready() const {
-  return status_.es8389.init_flag && es8389_input_codec_dev_ != nullptr &&
+  return chip_status_.es8389.init_flag && es8389_input_codec_dev_ != nullptr &&
          es8389_output_codec_dev_ != nullptr;
 }
 
 bool TDisplayP4AirDriver::IsLr1121Ready() const {
-  return status_.lr1121.init_flag && chip_.lr1121 != nullptr &&
+  return chip_status_.lr1121.init_flag && chip_.lr1121 != nullptr &&
          chip_.lr1121->initialized();
 }
 
 bool TDisplayP4AirDriver::IsNrf9151Ready() const {
-  return status_.nrf9151.init_flag && chip_.nrf9151 != nullptr;
+  return chip_status_.nrf9151.init_flag && chip_.nrf9151 != nullptr;
 }
 
 bool TDisplayP4AirDriver::IsScreenReady() const {
   return bus_.screen_mipi_bus != nullptr &&
          bus_.screen_mipi_bus->device_handle() != nullptr && IsHi8561Ready() &&
-         IsSy7200aReady();
+         IsScreenBacklightReady();
+}
+
+bool TDisplayP4AirDriver::IsTouchReady() const {
+  return IsHi8561TouchReady();
+}
+
+bool TDisplayP4AirDriver::IsScreenBacklightReady() const {
+  return IsSy7200aReady();
 }
 
 bool TDisplayP4AirDriver::IsSdmmcReady() const {
-  return status_.sd_card.init_flag && sd_card_.IsReady();
+  return chip_status_.sd_card.init_flag && sd_card_.IsReady();
 }
 
 bool TDisplayP4AirDriver::SetNs4150Enabled(bool enabled) {
-  if (!status_.xl9535.init_flag) {
+  if (!chip_status_.xl9535.init_flag) {
     return !enabled;
   }
   return chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, enabled ? 1 : 0);
 }
 
 bool TDisplayP4AirDriver::SetLedEnabled(bool enabled) {
-  if (!status_.xl9535.init_flag) {
+  if (!chip_status_.xl9535.init_flag) {
     return !enabled;
   }
   return chip_.xl9535->GpioWrite(gpio::xl9535::kLed, enabled ? 1 : 0);
@@ -1505,7 +1513,7 @@ bool TDisplayP4AirDriver::SetQmc6310nSleep(bool sleep) {
 }
 
 bool TDisplayP4AirDriver::SetScreenSleep(bool sleep) {
-  if (!status_.hi8561.init_flag) {
+  if (!chip_status_.hi8561.init_flag) {
     return sleep;
   }
   bool result = true;
@@ -1520,7 +1528,7 @@ bool TDisplayP4AirDriver::SetScreenSleep(bool sleep) {
 }
 
 bool TDisplayP4AirDriver::SetEs8389OperatingMode(Es8389OperatingMode mode) {
-  if (!status_.es8389.init_flag) {
+  if (!chip_status_.es8389.init_flag) {
     return mode == Es8389OperatingMode::kSleep && SetNs4150Enabled(false);
   }
   if (mode == es8389_operating_mode_) {
@@ -1590,7 +1598,7 @@ bool TDisplayP4AirDriver::ConfigureEs8389OutputPolarity() {
 }
 
 bool TDisplayP4AirDriver::SetLr1121OperatingMode(Lr1121OperatingMode mode) {
-  if (!status_.lr1121.init_flag || chip_.lr1121 == nullptr) {
+  if (!chip_status_.lr1121.init_flag || chip_.lr1121 == nullptr) {
     return mode == Lr1121OperatingMode::kSleep;
   }
   lr11xx_status_t result = LR11XX_STATUS_ERROR;
@@ -1614,14 +1622,14 @@ bool TDisplayP4AirDriver::SetLr1121OperatingMode(Lr1121OperatingMode mode) {
 }
 
 bool TDisplayP4AirDriver::SetEsp32c5PowerEnabled(bool enabled) {
-  if (!status_.xl9535.init_flag) {
+  if (!chip_status_.xl9535.init_flag) {
     return !enabled;
   }
   return chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, enabled ? 1 : 0);
 }
 
 bool TDisplayP4AirDriver::SetCameraPowerEnabled(bool enabled) {
-  if (!status_.sgm38121.init_flag) {
+  if (!chip_status_.sgm38121.init_flag) {
     return !enabled;
   }
   const auto status = enabled ? cpp_bus_driver::Sgm38121::Status::kOn
@@ -1645,7 +1653,7 @@ bool TDisplayP4AirDriver::SetCameraPowerEnabled(bool enabled) {
 }
 
 bool TDisplayP4AirDriver::SetUsbHostPowerEnabled(bool enabled) {
-  if (!status_.xl9535.init_flag) {
+  if (!chip_status_.xl9535.init_flag) {
     return !enabled;
   }
   (void)enabled;
@@ -1657,11 +1665,11 @@ bool TDisplayP4AirDriver::PrepareMinimalDriversForPowerOff() {
   if (IsXl9535Ready()) {
     result &= SetLedEnabled(false);
     result &= chip_.xl9535->Deinit(false);
-    status_.xl9535.init_flag = false;
+    chip_status_.xl9535.init_flag = false;
   }
-  if (status_.axp517.init_flag && chip_.axp517 != nullptr) {
+  if (chip_status_.axp517.init_flag && chip_.axp517 != nullptr) {
     result &= chip_.axp517->Deinit(false);
-    status_.axp517.init_flag = false;
+    chip_status_.axp517.init_flag = false;
   }
 
   result &= DeinitPower();
@@ -1693,7 +1701,7 @@ bool TDisplayP4AirDriver::PrepareDriversForPowerOff() {
   result &= DeinitSdmmc(false);
 
   // 将外设复位、电源使能及控制引脚设置为关机安全电平。
-  if (status_.xl9535.init_flag) {
+  if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
@@ -1714,7 +1722,7 @@ bool TDisplayP4AirDriver::PrepareDriversForPowerOff() {
 }
 
 bool TDisplayP4AirDriver::EnterEsp32c5DownloadMode() {
-  if (!status_.xl9535.init_flag) {
+  if (!chip_status_.xl9535.init_flag) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "EnterEsp32c5DownloadMode failed\n");
     return false;
@@ -1737,7 +1745,7 @@ bool TDisplayP4AirDriver::EnterEsp32c5DownloadMode() {
 }
 
 bool TDisplayP4AirDriver::SetUartTarget(UartTarget target) {
-  if (!status_.xl9535.init_flag) {
+  if (!chip_status_.xl9535.init_flag) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "SetUartTarget failed\n");
     return false;
   }

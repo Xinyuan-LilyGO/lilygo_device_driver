@@ -20,8 +20,6 @@
 namespace lilygo_device_driver {
 namespace gpio = t_display_p4::gpio;
 namespace device = t_display_p4::device;
-namespace keyboard_gpio = t_display_p4::keyboard_expansion::gpio;
-namespace keyboard_device = t_display_p4::keyboard_expansion::device;
 namespace {
 
 using RadioType = device::RadioType;
@@ -41,11 +39,11 @@ void TDisplayP4Driver::CreateDrivers() {
   }
   platform_hal_ = std::make_unique<cpp_bus_driver::PlatformHal>();
   radio_type_ = RadioType::kUnknown;
-  status_.sx1262.init_flag = false;
-  status_.lr2021.init_flag = false;
+  chip_status_.sx1262.init_flag = false;
+  chip_status_.lr2021.init_flag = false;
 
   bus_.xl9535_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
-      gpio::xl9535::kSda, gpio::xl9535::kScl, I2C_NUM_0);
+      gpio::xl9535::kSda, gpio::xl9535::kScl, LP_I2C_NUM_0);
   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
       gpio::sgm38121::kSda, gpio::sgm38121::kScl, I2C_NUM_1);
   bus_.radio_spi_bus =
@@ -137,57 +135,6 @@ void TDisplayP4Driver::CreateDrivers() {
                    chip_.xl9535->GpioWrite(
                        gpio::xl9535::kRadioRst, static_cast<uint8_t>(released));
           });
-}
-
-void TDisplayP4Driver::CreateKeyboardExpansionDrivers() {
-  if (chip_.xl9555 != nullptr) {
-    return;
-  }
-
-  bus_.xl9555_i2c_bus = std::make_shared<cpp_bus_driver::SoftwareI2c>(
-      keyboard_gpio::xl9555::kSda, keyboard_gpio::xl9555::kScl);
-  bus_.tca8418_i2c_bus = std::make_shared<cpp_bus_driver::SoftwareI2c>(
-      keyboard_gpio::tca8418::kSda, keyboard_gpio::tca8418::kScl);
-  bus_.cc1101_spi_bus =
-      std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.radio_spi_bus, 0);
-  bus_.nrf24l01_spi_bus =
-      std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.radio_spi_bus, 0);
-  bus_.st25r3916_spi_bus =
-      std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.radio_spi_bus, 1);
-
-  chip_.xl9555 = std::make_unique<cpp_bus_driver::Xl95x5>(
-      bus_.xl9555_i2c_bus, keyboard_device::xl9555::kI2cAddress);
-  chip_.tca8418 = std::make_unique<cpp_bus_driver::Tca8418>(
-      bus_.tca8418_i2c_bus, keyboard_device::tca8418::kI2cAddress);
-  chip_.sy7200a =
-      std::make_unique<cpp_bus_driver::Pwm>(keyboard_gpio::sy7200a::kEn);
-  chip_.cc1101 = std::make_unique<cpp_bus_driver::Cc1101>(bus_.cc1101_spi_bus,
-      keyboard_gpio::t_mix_rf::cc1101::kCs,
-      keyboard_gpio::t_mix_rf::cc1101::kMiso,
-      keyboard_gpio::t_mix_rf::cc1101::kGdo0,
-      keyboard_gpio::t_mix_rf::cc1101::kGdo2);
-  chip_.nrf24l01 = std::make_unique<cpp_bus_driver::Nrf24l01x>(
-      bus_.nrf24l01_spi_bus, keyboard_gpio::t_mix_rf::nrf24l01::kCs,
-      keyboard_gpio::t_mix_rf::nrf24l01::kCe,
-      keyboard_gpio::t_mix_rf::nrf24l01::kInt);
-  chip_.st25r3916 =
-      std::make_unique<stsw_st25rfal002_cpp_bus_driver::St25r3916x>(
-          bus_.st25r3916_spi_bus, keyboard_gpio::t_mix_rf::st25r3916::kInt,
-          keyboard_gpio::t_mix_rf::st25r3916::kCs);
-}
-
-void TDisplayP4Driver::DestroyKeyboardExpansionDrivers() {
-  chip_.st25r3916.reset();
-  chip_.nrf24l01.reset();
-  chip_.cc1101.reset();
-  chip_.sy7200a.reset();
-  chip_.tca8418.reset();
-  chip_.xl9555.reset();
-  bus_.st25r3916_spi_bus.reset();
-  bus_.nrf24l01_spi_bus.reset();
-  bus_.cc1101_spi_bus.reset();
-  bus_.tca8418_i2c_bus.reset();
-  bus_.xl9555_i2c_bus.reset();
 }
 
 bool TDisplayP4Driver::Init(InitMode mode) {
@@ -341,7 +288,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
 
 bool TDisplayP4Driver::InitBq27220() {
   if (!chip_.bq27220->Init()) {
-    status_.bq27220.init_flag = false;
+    chip_status_.bq27220.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBq27220 failed\n");
     return false;
   } else {
@@ -356,7 +303,7 @@ bool TDisplayP4Driver::InitBq27220() {
     result &= chip_.bq27220->SetTemperatureMode(
         cpp_bus_driver::Bq27220::TemperatureMode::kInternal);
 
-    status_.bq27220.init_flag = result;
+    chip_status_.bq27220.init_flag = result;
     if (result) {
       LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitBq27220 success\n");
     } else {
@@ -368,7 +315,7 @@ bool TDisplayP4Driver::InitBq27220() {
 }
 
 bool TDisplayP4Driver::InitXl9535() {
-  status_.xl9535.init_flag = false;
+  chip_status_.xl9535.init_flag = false;
   if (chip_.xl9535 == nullptr || !chip_.xl9535->Init()) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitXl9535 failed\n");
     return false;
@@ -413,18 +360,18 @@ bool TDisplayP4Driver::InitXl9535() {
     return false;
   }
 
-  status_.xl9535.init_flag = true;
+  chip_status_.xl9535.init_flag = true;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitXl9535 success\n");
   return true;
 }
 
 bool TDisplayP4Driver::InitPt4103() {
   if (chip_.pt4103 != nullptr && chip_.pt4103->IsInitialized()) {
-    status_.pt4103.init_flag = true;
+    chip_status_.pt4103.init_flag = true;
     return true;
   }
   if (chip_.pt4103 == nullptr) {
-    status_.pt4103.init_flag = false;
+    chip_status_.pt4103.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitPt4103 failed\n");
     return false;
   }
@@ -434,23 +381,23 @@ bool TDisplayP4Driver::InitPt4103() {
   config.channel = LEDC_CHANNEL_0;
   config.frequency_hz = device::pt4103::kPwmFrequencyHz;
   if (!chip_.pt4103->Init(config)) {
-    status_.pt4103.init_flag = false;
+    chip_status_.pt4103.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitPt4103 failed\n");
     return false;
   }
 
-  status_.pt4103.init_flag = true;
+  chip_status_.pt4103.init_flag = true;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitPt4103 success\n");
   return true;
 }
 
 bool TDisplayP4Driver::InitPcf8563() {
   if (!chip_.pcf8563->Init()) {
-    status_.pcf8563.init_flag = false;
+    chip_status_.pcf8563.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitPcf8563 failed\n");
     return false;
   } else {
-    status_.pcf8563.init_flag = true;
+    chip_status_.pcf8563.init_flag = true;
     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitPcf8563 success\n");
     return true;
   }
@@ -461,8 +408,8 @@ bool TDisplayP4Driver::InitEs8311() {
     return true;
   }
 
-  status_.es8311.init_flag = false;
-  if (!status_.xl9535.init_flag || chip_.xl9535 == nullptr ||
+  chip_status_.es8311.init_flag = false;
+  if (!chip_status_.xl9535.init_flag || chip_.xl9535 == nullptr ||
       chip_.es8311 == nullptr) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8311 failed\n");
     return false;
@@ -522,7 +469,7 @@ bool TDisplayP4Driver::InitEs8311() {
     chip_.es8311->Deinit(false);
     chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
   }
-  status_.es8311.init_flag = result;
+  chip_status_.es8311.init_flag = result;
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitEs8311 success\n" : "InitEs8311 failed\n");
   return result;
@@ -532,8 +479,8 @@ bool TDisplayP4Driver::InitL76k() {
   if (IsL76kReady()) {
     return true;
   }
-  if (!status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
-    status_.l76k.init_flag = false;
+  if (!chip_status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
+    chip_status_.l76k.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitL76k failed\n");
     return false;
   }
@@ -543,18 +490,18 @@ bool TDisplayP4Driver::InitL76k() {
   wakeup_pin_initialized &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kGpsWakeUp, cpp_bus_driver::Xl95x5::Mode::kOutput);
   if (!wakeup_pin_initialized) {
-    status_.l76k.init_flag = false;
+    chip_status_.l76k.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitL76k failed\n");
     return false;
   }
   if (!chip_.l76k->Init()) {
     if (!bus_.l76k_uart_bus->SetBaudRate(115200)) {
-      status_.l76k.init_flag = false;
+      chip_status_.l76k.init_flag = false;
       LogMessage(LogLevel::kError, __FILE__, __LINE__, "SetBaudRate failed\n");
       return false;
     }
     if (!chip_.l76k->Init()) {
-      status_.l76k.init_flag = false;
+      chip_status_.l76k.init_flag = false;
       LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitL76k failed\n");
       return false;
     } else {
@@ -569,7 +516,7 @@ bool TDisplayP4Driver::InitL76k() {
         chip_.l76k->Deinit();
       }
 
-      status_.l76k.init_flag = result;
+      chip_status_.l76k.init_flag = result;
       if (result) {
         LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitL76k success\n");
       } else {
@@ -590,7 +537,7 @@ bool TDisplayP4Driver::InitL76k() {
       chip_.l76k->Deinit();
     }
 
-    status_.l76k.init_flag = result;
+    chip_status_.l76k.init_flag = result;
     if (result) {
       LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitL76k success\n");
     } else {
@@ -621,7 +568,7 @@ bool TDisplayP4Driver::InitIcm20948() {
       chip_.icm20948->Deinit(false);
     }
   }
-  status_.icm20948.init_flag = result;
+  chip_status_.icm20948.init_flag = result;
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitIcm20948 success\n" : "InitIcm20948 failed\n");
   return result;
@@ -636,8 +583,8 @@ bool TDisplayP4Driver::InitSx1262() {
     return false;
   }
 
-  status_.sx1262.init_flag = false;
-  if (!status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
+  chip_status_.sx1262.init_flag = false;
+  if (!chip_status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
     return false;
   }
   bool reset_pin_initialized = true;
@@ -675,7 +622,7 @@ bool TDisplayP4Driver::InitSx1262() {
     return false;
   }
 
-  status_.sx1262.init_flag = true;
+  chip_status_.sx1262.init_flag = true;
   radio_type_ = RadioType::kSx1262;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
       "Auto detected T-Display-P4 radio: SX1262\n");
@@ -691,8 +638,8 @@ bool TDisplayP4Driver::InitLr2021() {
     return false;
   }
 
-  status_.lr2021.init_flag = false;
-  if (!status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
+  chip_status_.lr2021.init_flag = false;
+  if (!chip_status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
     return false;
   }
   bool reset_pin_initialized = true;
@@ -796,194 +743,12 @@ bool TDisplayP4Driver::InitLr2021() {
     return false;
   }
 
-  status_.lr2021.init_flag = true;
+  chip_status_.lr2021.init_flag = true;
   radio_type_ = RadioType::kLr2021;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
       "Auto detected T-Display-P4 radio: LR2021 (fw: %u.%u)\n",
       static_cast<unsigned>(version.major),
       static_cast<unsigned>(version.minor));
-  return true;
-}
-
-bool TDisplayP4Driver::InitXl9555() {
-  status_.xl9555.init_flag = false;
-  if (chip_.xl9555 == nullptr || !chip_.xl9555->Init()) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitXl9555 failed\n");
-    return false;
-  }
-
-  status_.xl9555.init_flag = true;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitXl9555 success\n");
-  return true;
-}
-
-bool TDisplayP4Driver::InitTca8418() {
-  if (!status_.xl9555.init_flag) {
-    status_.tca8418.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitTca8418 failed\n");
-    return false;
-  }
-  bool reset_pin_initialized = true;
-  reset_pin_initialized &=
-      chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
-  reset_pin_initialized &=
-      chip_.xl9555->SetGpioMode(keyboard_gpio::xl9555::kTca8418Rst,
-          cpp_bus_driver::Xl95x5::Mode::kOutput);
-  if (!reset_pin_initialized) {
-    status_.tca8418.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitTca8418 failed\n");
-    return false;
-  }
-  platform_hal_->DelayMs(10);
-  if (!chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 1)) {
-    status_.tca8418.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitTca8418 failed\n");
-    return false;
-  }
-  platform_hal_->DelayMs(10);
-
-  if (!chip_.tca8418->Init()) {
-    chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
-    status_.tca8418.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitTca8418 failed\n");
-    return false;
-  } else {
-    bool result = true;
-    result &= chip_.tca8418->SetKeypadScanWindow(0, 0,
-        keyboard_device::tca8418::kKeypadScanWidth,
-        keyboard_device::tca8418::kKeypadScanHeight);
-    result &= chip_.tca8418->SetInterruptEnable(
-        cpp_bus_driver::Tca8418::IrqMask::kKeyEvents);
-    result &= chip_.tca8418->ClearIrqFlag(
-        cpp_bus_driver::Tca8418::IrqFlag::kKeyEvents);
-
-    status_.tca8418.init_flag = result;
-    if (result) {
-      LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitTca8418 success\n");
-    } else {
-      chip_.tca8418->Deinit();
-      chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
-      LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitTca8418 failed\n");
-    }
-    return result;
-  }
-}
-
-bool TDisplayP4Driver::InitSy7200a() {
-  if (chip_.sy7200a != nullptr && chip_.sy7200a->IsInitialized()) {
-    status_.sy7200a.init_flag = true;
-    return true;
-  }
-  if (chip_.sy7200a == nullptr) {
-    status_.sy7200a.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSy7200a failed\n");
-    return false;
-  }
-
-  cpp_bus_driver::Pwm::Config config;
-  config.timer = LEDC_TIMER_1;
-  config.channel = LEDC_CHANNEL_1;
-  config.frequency_hz = keyboard_device::sy7200a::kPwmFrequencyHz;
-  config.resolution = LEDC_TIMER_5_BIT;
-  config.initial_duty = {.value = 0, .scale = 1};
-  config.idle_level_on_deinit = cpp_bus_driver::Pwm::IdleLevel::kLow;
-  if (!chip_.sy7200a->Init(config) ||
-      !chip_.sy7200a->DisableOutput(cpp_bus_driver::Pwm::IdleLevel::kLow)) {
-    chip_.sy7200a->Deinit();
-    status_.sy7200a.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSy7200a failed\n");
-    return false;
-  }
-
-  status_.sy7200a.init_flag = true;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSy7200a success\n");
-  return true;
-}
-
-bool TDisplayP4Driver::InitCc1101() {
-  if (!status_.xl9555.init_flag || chip_.cc1101 == nullptr) {
-    status_.cc1101.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitCc1101 failed\n");
-    return false;
-  }
-
-  bool rf_switch_initialized = true;
-  rf_switch_initialized &=
-      chip_.xl9555->SetGpioMode(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0,
-          cpp_bus_driver::Xl95x5::Mode::kOutput);
-  rf_switch_initialized &=
-      chip_.xl9555->SetGpioMode(keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1,
-          cpp_bus_driver::Xl95x5::Mode::kOutput);
-  // 初始化默认选择 868/915 MHz 通路
-  rf_switch_initialized &= SetCc1101RfSwitch(Cc1101RfSwitch::k868_915Mhz);
-  if (!rf_switch_initialized ||
-      !chip_.cc1101->Init(keyboard_device::cc1101::kSpiFrequencyHz)) {
-    status_.cc1101.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitCc1101 failed\n");
-    return false;
-  }
-
-  if (!chip_.cc1101->Sleep()) {
-    chip_.cc1101->Deinit(false);
-    status_.cc1101.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitCc1101 failed\n");
-    return false;
-  }
-
-  status_.cc1101.init_flag = true;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitCc1101 success\n");
-  return true;
-}
-
-bool TDisplayP4Driver::InitNrf24l01() {
-  if (chip_.nrf24l01 == nullptr || !chip_.nrf24l01->Init()) {
-    status_.nrf24l01.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitNrf24l01 failed\n");
-    return false;
-  }
-
-  if (!chip_.nrf24l01->PowerDown()) {
-    chip_.nrf24l01->Deinit(false);
-    status_.nrf24l01.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitNrf24l01 failed\n");
-    return false;
-  }
-
-  status_.nrf24l01.init_flag = true;
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitNrf24l01 success\n");
-  return true;
-}
-
-bool TDisplayP4Driver::InitSt25r3916() {
-  if (chip_.st25r3916 == nullptr || bus_.st25r3916_spi_bus == nullptr) {
-    status_.st25r3916.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSt25r3916 failed\n");
-    return false;
-  }
-
-  const ReturnCode result = chip_.st25r3916->Init();
-  const auto platform_error = chip_.st25r3916->platform_error();
-  status_.st25r3916.init_flag =
-      result == RFAL_ERR_NONE &&
-      platform_error == stsw_st25rfal002_cpp_bus_driver::PlatformError::kNone &&
-      chip_.st25r3916->initialized();
-  if (!status_.st25r3916.init_flag) {
-    chip_.st25r3916->Deinit(false);
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitSt25r3916 failed (RFAL: %u, platform: %u)\n",
-        static_cast<unsigned int>(result),
-        static_cast<unsigned int>(platform_error));
-    return false;
-  }
-
-  if (!SetSt25r3916OperatingMode(St25r3916OperatingMode::kSleep)) {
-    chip_.st25r3916->Deinit(false);
-    status_.st25r3916.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSt25r3916 failed\n");
-    return false;
-  }
-
-  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSt25r3916 success\n");
   return true;
 }
 
@@ -1027,117 +792,48 @@ bool TDisplayP4Driver::InitRadio() {
   return false;
 }
 
-bool TDisplayP4Driver::InitKeyboardExpansion() {
-  if (platform_hal_ == nullptr || bus_.radio_spi_bus == nullptr) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "Initialize the base device driver before the keyboard expansion\n");
-    return false;
-  }
-  if (!DeinitKeyboardExpansion()) {
-    return false;
-  }
-  CreateKeyboardExpansionDrivers();
-  status_.xl9555.init_flag = false;
-  status_.tca8418.init_flag = false;
-  status_.sy7200a.init_flag = false;
-  status_.cc1101.init_flag = false;
-  status_.nrf24l01.init_flag = false;
-  status_.st25r3916.init_flag = false;
-
-  if (!InitXl9555()) {
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-        "Keyboard expansion not connected\n");
-    return false;
-  }
-
-  bool expander_outputs_initialized = true;
-  expander_outputs_initialized &=
-      chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1, 1);
-  expander_outputs_initialized &=
-      chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2, 1);
-  expander_outputs_initialized &=
-      chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3, 1);
-  expander_outputs_initialized &=
-      chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn, 0);
-  expander_outputs_initialized &= chip_.xl9555->SetGpioMode(
-      keyboard_gpio::xl9555::kLed1, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  expander_outputs_initialized &= chip_.xl9555->SetGpioMode(
-      keyboard_gpio::xl9555::kLed2, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  expander_outputs_initialized &= chip_.xl9555->SetGpioMode(
-      keyboard_gpio::xl9555::kLed3, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  expander_outputs_initialized &= chip_.xl9555->SetGpioMode(
-      keyboard_gpio::xl9555::kTMixRfEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  expander_outputs_initialized &=
-      chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn, 1);
-  if (!expander_outputs_initialized) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "Keyboard expansion GPIO initialization failed\n");
-    return false;
-  }
-
-  // 扩展板通过外部电阻上拉 TCA8418 INT。启用主板内部下拉后，
-  // 扩展板断开时 INT 会自动变为低电平，供应用层确认连接状态。
-  if (!platform_hal_->SetGpioMode(keyboard_gpio::tca8418::kInt,
-          cpp_bus_driver::PlatformHal::GpioMode::kInput,
-          cpp_bus_driver::PlatformHal::GpioStatus::kPulldown)) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "Keyboard expansion GPIO initialization failed\n");
-    return false;
-  }
-
-  bool result = true;
-  result &= InitTca8418();
-  result &= InitSy7200a();
-  result &= InitCc1101();
-  result &= InitNrf24l01();
-  result &= InitSt25r3916();
-  result &=
-      SetKeyboardExpansionOperatingMode(KeyboardExpansionOperatingMode::kSleep);
-  return result;
-}
-
 bool TDisplayP4Driver::DeinitScreenBacklight() {
   if (chip_.pt4103 == nullptr || !chip_.pt4103->IsInitialized()) {
-    status_.pt4103.init_flag = false;
+    chip_status_.pt4103.init_flag = false;
     return true;
   }
 
   const bool result = chip_.pt4103->Deinit();
-  status_.pt4103.init_flag = chip_.pt4103->IsInitialized();
+  chip_status_.pt4103.init_flag = chip_.pt4103->IsInitialized();
   return result;
 }
 
 bool TDisplayP4Driver::DeinitEs8311() {
   bool result = true;
-  if (status_.es8311.init_flag && chip_.es8311 != nullptr) {
+  if (chip_status_.es8311.init_flag && chip_.es8311 != nullptr) {
     result &= SetEs8311OperatingMode(Es8311OperatingMode::kSleep);
     result &= chip_.es8311->Deinit(false);
   }
-  if (status_.xl9535.init_flag) {
+  if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
   }
-  status_.es8311.init_flag = false;
+  chip_status_.es8311.init_flag = false;
   return result;
 }
 
 bool TDisplayP4Driver::DeinitIcm20948() {
   bool result = true;
-  if (status_.icm20948.init_flag && chip_.icm20948 != nullptr) {
+  if (chip_status_.icm20948.init_flag && chip_.icm20948 != nullptr) {
     result &= chip_.icm20948->SetSleep(true);
     result &= chip_.icm20948->Deinit(false);
   }
-  status_.icm20948.init_flag = false;
+  chip_status_.icm20948.init_flag = false;
   return result;
 }
 
 bool TDisplayP4Driver::DeinitSx1262() {
   bool result = true;
-  if (status_.sx1262.init_flag && chip_.sx1262 != nullptr) {
+  if (chip_status_.sx1262.init_flag && chip_.sx1262 != nullptr) {
     result &= chip_.sx1262->SetSleep();
     result &= chip_.sx1262->Deinit(false);
   }
-  status_.sx1262.init_flag = false;
-  if (status_.xl9535.init_flag) {
+  chip_status_.sx1262.init_flag = false;
+  if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
   }
   if (radio_type_ == RadioType::kSx1262) {
@@ -1148,12 +844,12 @@ bool TDisplayP4Driver::DeinitSx1262() {
 
 bool TDisplayP4Driver::DeinitLr2021() {
   bool result = true;
-  if (status_.lr2021.init_flag && chip_.lr2021 != nullptr) {
+  if (chip_status_.lr2021.init_flag && chip_.lr2021 != nullptr) {
     result &= SetLr2021OperatingMode(Lr2021OperatingMode::kSleep);
     result &= chip_.lr2021->Deinit(false);
   }
-  status_.lr2021.init_flag = false;
-  if (status_.xl9535.init_flag) {
+  chip_status_.lr2021.init_flag = false;
+  if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kRadioRst, 0);
   }
   if (radio_type_ == RadioType::kLr2021) {
@@ -1173,145 +869,33 @@ bool TDisplayP4Driver::DeinitRadio() {
   }
 }
 
-bool TDisplayP4Driver::DeinitSt25r3916() {
-  if (chip_.st25r3916 == nullptr) {
-    status_.st25r3916.init_flag = false;
-    return true;
-  }
-
-  const bool was_ready = status_.st25r3916.init_flag;
-  const ReturnCode deinit_result = chip_.st25r3916->Deinit(false);
-  const auto platform_error = chip_.st25r3916->platform_error();
-  bool result = deinit_result == RFAL_ERR_NONE;
-  if (was_ready) {
-    result &=
-        platform_error == stsw_st25rfal002_cpp_bus_driver::PlatformError::kNone;
-  }
-  status_.st25r3916.init_flag = false;
-  return result;
-}
-
-bool TDisplayP4Driver::DeinitKeyboardExpansion(
-    KeyboardExpansionDeinitMode mode) {
-  bool result = true;
-
-  if (mode == KeyboardExpansionDeinitMode::kNormal) {
-    result &= DeinitSt25r3916();
-
-    if (chip_.nrf24l01 != nullptr) {
-      result &= chip_.nrf24l01->Deinit(false);
-    }
-    if (chip_.cc1101 != nullptr) {
-      result &= chip_.cc1101->Deinit(false);
-    }
-    if (chip_.sy7200a != nullptr && chip_.sy7200a->IsInitialized()) {
-      result &=
-          chip_.sy7200a->DisableOutput(cpp_bus_driver::Pwm::IdleLevel::kLow);
-      result &= chip_.sy7200a->Deinit();
-    }
-    if (chip_.tca8418 != nullptr) {
-      result &= chip_.tca8418->Deinit(false);
-    }
-    if (chip_.xl9555 != nullptr) {
-      if (status_.xl9555.init_flag) {
-        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed1, 1);
-        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2, 1);
-        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3, 1);
-        result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn, 0);
-        result &=
-            chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
-      }
-      result &= chip_.xl9555->Deinit(false);
-    }
-  } else {
-    // 扩展芯片无法通信时不再发送芯片命令，但仍必须注销主控侧的
-    // SPI/I2C device handle，否则反复连接会耗尽 SPI 设备槽。
-    if (chip_.st25r3916 != nullptr) {
-      result &= chip_.st25r3916->DeinitLocalResources(false) == RFAL_ERR_NONE;
-    }
-    if (chip_.nrf24l01 != nullptr) {
-      result &= chip_.nrf24l01->DeinitLocalResources(false);
-    }
-    if (chip_.cc1101 != nullptr) {
-      result &= chip_.cc1101->DeinitLocalResources(false);
-    }
-    if (chip_.sy7200a != nullptr && chip_.sy7200a->IsInitialized()) {
-      result &=
-          chip_.sy7200a->DisableOutput(cpp_bus_driver::Pwm::IdleLevel::kLow);
-      result &= chip_.sy7200a->Deinit();
-    }
-    if (chip_.tca8418 != nullptr) {
-      result &= chip_.tca8418->Deinit(false);
-    }
-    if (chip_.xl9555 != nullptr) {
-      result &= chip_.xl9555->Deinit(false);
-    }
-  }
-
-  status_.st25r3916.init_flag = false;
-  status_.nrf24l01.init_flag = false;
-  status_.cc1101.init_flag = false;
-  status_.sy7200a.init_flag = false;
-  status_.tca8418.init_flag = false;
-  status_.xl9555.init_flag = false;
-
-  if (platform_hal_ != nullptr) {
-    result &= platform_hal_->ResetGpio(keyboard_gpio::tca8418::kInt);
-  }
-
-  DestroyKeyboardExpansionDrivers();
-
-  return result;
-}
-
 bool TDisplayP4Driver::IsBq27220Ready() const {
-  return status_.bq27220.init_flag && chip_.bq27220 != nullptr;
+  return chip_status_.bq27220.init_flag && chip_.bq27220 != nullptr;
 }
 
 bool TDisplayP4Driver::IsPt4103Ready() const {
-  return status_.pt4103.init_flag && chip_.pt4103 != nullptr &&
+  return chip_status_.pt4103.init_flag && chip_.pt4103 != nullptr &&
          chip_.pt4103->IsInitialized();
 }
 
 bool TDisplayP4Driver::IsPcf8563Ready() const {
-  return status_.pcf8563.init_flag && chip_.pcf8563 != nullptr;
+  return chip_status_.pcf8563.init_flag && chip_.pcf8563 != nullptr;
 }
 
 bool TDisplayP4Driver::IsEs8311Ready() const {
-  return status_.es8311.init_flag && chip_.es8311 != nullptr;
+  return chip_status_.es8311.init_flag && chip_.es8311 != nullptr;
 }
 
 bool TDisplayP4Driver::IsIcm20948Ready() const {
-  return status_.icm20948.init_flag && chip_.icm20948 != nullptr;
+  return chip_status_.icm20948.init_flag && chip_.icm20948 != nullptr;
 }
 
 bool TDisplayP4Driver::IsSx1262Ready() const {
-  return status_.sx1262.init_flag && chip_.sx1262 != nullptr;
+  return chip_status_.sx1262.init_flag && chip_.sx1262 != nullptr;
 }
 
 bool TDisplayP4Driver::IsLr2021Ready() const {
-  return status_.lr2021.init_flag && chip_.lr2021 != nullptr;
-}
-
-bool TDisplayP4Driver::IsXl9555Ready() const {
-  return status_.xl9555.init_flag && chip_.xl9555 != nullptr;
-}
-
-bool TDisplayP4Driver::IsTca8418Ready() const {
-  return status_.tca8418.init_flag && chip_.tca8418 != nullptr;
-}
-
-bool TDisplayP4Driver::IsCc1101Ready() const {
-  return status_.cc1101.init_flag && chip_.cc1101 != nullptr;
-}
-
-bool TDisplayP4Driver::IsNrf24l01Ready() const {
-  return status_.nrf24l01.init_flag && chip_.nrf24l01 != nullptr;
-}
-
-bool TDisplayP4Driver::IsSt25r3916Ready() const {
-  return status_.st25r3916.init_flag && chip_.st25r3916 != nullptr &&
-         chip_.st25r3916->initialized();
+  return chip_status_.lr2021.init_flag && chip_.lr2021 != nullptr;
 }
 
 bool TDisplayP4Driver::IsScreenReady() const {
@@ -1369,7 +953,7 @@ bool TDisplayP4Driver::SetEs8311OperatingMode(Es8311OperatingMode mode) {
   const bool sleep = mode == Es8311OperatingMode::kSleep;
   // 该开关控制共享的 OUT_5V 音频电源域。除 NS4150 外，RT9080 也从
   // OUT_5V 生成 ES8311 模拟 ADC 使用的 AD_3V3，因此仅采集时同样要开启。
-  if (!sleep && (!status_.xl9535.init_flag ||
+  if (!sleep && (!chip_status_.xl9535.init_flag ||
                     !chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 1))) {
     return false;
   }
@@ -1403,11 +987,11 @@ bool TDisplayP4Driver::SetEs8311OperatingMode(Es8311OperatingMode mode) {
     result &= chip_.es8311->SetOutputToHpDrive(playback_enabled);
   }
   if (sleep) {
-    if (status_.xl9535.init_flag) {
+    if (chip_status_.xl9535.init_flag) {
       result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
     }
   } else if (!result) {
-    if (status_.xl9535.init_flag) {
+    if (chip_status_.xl9535.init_flag) {
       chip_.xl9535->GpioWrite(gpio::xl9535::kAudioPowerEn, 0);
     }
   }
@@ -1472,85 +1056,6 @@ bool TDisplayP4Driver::SetLr2021OperatingMode(Lr2021OperatingMode mode) {
   return true;
 }
 
-bool TDisplayP4Driver::SetCc1101OperatingMode(Cc1101OperatingMode mode) {
-  if (!IsCc1101Ready()) {
-    return mode == Cc1101OperatingMode::kSleep;
-  }
-  const bool result = mode == Cc1101OperatingMode::kSleep
-                          ? chip_.cc1101->Sleep()
-                          : chip_.cc1101->Wakeup();
-  if (!result) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "CC1101 operating mode change failed\n");
-    return false;
-  }
-  return true;
-}
-
-bool TDisplayP4Driver::SetNrf24l01OperatingMode(Nrf24l01OperatingMode mode) {
-  if (!IsNrf24l01Ready()) {
-    return mode == Nrf24l01OperatingMode::kSleep;
-  }
-  const bool result = mode == Nrf24l01OperatingMode::kSleep
-                          ? chip_.nrf24l01->PowerDown()
-                          : chip_.nrf24l01->Standby();
-  if (!result) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "NRF24L01 operating mode change failed\n");
-    return false;
-  }
-  return true;
-}
-
-bool TDisplayP4Driver::SetSt25r3916OperatingMode(St25r3916OperatingMode mode) {
-  if (!IsSt25r3916Ready()) {
-    return mode == St25r3916OperatingMode::kSleep;
-  }
-  const ReturnCode result = mode == St25r3916OperatingMode::kSleep
-                                ? chip_.st25r3916->StartLowPowerMode()
-                                : chip_.st25r3916->StopLowPowerMode();
-  if (result != RFAL_ERR_NONE) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "ST25R3916 operating mode change failed (error code: %u)\n",
-        static_cast<unsigned int>(result));
-    return false;
-  }
-  return true;
-}
-
-bool TDisplayP4Driver::SetKeyboardExpansionOperatingMode(
-    KeyboardExpansionOperatingMode mode) {
-  if (!IsXl9555Ready()) {
-    return mode == KeyboardExpansionOperatingMode::kSleep;
-  }
-
-  if (mode == KeyboardExpansionOperatingMode::kSleep) {
-    bool result = true;
-    // 低功耗状态下关闭全部指示灯，避免屏幕熄灭后继续耗电和发光。
-    result &= SetKeyboardExpansionLed(KeyboardExpansionLed::kLed1, false);
-    result &= SetKeyboardExpansionLed(KeyboardExpansionLed::kLed2, false);
-    result &= SetKeyboardExpansionLed(KeyboardExpansionLed::kLed3, false);
-    if (IsSy7200aReady()) {
-      result &=
-          chip_.sy7200a->DisableOutput(cpp_bus_driver::Pwm::IdleLevel::kLow);
-    }
-    result &= SetCc1101OperatingMode(Cc1101OperatingMode::kSleep);
-    result &= SetNrf24l01OperatingMode(Nrf24l01OperatingMode::kSleep);
-    result &= SetSt25r3916OperatingMode(St25r3916OperatingMode::kSleep);
-    // TCA8418 没有独立睡眠命令，保持矩阵扫描才能继续响应按键。
-    return result;
-  }
-
-  bool result = chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn, 1);
-  result &= SetCc1101OperatingMode(Cc1101OperatingMode::kStandby);
-  result &= SetNrf24l01OperatingMode(Nrf24l01OperatingMode::kStandby);
-  result &= SetSt25r3916OperatingMode(St25r3916OperatingMode::kActive);
-  if (!result) {
-    SetKeyboardExpansionOperatingMode(KeyboardExpansionOperatingMode::kSleep);
-  }
-  return result;
-}
-
 bool TDisplayP4Driver::SetRadioOperatingMode(RadioOperatingMode mode) {
   if (!IsRadioReady()) {
     if (mode == RadioOperatingMode::kSleep) {
@@ -1576,14 +1081,14 @@ bool TDisplayP4Driver::SetRadioOperatingMode(RadioOperatingMode mode) {
 }
 
 bool TDisplayP4Driver::SetEsp32c6PowerEnabled(bool enabled) {
-  if (!status_.xl9535.init_flag) {
+  if (!chip_status_.xl9535.init_flag) {
     return !enabled;
   }
   return chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, enabled ? 1 : 0);
 }
 
 bool TDisplayP4Driver::SetEthernetPowerEnabled(bool enabled) {
-  if (!status_.xl9535.init_flag) {
+  if (!chip_status_.xl9535.init_flag) {
     return !enabled;
   }
   return chip_.xl9535->GpioWrite(gpio::xl9535::kEthernetRst, enabled ? 1 : 0);
@@ -1612,7 +1117,7 @@ bool TDisplayP4Driver::PrepareDriversForPowerOff() {
   result &= DeinitSdmmc();
 
   // 将外设复位、电源使能及控制引脚设置为关机安全电平。
-  if (status_.xl9535.init_flag) {
+  if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c6En, 0);
@@ -1627,71 +1132,6 @@ bool TDisplayP4Driver::PrepareDriversForPowerOff() {
   result &= DeinitLdoPower(4);
   minimal_drivers_initialized_ = false;
   return result;
-}
-
-bool TDisplayP4Driver::SetCc1101RfSwitch(Cc1101RfSwitch rf_switch) {
-  if (!status_.xl9555.init_flag) {
-    LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "SetCc1101RfSwitch failed\n");
-    return false;
-  }
-
-  bool result = true;
-  switch (rf_switch) {
-    case Cc1101RfSwitch::k315Mhz:
-      result &= chip_.xl9555->GpioWrite(
-          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0, 0);
-      result &= chip_.xl9555->GpioWrite(
-          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1, 1);
-      break;
-    case Cc1101RfSwitch::k434Mhz:
-      result &= chip_.xl9555->GpioWrite(
-          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0, 1);
-      result &= chip_.xl9555->GpioWrite(
-          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1, 1);
-      break;
-    case Cc1101RfSwitch::k868_915Mhz:
-      result &= chip_.xl9555->GpioWrite(
-          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch0, 1);
-      result &= chip_.xl9555->GpioWrite(
-          keyboard_gpio::xl9555::kTMixRfCc1101RfSwitch1, 0);
-      break;
-
-    default:
-      result = false;
-      break;
-  }
-
-  if (!result) {
-    LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "SetCc1101RfSwitch failed\n");
-  }
-  return result;
-}
-
-bool TDisplayP4Driver::SetKeyboardExpansionLed(
-    KeyboardExpansionLed led, bool enabled) {
-  if (!IsXl9555Ready()) {
-    return false;
-  }
-
-  cpp_bus_driver::Xl95x5::Pin pin = keyboard_gpio::xl9555::kLed1;
-  switch (led) {
-    case KeyboardExpansionLed::kLed1:
-      pin = keyboard_gpio::xl9555::kLed1;
-      break;
-    case KeyboardExpansionLed::kLed2:
-      pin = keyboard_gpio::xl9555::kLed2;
-      break;
-    case KeyboardExpansionLed::kLed3:
-      pin = keyboard_gpio::xl9555::kLed3;
-      break;
-    default:
-      return false;
-  }
-
-  // 键盘扩展指示灯为低电平点亮。
-  return chip_.xl9555->GpioWrite(pin, enabled ? 0 : 1);
 }
 
 bool TDisplayP4Driver::SetSky13453RfSwitch(Sky13453RfSwitch rf_switch) {
@@ -1720,7 +1160,22 @@ bool TDisplayP4Driver::SetSky13453RfSwitch(Sky13453RfSwitch rf_switch) {
 }
 
 void TDisplayP4Driver::ResetScreenBacklightStatus() {
-  status_.pt4103.init_flag = false;
+  chip_status_.pt4103.init_flag = false;
+}
+
+bool TDisplayP4Driver::InitSy7200a() {
+  return InitKeyboardBacklight();
+}
+
+bool TDisplayP4Driver::IsScreenBacklightReady() const {
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return IsPt4103Ready();
+    case device::ScreenType::kRm69a10:
+      return IsRm69a10Ready();
+    default:
+      return false;
+  }
 }
 
 }  // namespace lilygo_device_driver

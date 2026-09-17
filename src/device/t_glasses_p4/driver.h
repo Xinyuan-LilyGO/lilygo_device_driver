@@ -118,84 +118,11 @@ class TGlassesP4Driver {
     kSleep,
   };
 
-  struct Bus {
-    // 屏幕与 BQ25896 分别使用 I2C0、I2C1，SGM38121 使用 LP I2C0。
-    std::shared_ptr<cpp_bus_driver::HardwareI2c> bq25896_i2c_bus;
-    // std::shared_ptr<cpp_bus_driver::HardwareI2c> sy6970_i2c_bus;
-    // 旧版 BQ27220 与充电芯片共享硬件 I2C 的字段参考。
-    // std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
-    // BQ27220 与 BQ25896 共用引脚，恢复后共享 BQ25896 的硬件总线。
-    // 恢复新板时使用下方字段，两个同名字段不可同时启用。
-    // std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c> sgm38121_i2c_bus;
-    // std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
-    // std::shared_ptr<cpp_bus_driver::HardwareI2c> es8311_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c> screen_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
-    // std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareSpi> lr2021_spi_bus;
-  };
-
-  struct Chip {
-    std::unique_ptr<cpp_bus_driver::Bq2589x> bq25896;
-    // std::unique_ptr<cpp_bus_driver::Sy6970> sy6970;
-    // std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
-    std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
-    // std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
-    // std::unique_ptr<cpp_bus_driver::Es8311> es8311;
-    std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
-    std::unique_ptr<cpp_bus_driver::S023msafjf10111e1> s023msafjf10111e1;
-  };
-
-  struct Status {
-    struct {
-      bool init_flag = false;
-    } bq25896;
-
-    // struct {
-    //   bool init_flag = false;
-    // } sy6970;
-    //
-    // struct {
-    //   bool init_flag = false;
-    // } bq27220;
-    //
-    struct {
-      bool init_flag = false;
-    } sgm38121;
-
-    struct {
-      bool init_flag = false;
-    } s023msafjf10111e1;
-
-    // struct {
-    //   bool init_flag = false;
-    //   cpp_bus_driver::Aw862xx::RamWaveformSelection ram_waveform_selection;
-    // } aw86224;
-    //
-    // struct {
-    //   bool init_flag = false;
-    // } es8311;
-    //
-    struct {
-      bool init_flag = false;
-    } es8389;
-    //
-    struct {
-      bool init_flag = false;
-    } lr2021;
-    //
-    struct {
-      bool init_flag = false;
-    } sd_card;
-  };
-
   static TGlassesP4Driver& GetInstance();
 
-  const Bus& bus() const { return bus_; }
-  const Chip& chip() const { return chip_; }
-  const Status& status() const { return status_; }
+  const auto& bus() const { return bus_; }
+  const auto& chip() const { return chip_; }
+  const auto& chip_status() const { return chip_status_; }
 
   const t_glasses_p4::device::DeviceModelInfo& device_model_info() const {
     return t_glasses_p4::device::kDeviceModelInfo;
@@ -246,7 +173,6 @@ class TGlassesP4Driver {
   bool InitBmm350();
   bool InitLr2021();
   bool InitPower();
-  bool InitScreen();
   bool InitSdmmc(const char* base_path,
       int max_freq_khz = SDMMC_FREQ_DEFAULT);
   // bool InitSdspi(const char* base_path, spi_host_device_t host_id,
@@ -256,7 +182,7 @@ class TGlassesP4Driver {
   // bool DeinitEs8311();
   bool DeinitEs8389();
   bool DeinitLr2021();
-  bool DeinitScreen();
+  bool DeinitS023msafjf10111e1();
   bool DeinitSdmmc();
 
   // bool IsSy6970Ready() const;
@@ -268,7 +194,6 @@ class TGlassesP4Driver {
   // bool IsEs8311Ready() const;
   bool IsEs8389Ready() const;
   bool IsLr2021Ready() const;
-  bool IsScreenReady() const;
   bool IsSdmmcReady() const;
 
   // bool SetAw86224Standby();
@@ -290,6 +215,79 @@ class TGlassesP4Driver {
   bool SetScreenMirror(bool horizontal, bool vertical);
 
  private:
+  struct Bus {
+    // 屏幕与 BQ25896 分别使用 I2C0、I2C1，SGM38121 使用 LP I2C0。
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> bq25896_i2c_bus;
+    // std::shared_ptr<cpp_bus_driver::HardwareI2c> sy6970_i2c_bus;
+    // 旧版 BQ27220 与充电芯片共享硬件 I2C 的字段参考。
+    // std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
+    // BQ27220 与 BQ25896 共用引脚，恢复后共享 BQ25896 的硬件总线。
+    // 恢复新板时使用下方字段，两个同名字段不可同时启用。
+    // std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> sgm38121_i2c_bus;
+    // std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
+    // std::shared_ptr<cpp_bus_driver::HardwareI2c> es8311_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> screen_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
+    // std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareSpi> lr2021_spi_bus;
+  };
+
+  struct Chip {
+    std::unique_ptr<cpp_bus_driver::Bq2589x> bq25896;
+    // std::unique_ptr<cpp_bus_driver::Sy6970> sy6970;
+    // std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
+    std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
+    // std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
+    // std::unique_ptr<cpp_bus_driver::Es8311> es8311;
+    std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
+    std::unique_ptr<cpp_bus_driver::S023msafjf10111e1> s023msafjf10111e1;
+  };
+
+  struct ChipStatus {
+    struct {
+      bool init_flag = false;
+    } bq25896;
+
+    // struct {
+    //   bool init_flag = false;
+    // } sy6970;
+    //
+    // struct {
+    //   bool init_flag = false;
+    // } bq27220;
+    //
+    struct {
+      bool init_flag = false;
+    } sgm38121;
+
+    struct {
+      bool init_flag = false;
+    } s023msafjf10111e1;
+
+    // struct {
+    //   bool init_flag = false;
+    //   cpp_bus_driver::Aw862xx::RamWaveformSelection ram_waveform_selection;
+    // } aw86224;
+    //
+    // struct {
+    //   bool init_flag = false;
+    // } es8311;
+    //
+    struct {
+      bool init_flag = false;
+    } es8389;
+    //
+    struct {
+      bool init_flag = false;
+    } lr2021;
+    //
+    struct {
+      bool init_flag = false;
+    } sd_card;
+  };
+
   void CreateDrivers();
 
   /**
@@ -311,7 +309,7 @@ class TGlassesP4Driver {
   std::unique_ptr<cpp_bus_driver::PlatformHal> platform_hal_;
   Bus bus_;
   Chip chip_;
-  Status status_;
+  ChipStatus chip_status_;
   SdCard sd_card_;
   // const t_glasses_p4::device::ScreenInfo* screen_info_ = nullptr;
   bool minimal_drivers_initialized_ = false;

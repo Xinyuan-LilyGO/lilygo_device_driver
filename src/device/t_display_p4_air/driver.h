@@ -106,6 +106,13 @@ inline constexpr BatteryInfo kBatteryInfo = {
 
 }  // namespace t_display_p4_air::device
 
+/**
+ * @brief T-Display-P4-Air 板级设备驱动。
+ * @note 当前屏幕型号固定，Screen、Touch、ScreenBacklight 仍以通用
+ * 名称提供公共接口，为后续不同型号屏幕及其配套器件预留扩展入口；
+ * 对应的具体芯片实现放在私有区域。其他无需型号选择的芯片接口
+ * 使用具体芯片名称。
+ */
 class TDisplayP4AirDriver {
  public:
   enum class InitMode { kAsync, kSync };
@@ -122,6 +129,121 @@ class TDisplayP4AirDriver {
     kEsp32c5,
   };
 
+  static TDisplayP4AirDriver& GetInstance();
+
+  const auto& bus() const { return bus_; }
+  const auto& chip() const { return chip_; }
+  const auto& chip_status() const { return chip_status_; }
+
+  const t_display_p4_air::device::DeviceModelInfo& device_model_info() const {
+    return t_display_p4_air::device::kDeviceModelInfo;
+  }
+  const t_display_p4_air::device::ScreenInfo& screen_info() const;
+  t_display_p4_air::device::ScreenType screen_type() const {
+    return screen_info().type;
+  }
+  const t_display_p4_air::device::CameraInfo& camera_info() const {
+    return t_display_p4_air::device::kCameraInfo;
+  }
+  /**
+   * @brief 获取主机固定电池硬件信息
+   * @return 充电芯片、电量计芯片和主机内置电池额定容量
+   */
+  const t_display_p4_air::device::BatteryInfo& battery_info() const {
+    return t_display_p4_air::device::kBatteryInfo;
+  }
+  esp_codec_dev_handle_t es8389_input_codec_dev() const {
+    return es8389_input_codec_dev_;
+  }
+  esp_codec_dev_handle_t es8389_output_codec_dev() const {
+    return es8389_output_codec_dev_;
+  }
+  t_display_p4_air::device::DeviceInfo device_info() const {
+    return {
+        .model = device_model_info(),
+        .screen = screen_info(),
+        .camera = camera_info(),
+        .battery = battery_info(),
+    };
+  }
+
+  bool Init(InitMode mode = InitMode::kSync);
+  bool InitMinimal();
+  bool InitAxp517();
+  bool InitXl9535();
+  bool InitSgm38121();
+  bool InitBhi260ap();
+  bool InitQmc6310n();
+  bool InitAw86224();
+  bool InitSt25r3916();
+  bool InitEs8389();
+  bool InitLr1121();
+  bool InitNrf9151();
+  bool InitPower();
+  bool InitScreen();
+  bool InitTouch();
+  bool InitScreenBacklight();
+  bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf);
+  bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
+  bool InitSdspi(const char* base_path, spi_host_device_t host_id,
+      int max_freq_khz = SDMMC_FREQ_DEFAULT);
+
+  bool DeinitEs8389();
+  bool DeinitBhi260ap();
+  bool DeinitQmc6310n();
+  bool DeinitAw86224();
+  bool DeinitSt25r3916();
+  bool DeinitLr1121();
+  bool DeinitNrf9151();
+  bool DeinitPower();
+  bool DeinitScreen();
+  bool DeinitTouch();
+  bool DeinitScreenBacklight();
+  bool DeinitSdmmc(bool release_bus = true);
+
+  bool IsAxp517Ready() const;
+  bool IsXl9535Ready() const;
+  bool IsSgm38121Ready() const;
+  bool IsBhi260apReady() const;
+  bool IsQmc6310nReady() const;
+  bool IsAw86224Ready() const;
+  bool IsSt25r3916Ready() const;
+  bool IsEs8389Ready() const;
+  bool IsLr1121Ready() const;
+  bool IsNrf9151Ready() const;
+  bool IsScreenReady() const;
+  bool IsTouchReady() const;
+  bool IsScreenBacklightReady() const;
+  bool IsSdmmcReady() const;
+
+  bool SetLedEnabled(bool enabled);
+
+  bool SetAw86224Standby();
+  bool SetBhi260apSleep(bool sleep);
+  bool SetQmc6310nSleep(bool sleep);
+  bool SetScreenSleep(bool sleep);
+  bool SetEs8389OperatingMode(Es8389OperatingMode mode);
+  bool SetLr1121OperatingMode(Lr1121OperatingMode mode);
+  bool SetEsp32c5PowerEnabled(bool enabled);
+  bool SetCameraPowerEnabled(bool enabled);
+  bool SetUsbHostPowerEnabled(bool enabled);
+  bool PrepareMinimalDriversForPowerOff();
+  bool PrepareDriversForPowerOff();
+
+  /**
+   * @brief 使 ESP32-C5 进入下载模式。
+   * @return 时序控制成功时返回 true，否则返回 false。
+   */
+  bool EnterEsp32c5DownloadMode();
+
+  /**
+   * @brief 切换外部串口连接目标。
+   * @param target 串口连接到 ESP32-P4 或 ESP32-C5。
+   * @return 串口切换成功时返回 true，否则返回 false。
+   */
+  bool SetUartTarget(UartTarget target);
+
+ private:
   struct Bus {
     std::shared_ptr<cpp_bus_driver::HardwareI2c> axp517_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> xl9535_i2c_bus;
@@ -152,7 +274,7 @@ class TDisplayP4AirDriver {
     std::unique_ptr<usp_cpp_bus_driver::Lr11xx> lr1121;
   };
 
-  struct Status {
+  struct ChipStatus {
     struct {
       bool init_flag = false;
     } axp517;
@@ -214,136 +336,27 @@ class TDisplayP4AirDriver {
     } sd_card;
   };
 
-  static TDisplayP4AirDriver& GetInstance();
+  void CreateDrivers();
 
-  const Bus& bus() const { return bus_; }
-  const Chip& chip() const { return chip_; }
-  const Status& status() const { return status_; }
-
-  const t_display_p4_air::device::DeviceModelInfo& device_model_info() const {
-    return t_display_p4_air::device::kDeviceModelInfo;
-  }
-  const t_display_p4_air::device::ScreenInfo& screen_info() const;
-  t_display_p4_air::device::ScreenType screen_type() const {
-    return screen_info().type;
-  }
-  const t_display_p4_air::device::CameraInfo& camera_info() const {
-    return t_display_p4_air::device::kCameraInfo;
-  }
-  /**
-   * @brief 获取主机固定电池硬件信息
-   * @return 充电芯片、电量计芯片和主机内置电池额定容量
-   */
-  const t_display_p4_air::device::BatteryInfo& battery_info() const {
-    return t_display_p4_air::device::kBatteryInfo;
-  }
-  esp_codec_dev_handle_t es8389_input_codec_dev() const {
-    return es8389_input_codec_dev_;
-  }
-  esp_codec_dev_handle_t es8389_output_codec_dev() const {
-    return es8389_output_codec_dev_;
-  }
-  t_display_p4_air::device::DeviceInfo device_info() const {
-    return {
-        .model = device_model_info(),
-        .screen = screen_info(),
-        .camera = camera_info(),
-        .battery = battery_info(),
-    };
-  }
-
-  bool Init(InitMode mode = InitMode::kSync);
-  bool InitMinimal();
-  bool InitAxp517();
-  bool InitXl9535();
-  bool InitSgm38121();
-  bool InitBhi260ap();
-  bool InitQmc6310n();
+  bool InitDrivers(InitMode mode);
+  bool InitMinimalDrivers();
   bool InitHi8561();
   bool InitHi8561Touch();
   bool InitSy7200a();
-  bool InitAw86224();
-  bool InitSt25r3916();
-  bool InitEs8389();
-  bool InitLr1121();
-  bool InitNrf9151();
-  bool InitPower();
-  bool InitScreen();
-  bool InitTouch();
-  bool InitScreenBacklight();
-  bool InitSpiffs(const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf);
-  bool InitSdmmc(const char* base_path, int max_freq_khz = SDMMC_FREQ_DEFAULT);
-  bool InitSdspi(const char* base_path, spi_host_device_t host_id,
-      int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
-  bool DeinitEs8389();
-  bool DeinitBhi260ap();
-  bool DeinitQmc6310n();
-  bool DeinitAw86224();
-  bool DeinitSt25r3916();
-  bool DeinitLr1121();
-  bool DeinitNrf9151();
-  bool DeinitPower();
-  bool DeinitScreen();
-  bool DeinitTouch();
-  bool DeinitScreenBacklight();
-  bool DeinitSdmmc(bool release_bus = true);
-
-  bool IsAxp517Ready() const;
-  bool IsXl9535Ready() const;
-  bool IsSgm38121Ready() const;
-  bool IsBhi260apReady() const;
-  bool IsQmc6310nReady() const;
   bool IsHi8561Ready() const;
   bool IsHi8561TouchReady() const;
   bool IsSy7200aReady() const;
-  bool IsAw86224Ready() const;
-  bool IsSt25r3916Ready() const;
-  bool IsEs8389Ready() const;
-  bool IsLr1121Ready() const;
-  bool IsNrf9151Ready() const;
-  bool IsScreenReady() const;
-  bool IsSdmmcReady() const;
 
-  bool SetLedEnabled(bool enabled);
-
-  bool SetAw86224Standby();
-  bool SetBhi260apSleep(bool sleep);
-  bool SetQmc6310nSleep(bool sleep);
-  bool SetScreenSleep(bool sleep);
-  bool SetEs8389OperatingMode(Es8389OperatingMode mode);
-  bool SetLr1121OperatingMode(Lr1121OperatingMode mode);
-  bool SetEsp32c5PowerEnabled(bool enabled);
-  bool SetCameraPowerEnabled(bool enabled);
-  bool SetUsbHostPowerEnabled(bool enabled);
-  bool PrepareMinimalDriversForPowerOff();
-  bool PrepareDriversForPowerOff();
-
-  /**
-   * @brief 使 ESP32-C5 进入下载模式。
-   * @return 时序控制成功时返回 true，否则返回 false。
-   */
-  bool EnterEsp32c5DownloadMode();
-
-  /**
-   * @brief 切换外部串口连接目标。
-   * @param target 串口连接到 ESP32-P4 或 ESP32-C5。
-   * @return 串口切换成功时返回 true，否则返回 false。
-   */
-  bool SetUartTarget(UartTarget target);
-
- private:
-  void CreateDrivers();
-  bool InitDrivers(InitMode mode);
-  bool InitMinimalDrivers();
   bool SetNs4150Enabled(bool enabled);
+
   bool ConfigureEs8389OutputPolarity();
 
   AsyncInitManager async_init_manager_;
   std::unique_ptr<cpp_bus_driver::PlatformHal> platform_hal_;
   Bus bus_;
   Chip chip_;
-  Status status_;
+  ChipStatus chip_status_;
   SdCard sd_card_;
   bool minimal_drivers_initialized_ = false;
   bool power_initialized_ = false;
