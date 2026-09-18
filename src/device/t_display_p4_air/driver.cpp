@@ -1652,14 +1652,6 @@ bool TDisplayP4AirDriver::SetCameraPowerEnabled(bool enabled) {
   return result;
 }
 
-bool TDisplayP4AirDriver::SetUsbHostPowerEnabled(bool enabled) {
-  if (!chip_status_.xl9535.init_flag) {
-    return !enabled;
-  }
-  (void)enabled;
-  return true;
-}
-
 bool TDisplayP4AirDriver::PrepareMinimalDriversForPowerOff() {
   bool result = true;
   if (IsXl9535Ready()) {

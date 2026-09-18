@@ -226,7 +226,6 @@ class TDisplayP4AirDriver {
   bool SetLr1121OperatingMode(Lr1121OperatingMode mode);
   bool SetEsp32c5PowerEnabled(bool enabled);
   bool SetCameraPowerEnabled(bool enabled);
-  bool SetUsbHostPowerEnabled(bool enabled);
   bool PrepareMinimalDriversForPowerOff();
   bool PrepareDriversForPowerOff();
 
