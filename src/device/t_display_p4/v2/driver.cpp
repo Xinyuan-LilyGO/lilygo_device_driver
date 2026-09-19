@@ -53,8 +53,8 @@ bool TDisplayP4Driver::InitUsbHostPower() {
   if (!SetUsbHostPowerEnabled(false) ||
       !chip_.xl9535->SetGpioMode(gpio::xl9535::kUsbHostPowerEn,
           cpp_bus_driver::Xl95x5::Mode::kOutput) ||
-      !chip_.axp517->SetForceRbfetEnable(false) ||
-      !chip_.axp517->SetPdRole(false, false) ||
+      !chip_.axp517->SetRbfetForceEnable(false) ||
+      !chip_.axp517->SetTypeCRole(cpp_bus_driver::Axp517::TypeCRole::kSink) ||
       !chip_.axp517->SetBoostVoltage(5000)) {
     SetUsbHostPowerEnabled(false);
     return false;
@@ -105,21 +105,21 @@ bool TDisplayP4Driver::InitAxp517() {
     return false;
   }
 
-  const cpp_bus_driver::Axp517::AdcChannel adc_channel = {
-      .battery_discharge_current_measure = true,
-      .battery_charge_current_measure = true,
-      .chip_temperature_measure = true,
-      .ts_value_measure = true,
-      .battery_voltage_measure = true,
-  };
-  bool result = true;
-  result &= chip_.axp517->SetAdcChannel(adc_channel);
-  result &= chip_.axp517->SetBoostVoltage(5000);
-  result &= chip_.axp517->SetForceRbfetEnable(false);
-  result &= chip_.axp517->SetBoostEnable(false);
-  result &= chip_.axp517->SetTypeCDetectEnable(true);
-  result &= chip_.axp517->SetVbusDetectEnable(true);
-  result &= chip_.axp517->SetPdRole(false, false);
+  const uint8_t adc_channels =
+      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kBatteryVoltage) |
+      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kTs) |
+      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kChargeCurrent) |
+      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kDischargeCurrent) |
+      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kDieTemperature);
+  cpp_bus_driver::Axp517::Status power_status;
+  const bool result =
+      chip_.axp517->SetAdcChannels(adc_channels) &&
+      chip_.axp517->SetBoostEnable(false) &&
+      chip_.axp517->SetRbfetForceEnable(false) &&
+      chip_.axp517->SetBoostVoltage(5000) &&
+      chip_.axp517->GetStatus(power_status) &&
+      chip_.axp517->InitTypeC(false, power_status.battery_present) &&
+      chip_.axp517->SetTypeCRole(cpp_bus_driver::Axp517::TypeCRole::kSink);
   chip_status_.axp517.init_flag = result;
   if (!result) {
     chip_.axp517->Deinit(false);
