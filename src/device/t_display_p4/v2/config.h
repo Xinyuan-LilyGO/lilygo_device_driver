@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 V2 板级硬件配置
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-09-22 14:58:00
+ * @LastEditTime: 2026-09-22 15:18:33
  * @License: GPL 3.0
  */
 
@@ -182,7 +182,7 @@ inline constexpr cpp_bus_driver::Axp517Sink::Config kDefaultPdConfig = {
     .max_input_voltage_mv = 12000,
     .max_input_current_ma = 2000,
     .preferred_voltage_mv = 12000,
-    .fallback_input_current_ma = 500,
+    .fallback_input_current_ma = 2000,
     .fallback_vindpm_mv = 4400,
     .contract_charge_current_ma = kInternalChargeCurrentMa,
     .fallback_charge_current_ma = kInternalChargeCurrentMa,
