@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 V2 板级硬件配置
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-09-15 15:48:24
+ * @LastEditTime: 2026-09-22 14:58:00
  * @License: GPL 3.0
  */
 
@@ -21,6 +21,8 @@ inline constexpr int kPower = 11;
 }  // namespace button
 
 namespace power {
+// 外部电池选择检测，低电平表示选择 EX_VBAT，不代表电池已插入。
+inline constexpr int kExternalBatteryDetect = 8;
 inline constexpr int kEnable3v3 = 12;
 }  // namespace power
 
@@ -174,6 +176,37 @@ namespace battery {
 inline constexpr const char* kChargerChipName = "axp517";
 inline constexpr const char* kFuelGaugeChipName = "axp517";
 inline constexpr uint16_t kCapacityMah = 1000;
+inline constexpr uint16_t kInternalChargeCurrentMa = 512;
+// 本板默认 PD 策略；应用层可复制后调整，再用于创建 PD Sink。
+inline constexpr cpp_bus_driver::Axp517Sink::Config kDefaultPdConfig = {
+    .max_input_voltage_mv = 12000,
+    .max_input_current_ma = 2000,
+    .preferred_voltage_mv = 12000,
+    .fallback_input_current_ma = 500,
+    .fallback_vindpm_mv = 4400,
+    .contract_charge_current_ma = kInternalChargeCurrentMa,
+    .fallback_charge_current_ma = kInternalChargeCurrentMa,
+    .manage_charge_current = true,
+    .require_battery_present = true,
+    .enable_pps = true,
+    .prefer_pps = false,
+    .enable_debounce_ms = 100,
+};
+// 10 kΩ/B3950 电池 NTC 直接连接 TS。
+// 50 µA 偏置：V(T) = 500 * exp(3950 * (1 / (T + 273.15) - 1 / 298.15)) mV。
+// 温度点依次为 -25,-15,-10,-5,0,5,10,20,30,40,45,50,55,60,70,80 ℃。
+inline constexpr cpp_bus_driver::Axp517::NtcConfig kNtcConfig = {
+    .voltage_mv = {{7216, 3895, 2912, 2201, 1681, 1296, 1009, 627,
+                    402, 265, 217, 179, 149, 124, 88, 64}},
+    .current_ua = 50,
+    // 按寄存器步进向允许温度区间内取整：低温 32 mV、高温 2 mV。
+    .charge_cold_mv = 1664,  // 目标 0 ℃，实际约 0.2 ℃。
+    .charge_hot_mv = 218,   // 目标 45 ℃，实际约 44.9 ℃。
+    .work_cold_mv = 5248,   // Boost 目标 -20 ℃。
+    .work_hot_mv = 126,     // Boost 目标 60 ℃。
+    // 电压表基于 TS 原始 ADC 电压，未经板级校准不叠加偏移补偿。
+    .compensate_offset = false,
+};
 }  // namespace battery
 
 namespace xl9535 {

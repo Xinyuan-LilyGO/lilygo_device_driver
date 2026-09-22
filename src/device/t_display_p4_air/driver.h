@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-09-02 17:16:14
+ * @LastEditTime: 2026-09-22 14:58:46
  * @License: GPL 3.0
  */
 
@@ -70,11 +70,13 @@ struct CameraInfo {
   int buffer_count;
 };
 
-// 充电芯片、电量计芯片和主机内置电池容量信息
+// 充电芯片、电量计芯片、主机内置电池容量和 NTC 配置信息
 struct BatteryInfo {
   const char* charger_chip_name;
   const char* fuel_gauge_chip_name;
   uint16_t capacity_mah;
+  // 引用静态板级 NTC 参数，不代表实时温度；无配置时为 nullptr。
+  const cpp_bus_driver::Axp517::NtcConfig* ntc_config = nullptr;
 };
 
 // T-Display-P4-Air 聚合设备信息
@@ -102,6 +104,7 @@ inline constexpr BatteryInfo kBatteryInfo = {
     .charger_chip_name = battery::kChargerChipName,
     .fuel_gauge_chip_name = battery::kFuelGaugeChipName,
     .capacity_mah = battery::kCapacityMah,
+    .ntc_config = &battery::kNtcConfig,
 };
 
 }  // namespace t_display_p4_air::device

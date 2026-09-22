@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-09-17 11:47:23
+ * @LastEditTime: 2026-09-22 14:58:46
  * @License: GPL 3.0
  */
 
@@ -94,17 +94,28 @@ inline constexpr CameraInfo kCameraInfo = {
     .buffer_count = camera::kBufferCount,
 };
 
-// 充电芯片、电量计芯片和电池容量信息
+// 充电芯片、电量计芯片、电池容量、默认 PD 和 NTC 配置信息
 struct BatteryInfo {
   const char* charger_chip_name;
   const char* fuel_gauge_chip_name;
   uint16_t capacity_mah;
+  // 引用静态板级默认策略，不代表当前 PD 合同；无配置时为 nullptr。
+  const cpp_bus_driver::Axp517Sink::Config* default_pd_config = nullptr;
+  // 引用静态板级 NTC 参数，不代表实时温度；无配置时为 nullptr。
+  const cpp_bus_driver::Axp517::NtcConfig* ntc_config = nullptr;
 };
 
 inline constexpr BatteryInfo kBatteryInfo = {
     .charger_chip_name = battery::kChargerChipName,
     .fuel_gauge_chip_name = battery::kFuelGaugeChipName,
     .capacity_mah = battery::kCapacityMah,
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+    .default_pd_config = &battery::kDefaultPdConfig,
+    .ntc_config = &battery::kNtcConfig,
+#else
+    .default_pd_config = nullptr,
+    .ntc_config = nullptr,
+#endif
 };
 
 // T-Display-P4 聚合设备信息
@@ -389,6 +400,14 @@ class TDisplayP4Driver {
    * @return RF 开关引脚配置成功时返回 true，否则返回 false。
    */
   bool SetSky13453RfSwitch(Sky13453RfSwitch rf_switch);
+#endif
+
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  /**
+   * @brief 检查电池选择开关是否位于外部电池位置
+   * @return 选择 EX_VBAT 返回true，选择 P4_VBAT 或芯片未初始化返回false
+   */
+  bool IsExternalBatterySelected() const;
 #endif
 
  private:

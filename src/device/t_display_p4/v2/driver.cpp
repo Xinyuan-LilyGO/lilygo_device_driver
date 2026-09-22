@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 V2 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-09-02 17:16:04
+ * @LastEditTime: 2026-09-22 14:58:46
  * @License: GPL 3.0
  */
 #include "device/t_display_p4/driver.h"
@@ -16,6 +16,8 @@
 #include "driver/spi_master.h"
 #include "esp_vfs_fat.h"
 #include "firmware/bhi260ap/BHI260AP.fw.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "sdmmc_cmd.h"
 
 namespace lilygo_device_driver {
@@ -106,20 +108,29 @@ bool TDisplayP4Driver::InitAxp517() {
   }
 
   const uint8_t adc_channels =
-      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kBatteryVoltage) |
+      static_cast<uint8_t>(
+          cpp_bus_driver::Axp517::AdcChannel::kBatteryVoltage) |
       static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kTs) |
       static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kChargeCurrent) |
-      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kDischargeCurrent) |
+      static_cast<uint8_t>(
+          cpp_bus_driver::Axp517::AdcChannel::kDischargeCurrent) |
       static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kDieTemperature);
+  const auto* ntc_config = battery_info().ntc_config;
   cpp_bus_driver::Axp517::Status power_status;
-  const bool result =
+  bool result =
+      platform_hal_->SetGpioMode(gpio::power::kExternalBatteryDetect,
+          cpp_bus_driver::PlatformHal::GpioMode::kInput) &&
       chip_.axp517->SetAdcChannels(adc_channels) &&
+      ntc_config != nullptr &&
+      chip_.axp517->ConfigureNtc(*ntc_config) &&
+      chip_.axp517->SetJeitaEnable(false) &&
       chip_.axp517->SetBoostEnable(false) &&
       chip_.axp517->SetRbfetForceEnable(false) &&
       chip_.axp517->SetBoostVoltage(5000) &&
       chip_.axp517->GetStatus(power_status) &&
       chip_.axp517->InitTypeC(false, power_status.battery_present) &&
-      chip_.axp517->SetTypeCRole(cpp_bus_driver::Axp517::TypeCRole::kSink);
+      chip_.axp517->SetTypeCRole(cpp_bus_driver::Axp517::TypeCRole::kSink) &&
+      chip_.axp517->SetChargeCurrent(device::battery::kInternalChargeCurrentMa);
   chip_status_.axp517.init_flag = result;
   if (!result) {
     chip_.axp517->Deinit(false);
@@ -1006,6 +1017,7 @@ bool TDisplayP4Driver::SetEsp32c5PowerEnabled(bool enabled) {
 }
 
 bool TDisplayP4Driver::PrepareMinimalDriversForPowerOff() {
+  // 应用若在轮询 PD，须先停止任务，再释放 AXP517 或关闭其电源。
   bool result = true;
   result &= DeinitKeyboardExpansion();
   // 在释放 AXP517 与 XL9535 前关闭 Type-A 负载及 Boost。
@@ -1290,6 +1302,11 @@ bool TDisplayP4Driver::SetNs4150Enabled(bool enabled) {
 
 void TDisplayP4Driver::ResetScreenBacklightStatus() {
   chip_status_.sy7200a.init_flag = false;
+}
+
+bool TDisplayP4Driver::IsExternalBatterySelected() const {
+  return IsAxp517Ready() &&
+         !platform_hal_->GpioRead(gpio::power::kExternalBatteryDetect);
 }
 
 }  // namespace lilygo_device_driver

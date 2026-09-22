@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-09-02 17:16:04
+ * @LastEditTime: 2026-09-22 14:58:46
  * @License: GPL 3.0
  */
 #include "device/t_display_p4_air/driver.h"
@@ -265,9 +265,13 @@ bool TDisplayP4AirDriver::InitAxp517() {
       static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kChargeCurrent) |
       static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kDischargeCurrent) |
       static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kDieTemperature);
+  const auto* ntc_config = battery_info().ntc_config;
   cpp_bus_driver::Axp517::Status power_status;
   const bool result =
       chip_.axp517->SetAdcChannels(adc_channels) &&
+      ntc_config != nullptr &&
+      chip_.axp517->ConfigureNtc(*ntc_config) &&
+      chip_.axp517->SetJeitaEnable(false) &&
       chip_.axp517->SetBoostEnable(false) &&
       chip_.axp517->SetRbfetForceEnable(false) &&
       chip_.axp517->SetBoostVoltage(5000) &&

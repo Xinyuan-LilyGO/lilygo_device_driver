@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级硬件配置
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-07-11 14:47:34
+ * @LastEditTime: 2026-09-22 14:58:00
  * @License: GPL 3.0
  */
 
@@ -177,6 +177,21 @@ namespace battery {
 inline constexpr const char* kChargerChipName = "axp517";
 inline constexpr const char* kFuelGaugeChipName = "axp517";
 inline constexpr uint16_t kCapacityMah = 1000;
+// 10 kΩ/B3950 电池 NTC 直接连接 TS。
+// 50 µA 偏置：V(T) = 500 * exp(3950 * (1 / (T + 273.15) - 1 / 298.15)) mV。
+// 温度点依次为 -25,-15,-10,-5,0,5,10,20,30,40,45,50,55,60,70,80 ℃。
+inline constexpr cpp_bus_driver::Axp517::NtcConfig kNtcConfig = {
+    .voltage_mv = {{7216, 3895, 2912, 2201, 1681, 1296, 1009, 627,
+                    402, 265, 217, 179, 149, 124, 88, 64}},
+    .current_ua = 50,
+    // 按寄存器步进向允许温度区间内取整：低温 32 mV、高温 2 mV。
+    .charge_cold_mv = 1664,  // 目标 0 ℃，实际约 0.2 ℃。
+    .charge_hot_mv = 218,   // 目标 45 ℃，实际约 44.9 ℃。
+    .work_cold_mv = 5248,   // Boost 目标 -20 ℃。
+    .work_hot_mv = 126,     // Boost 目标 60 ℃。
+    // 电压表基于 TS 原始 ADC 电压，未经板级校准不叠加偏移补偿。
+    .compensate_offset = false,
+};
 }  // namespace battery
 
 namespace xl9535 {
