@@ -136,14 +136,8 @@ Common T-Display-P4 chip objects include:
 
 ```cpp
 driver.chip().xl9535;
-driver.chip().bq27220;
-driver.chip().sgm38121;
 driver.chip().pcf8563;
-driver.chip().aw86224;
 driver.chip().es8311;
-driver.chip().l76k;
-driver.chip().icm20948;
-driver.chip().sx1262;
 ```
 
 ## Log Configuration

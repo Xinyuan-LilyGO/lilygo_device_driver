@@ -1127,9 +1127,7 @@ void TDisplayP4Driver::CreateDrivers() {
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.qmc6309_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
-  bus_.hi8561_i2c_touch_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
-  bus_.gt9895_i2c_touch_bus =
+  bus_.touch_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.aw86224_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
@@ -1160,9 +1158,9 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
       bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
-      bus_.hi8561_i2c_touch_bus, device::hi8561::kTouchI2cAddress);
+      bus_.touch_i2c_bus, device::hi8561::kTouchI2cAddress);
   chip_.gt9895 = std::make_unique<cpp_bus_driver::Gt9895>(
-      bus_.gt9895_i2c_touch_bus, device::gt9895::kI2cAddress);
+      bus_.touch_i2c_bus, device::gt9895::kI2cAddress);
   chip_.sy7200a = std::make_unique<cpp_bus_driver::Pwm>(gpio::sy7200a::kEn);
   chip_.l76k = std::make_unique<cpp_bus_driver::L76k>(
       bus_.l76k_uart_bus, [this](bool value) {

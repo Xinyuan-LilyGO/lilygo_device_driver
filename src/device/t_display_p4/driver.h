@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-09-22 14:58:46
+ * @LastEditTime: 2026-09-23 11:38:11
  * @License: GPL 3.0
  */
 
@@ -25,8 +25,12 @@
 #include "device/t_display_p4/keyboard_expansion_config.h"
 #include "stsw_st25rfal002_cpp_bus_driver.h"
 
-#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
 #include "SensorQMC6309.hpp"
+#if !defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+#include "SensorQMI8658.hpp"
+#endif
+
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
 #include "bhi2xy_sensorapi_cpp_bus_driver.h"
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
@@ -39,6 +43,12 @@ enum class ScreenType {
   kUnknown,
   kHi8561,
   kRm69a10,
+};
+
+enum class ImuType {
+  kUnknown,
+  kIcm20948,
+  kQmi8658Qmc6309,
 };
 
 enum class RadioType {
@@ -131,7 +141,7 @@ struct DeviceInfo {
 /**
  * @brief T-Display-P4 板级设备驱动。
  * @note 自动检测型号的功能以通用名称提供公共接口，例如 Screen、
- * Touch、ScreenBacklight，以及 V1 的 Radio；对应的具体芯片实现
+ * Touch、ScreenBacklight，以及 V1 的 Radio、Imu；对应的具体芯片实现
  * 放在私有区域。无需型号选择的芯片接口使用具体芯片名称，例如
  * V2 的 Lr2021。
  */
@@ -219,16 +229,22 @@ class TDisplayP4Driver {
   const auto& chip() const { return chip_; }
   const auto& chip_status() const { return chip_status_; }
 
-  const t_display_p4::device::DeviceModelInfo& device_model_info() const {
-    return t_display_p4::device::kDeviceModelInfo;
-  }
+  // 自动检测的硬件类型查询。
   t_display_p4::device::ScreenType screen_type() const {
     return screen_info().type;
   }
-  const t_display_p4::device::ScreenInfo& screen_info() const;
 #if !defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
   t_display_p4::device::RadioType radio_type() const { return radio_type_; }
+  t_display_p4::device::ImuType imu_type() const {
+    return imu_type_;
+  }
 #endif
+
+  // 设备及外设信息查询。
+  const t_display_p4::device::DeviceModelInfo& device_model_info() const {
+    return t_display_p4::device::kDeviceModelInfo;
+  }
+  const t_display_p4::device::ScreenInfo& screen_info() const;
   const t_display_p4::device::CameraInfo& camera_info() const {
     return t_display_p4::device::kCameraInfo;
   }
@@ -276,7 +292,7 @@ class TDisplayP4Driver {
   bool InitLr2021();
   bool InitUsbHostPower();
 #else
-  bool InitIcm20948();
+  bool InitImu();
   bool InitBq27220();
   bool InitPcf8563();
   bool InitEs8311();
@@ -304,7 +320,7 @@ class TDisplayP4Driver {
   bool DeinitLr2021();
   bool DeinitPower();
 #else
-  bool DeinitIcm20948();
+  bool DeinitImu();
   bool DeinitEs8311();
   bool DeinitRadio();
 #endif
@@ -328,7 +344,7 @@ class TDisplayP4Driver {
   bool IsEs8389Ready() const;
   bool IsLr2021Ready() const;
 #else
-  bool IsIcm20948Ready() const;
+  bool IsImuReady() const;
   bool IsBq27220Ready() const;
   bool IsPcf8563Ready() const;
   bool IsEs8311Ready() const;
@@ -358,7 +374,7 @@ class TDisplayP4Driver {
   bool SetEsp32c5PowerEnabled(bool enabled);
   bool PrepareMinimalDriversForPowerOff();
 #else
-  bool SetIcm20948Sleep(bool sleep);
+  bool SetImuSleep(bool sleep);
   bool SetEs8311OperatingMode(Es8311OperatingMode mode);
   bool SetRadioOperatingMode(RadioOperatingMode mode);
   bool SetEsp32c6PowerEnabled(bool enabled);
@@ -417,8 +433,7 @@ class TDisplayP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareUart> l76k_uart_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c> hi8561_i2c_touch_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c> gt9895_i2c_touch_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> touch_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> radio_spi_bus;
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
@@ -427,10 +442,10 @@ class TDisplayP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c> qmc6309_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
 #else
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> imu_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> pcf8563_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> es8311_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c> icm20948_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> sx1262_spi_bus;
 #endif
@@ -459,10 +474,12 @@ class TDisplayP4Driver {
     std::unique_ptr<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy> bhi260ap;
     std::unique_ptr<SensorQMC6309> qmc6309;
 #else
+    std::unique_ptr<cpp_bus_driver::Icm20948> icm20948;
+    std::unique_ptr<SensorQMI8658> qmi8658;
+    std::unique_ptr<SensorQMC6309> qmc6309;
     std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
     std::unique_ptr<cpp_bus_driver::Pcf8563x> pcf8563;
     std::unique_ptr<cpp_bus_driver::Es8311> es8311;
-    std::unique_ptr<cpp_bus_driver::Icm20948> icm20948;
     std::unique_ptr<usp_cpp_bus_driver::Sx126x> sx1262;
     std::unique_ptr<cpp_bus_driver::Pwm> pt4103;
 #endif
@@ -563,6 +580,14 @@ class TDisplayP4Driver {
 
     struct {
       bool init_flag = false;
+    } qmi8658;
+
+    struct {
+      bool init_flag = false;
+    } qmc6309;
+
+    struct {
+      bool init_flag = false;
     } sx1262;
 #endif
 
@@ -605,6 +630,9 @@ class TDisplayP4Driver {
   bool InitSy7200a();
 
 #if !defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  bool InitIcm20948();
+  bool InitQmi8658();
+  bool InitQmc6309();
   bool InitPt4103();
   bool InitSx1262();
   bool InitLr2021();
@@ -616,6 +644,8 @@ class TDisplayP4Driver {
   bool IsSx1262Ready() const;
   bool IsLr2021Ready() const;
 
+  bool SetQmi8658Sleep(bool sleep);
+  bool SetQmc6309Sleep(bool sleep);
   bool SetSx1262OperatingMode(Sx1262OperatingMode mode);
   bool SetLr2021OperatingMode(Lr2021OperatingMode mode);
 #endif
@@ -659,6 +689,8 @@ class TDisplayP4Driver {
   esp_codec_dev_handle_t es8389_output_codec_dev_ = nullptr;
   Es8389OperatingMode es8389_operating_mode_ = Es8389OperatingMode::kSleep;
 #else
+  t_display_p4::device::ImuType imu_type_ =
+      t_display_p4::device::ImuType::kUnknown;
   t_display_p4::device::RadioType radio_type_ =
       t_display_p4::device::RadioType::kUnknown;
 #endif

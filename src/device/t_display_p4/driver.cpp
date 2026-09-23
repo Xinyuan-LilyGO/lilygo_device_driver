@@ -1327,7 +1327,11 @@ bool TDisplayP4Driver::SetKeyboardExpansionLed(
 }
 
 bool TDisplayP4Driver::DetectScreenType() {
-  chip_status_.gt9895.init_flag = false;
+  // HardwareI2c::Init 不会替换已存在的设备句柄，重新探测前必须释放。
+  if (!DeinitTouch()) {
+    return false;
+  }
+  screen_info_ = nullptr;
 
   if (!chip_status_.xl9535.init_flag) {
     return false;
@@ -1356,9 +1360,11 @@ bool TDisplayP4Driver::DetectScreenType() {
     return true;
   }
 
-  if (bus_.gt9895_i2c_touch_bus != nullptr) {
-    bus_.gt9895_i2c_touch_bus->Deinit(false);
+  // 探测失败后清理 GT9895 的句柄和缓存，再允许 HI8561 初始化。
+  if (chip_.gt9895 != nullptr && !chip_.gt9895->Deinit(false)) {
+    return false;
   }
+  chip_status_.gt9895.init_flag = false;
   screen_info_ = ScreenInfoForType(device::ScreenType::kHi8561);
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
       "Auto detected T-Display-P4 screen: %s\n", screen_info_->name);

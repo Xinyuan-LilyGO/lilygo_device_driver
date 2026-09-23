@@ -48,12 +48,12 @@ elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_CAN485_C5)
 elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4)
     if(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
         set(p4_version_dir "./src/device/t_display_p4/v2/")
-        list(APPEND requires "esp_codec_dev" "sensorlib"
+        list(APPEND requires "esp_codec_dev"
                 "bhi2xy_sensorapi_cpp_bus_driver")
     else()
         set(p4_version_dir "./src/device/t_display_p4/v1/")
     endif()
-    list(APPEND requires "stsw-st25rfal002_cpp_bus_driver")
+    list(APPEND requires "stsw-st25rfal002_cpp_bus_driver" "sensorlib")
     set(
             src_dirs
             "./src/"

@@ -23,6 +23,7 @@ namespace device = t_display_p4::device;
 namespace {
 
 using RadioType = device::RadioType;
+using ImuType = device::ImuType;
 
 constexpr uint16_t kSx1262VersionStringAddress = 0x0320;
 constexpr std::array<uint8_t, 6> kSx1262VersionPrefix = {
@@ -30,6 +31,9 @@ constexpr std::array<uint8_t, 6> kSx1262VersionPrefix = {
 constexpr uint8_t kLr2021ExpectedVersionMajor = 0x01;
 constexpr uint8_t kLr2021ExpectedVersionMinor = 0x18;
 constexpr uint32_t kInitializationShutdownTimeoutMs = 5 * 1000;
+
+constexpr uint8_t kQmiCtrl1 = 0x02;
+constexpr uint8_t kQmiPowerDownBit = 1;
 
 }  // namespace
 
@@ -70,7 +74,7 @@ void TDisplayP4Driver::CreateDrivers() {
   bus_.l76k_uart_bus = std::make_shared<cpp_bus_driver::HardwareUart>(
       gpio::l76k::kRx, gpio::l76k::kTx, UART_NUM_1);
 
-  bus_.icm20948_i2c_bus =
+  bus_.imu_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
 
   chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220>(
@@ -82,14 +86,12 @@ void TDisplayP4Driver::CreateDrivers() {
   chip_.sgm38121 = std::make_unique<cpp_bus_driver::Sgm38121>(
       bus_.sgm38121_i2c_bus, device::sgm38121::kI2cAddress);
 
-  bus_.hi8561_i2c_touch_bus =
+  bus_.touch_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
-      bus_.hi8561_i2c_touch_bus, device::hi8561::kTouchI2cAddress);
+      bus_.touch_i2c_bus, device::hi8561::kTouchI2cAddress);
   chip_.pt4103 = std::make_unique<cpp_bus_driver::Pwm>(gpio::pt4103::kEn);
 
-  bus_.gt9895_i2c_touch_bus =
-      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
   cpp_bus_driver::TouchCoordinateTransform gt9895_coordinate_transform;
   gt9895_coordinate_transform.source_width =
       device::gt9895::kRawCoordinateWidth;
@@ -100,7 +102,7 @@ void TDisplayP4Driver::CreateDrivers() {
   gt9895_coordinate_transform.target_height =
       static_cast<uint16_t>(device::rm69a10::kScreenHeight);
   chip_.gt9895 =
-      std::make_unique<cpp_bus_driver::Gt9895>(bus_.gt9895_i2c_touch_bus,
+      std::make_unique<cpp_bus_driver::Gt9895>(bus_.touch_i2c_bus,
           device::gt9895::kI2cAddress, -1, -1, gt9895_coordinate_transform);
 
   chip_.pcf8563 = std::make_unique<cpp_bus_driver::Pcf8563x>(
@@ -111,9 +113,6 @@ void TDisplayP4Driver::CreateDrivers() {
 
   chip_.es8311 = std::make_unique<cpp_bus_driver::Es8311>(
       bus_.es8311_i2c_bus, bus_.es8311_i2s_bus, device::es8311::kI2cAddress);
-
-  chip_.icm20948 = std::make_unique<cpp_bus_driver::Icm20948>(
-      bus_.icm20948_i2c_bus, device::icm20948::kI2cAddress);
 
   chip_.l76k = std::make_unique<cpp_bus_driver::L76k>(
       bus_.l76k_uart_bus, [this](bool value) -> bool {
@@ -236,11 +235,11 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
         [](void* arg) {
           auto* self = static_cast<TDisplayP4Driver*>(arg);
           if (!self->async_init_manager_.stop_requested()) {
-            self->InitIcm20948();
+            self->InitImu();
           }
           self->async_init_manager_.FinishTask();
         },
-        "InitIcm20948Task", 4096, this, 3);
+        "InitImuTask", 4096, this, 3);
 
     result &= async_init_manager_.StartTask(
         [](void* arg) {
@@ -277,7 +276,7 @@ bool TDisplayP4Driver::InitDrivers(InitMode mode) {
     }
     result &= es8311_initialized;
     result &= InitL76k();
-    result &= InitIcm20948();
+    result &= InitImu();
     result &= InitRadio();
 
     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
@@ -547,10 +546,47 @@ bool TDisplayP4Driver::InitL76k() {
   }
 }
 
-bool TDisplayP4Driver::InitIcm20948() {
-  if (IsIcm20948Ready()) {
+bool TDisplayP4Driver::InitImu() {
+  if (IsImuReady()) {
     return true;
   }
+  if (bus_.imu_i2c_bus == nullptr || !bus_.imu_i2c_bus->InitBus()) {
+    return false;
+  }
+
+  if (InitIcm20948()) {
+    imu_type_ = ImuType::kIcm20948;
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "Auto detected T-Display-P4 IMU: ICM20948\n");
+    return true;
+  }
+  if (InitQmi8658() && InitQmc6309()) {
+    imu_type_ = ImuType::kQmi8658Qmc6309;
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "Auto detected T-Display-P4 IMU: QMI8658 + QMC6309\n");
+    return true;
+  }
+  // 新组合必须完整初始化；单颗芯片函数只管理自身。
+  if (chip_status_.qmi8658.init_flag) {
+    SetQmi8658Sleep(true);
+    chip_.qmi8658.reset();
+    chip_status_.qmi8658.init_flag = false;
+  }
+  if (chip_status_.qmc6309.init_flag) {
+    SetQmc6309Sleep(true);
+    chip_.qmc6309.reset();
+    chip_status_.qmc6309.init_flag = false;
+  }
+  imu_type_ = ImuType::kUnknown;
+  LogMessage(LogLevel::kError, __FILE__, __LINE__,
+      "No complete supported IMU initialized (ICM20948 / QMI8658 + QMC6309)\n");
+  return false;
+}
+
+bool TDisplayP4Driver::InitIcm20948() {
+  chip_status_.icm20948.init_flag = false;
+  chip_.icm20948 = std::make_unique<cpp_bus_driver::Icm20948>(
+      bus_.imu_i2c_bus, device::icm20948::kI2cAddress);
   cpp_bus_driver::Icm20948::Config config;
   config.accel_range = cpp_bus_driver::Icm20948::AccelRange::k2g;
   config.gyro_range = cpp_bus_driver::Icm20948::GyroRange::k250Dps;
@@ -560,17 +596,84 @@ bool TDisplayP4Driver::InitIcm20948() {
   config.gyro_sample_rate_divider = 9;
   config.magnetometer_mode =
       cpp_bus_driver::Icm20948::MagnetometerMode::kContinuous20Hz;
-
   bool result = chip_.icm20948->Init(config);
   if (result) {
     result = chip_.icm20948->SetSleep(true);
-    if (!result) {
-      chip_.icm20948->Deinit(false);
-    }
+  }
+  if (!result) {
+    chip_.icm20948->Deinit(false);
+    chip_.icm20948.reset();
   }
   chip_status_.icm20948.init_flag = result;
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitIcm20948 success\n" : "InitIcm20948 failed\n");
+  return result;
+}
+
+bool TDisplayP4Driver::InitQmi8658() {
+  if (chip_status_.qmi8658.init_flag && chip_.qmi8658 != nullptr) {
+    return true;
+  }
+  chip_status_.qmi8658.init_flag = false;
+  if (bus_.imu_i2c_bus == nullptr || !bus_.imu_i2c_bus->InitBus()) {
+    return false;
+  }
+  chip_.qmi8658 = std::make_unique<SensorQMI8658>();
+  const bool started = chip_.qmi8658->begin(
+      bus_.imu_i2c_bus->bus_handle(), device::qmi8658::kI2cAddress);
+  bool result = started;
+  if (result) {
+    result = chip_.qmi8658->configAccelerometer(SensorQMI8658::ACC_RANGE_2G,
+                 SensorQMI8658::ACC_ODR_125Hz, SensorQMI8658::LPF_MODE_3) &&
+             chip_.qmi8658->configGyroscope(SensorQMI8658::GYR_RANGE_256DPS,
+                 SensorQMI8658::GYR_ODR_112_1Hz, SensorQMI8658::LPF_MODE_3) &&
+             chip_.qmi8658->disableSyncSampleMode();
+    result &= SetQmi8658Sleep(true);
+  }
+  if (!result) {
+    if (started) {
+      SetQmi8658Sleep(true);
+    }
+    chip_.qmi8658.reset();
+  }
+  chip_status_.qmi8658.init_flag = result;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitQmi8658 success\n" : "InitQmi8658 failed\n");
+  return result;
+}
+
+bool TDisplayP4Driver::InitQmc6309() {
+  if (chip_status_.qmc6309.init_flag && chip_.qmc6309 != nullptr) {
+    return true;
+  }
+  chip_status_.qmc6309.init_flag = false;
+  if (bus_.imu_i2c_bus == nullptr || !bus_.imu_i2c_bus->InitBus()) {
+    return false;
+  }
+  chip_.qmc6309 = std::make_unique<SensorQMC6309>();
+  const bool started = chip_.qmc6309->begin(
+      bus_.imu_i2c_bus->bus_handle(), device::qmc6309::kI2cAddress);
+  bool result = started;
+  if (result) {
+    chip_.qmc6309->setOffset(0, 0, 0);
+    // 与 V2 一致：SensorLib 0.4.1 的 ODR 接口寄存器有误，不调用它。
+    // begin 默认配置后显式覆盖 OSR/LPF，唤醒采用连续测量模式。
+    result = SetQmc6309Sleep(true);
+    result &= chip_.qmc6309->setFullScaleRange(MagFullScaleRange::FS_8G);
+    result &= chip_.qmc6309->setOversamplingRate(MagOverSampleRatio::OSR_8);
+    result &= chip_.qmc6309->setLowPassFilter(MagLowPassFilter::LPF_8);
+    result &= chip_.qmc6309->setSetResetMode(
+        SensorQMC6309::MagSetResetMode::SET_AND_RESET_ON);
+  }
+  if (!result) {
+    if (started) {
+      SetQmc6309Sleep(true);
+    }
+    chip_.qmc6309.reset();
+  }
+  chip_status_.qmc6309.init_flag = result;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitQmc6309 success\n" : "InitQmc6309 failed\n");
   return result;
 }
 
@@ -816,13 +919,27 @@ bool TDisplayP4Driver::DeinitEs8311() {
   return result;
 }
 
-bool TDisplayP4Driver::DeinitIcm20948() {
+bool TDisplayP4Driver::DeinitImu() {
   bool result = true;
-  if (chip_status_.icm20948.init_flag && chip_.icm20948 != nullptr) {
-    result &= chip_.icm20948->SetSleep(true);
+  if (chip_.icm20948 != nullptr) {
+    if (chip_status_.icm20948.init_flag) {
+      result &= chip_.icm20948->SetSleep(true);
+    }
     result &= chip_.icm20948->Deinit(false);
   }
+  if (chip_status_.qmi8658.init_flag) {
+    result &= SetQmi8658Sleep(true);
+  }
+  if (chip_status_.qmc6309.init_flag) {
+    result &= SetQmc6309Sleep(true);
+  }
+  chip_.icm20948.reset();
+  chip_.qmi8658.reset();
+  chip_.qmc6309.reset();
   chip_status_.icm20948.init_flag = false;
+  chip_status_.qmi8658.init_flag = false;
+  chip_status_.qmc6309.init_flag = false;
+  imu_type_ = ImuType::kUnknown;
   return result;
 }
 
@@ -886,8 +1003,17 @@ bool TDisplayP4Driver::IsEs8311Ready() const {
   return chip_status_.es8311.init_flag && chip_.es8311 != nullptr;
 }
 
-bool TDisplayP4Driver::IsIcm20948Ready() const {
-  return chip_status_.icm20948.init_flag && chip_.icm20948 != nullptr;
+bool TDisplayP4Driver::IsImuReady() const {
+  switch (imu_type_) {
+    case ImuType::kIcm20948:
+      return chip_status_.icm20948.init_flag && chip_.icm20948 != nullptr;
+    case ImuType::kQmi8658Qmc6309:
+      return chip_status_.qmi8658.init_flag &&
+             chip_status_.qmc6309.init_flag && chip_.qmi8658 != nullptr &&
+             chip_.qmc6309 != nullptr;
+    default:
+      return false;
+  }
 }
 
 bool TDisplayP4Driver::IsSx1262Ready() const {
@@ -923,18 +1049,6 @@ bool TDisplayP4Driver::IsRadioReady() const {
     default:
       return false;
   }
-}
-
-bool TDisplayP4Driver::SetIcm20948Sleep(bool sleep) {
-  if (!IsIcm20948Ready()) {
-    if (sleep) {
-      return true;
-    }
-    if (!InitIcm20948()) {
-      return false;
-    }
-  }
-  return chip_.icm20948->SetSleep(sleep);
 }
 
 bool TDisplayP4Driver::SetEs8311OperatingMode(Es8311OperatingMode mode) {
@@ -996,6 +1110,61 @@ bool TDisplayP4Driver::SetEs8311OperatingMode(Es8311OperatingMode mode) {
     }
   }
   return result;
+}
+
+bool TDisplayP4Driver::SetImuSleep(bool sleep) {
+  if (!IsImuReady()) {
+    if (sleep) {
+      return true;
+    }
+    if (!InitImu()) {
+      return false;
+    }
+  }
+  if (imu_type_ == ImuType::kIcm20948) {
+    return chip_.icm20948->SetSleep(sleep);
+  }
+  // 组合设备的协调与失败回滚只在板级接口处理。
+  bool result = SetQmi8658Sleep(sleep);
+  result &= SetQmc6309Sleep(sleep);
+  if (!sleep && !result) {
+    SetQmi8658Sleep(true);
+    SetQmc6309Sleep(true);
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::SetQmi8658Sleep(bool sleep) {
+  if (chip_.qmi8658 == nullptr) {
+    return sleep;
+  }
+  // SensorLib powerDown()/powerOn() 无返回值；使用其寄存器接口检查写入结果。
+  bool result = true;
+  if (sleep) {
+    result &= chip_.qmi8658->disableAccelerometer();
+    result &= chip_.qmi8658->disableGyroscope();
+    result &= chip_.qmi8658->setRegBit(kQmiCtrl1, kQmiPowerDownBit);
+  } else {
+    result = chip_.qmi8658->clrRegBit(kQmiCtrl1, kQmiPowerDownBit);
+    if (result) {
+      platform_hal_->DelayMs(10);
+      result = chip_.qmi8658->enableAccelerometer() &&
+               chip_.qmi8658->enableGyroscope();
+    }
+    if (!result) {
+      SetQmi8658Sleep(true);
+    }
+  }
+  return result;
+}
+
+bool TDisplayP4Driver::SetQmc6309Sleep(bool sleep) {
+  if (chip_.qmc6309 == nullptr) {
+    return sleep;
+  }
+  return chip_.qmc6309->setOperationMode(sleep
+          ? OperationMode::SUSPEND
+          : OperationMode::CONTINUOUS_MEASUREMENT);
 }
 
 bool TDisplayP4Driver::SetSx1262OperatingMode(Sx1262OperatingMode mode) {
@@ -1107,7 +1276,7 @@ bool TDisplayP4Driver::PrepareDriversForPowerOff() {
   result &= DeinitScreen();
   result &= DeinitAw86224();
   result &= DeinitEs8311();
-  result &= DeinitIcm20948();
+  result &= DeinitImu();
   result &= DeinitL76k();
   result &= DeinitRadio();
   result &= SetCameraPowerEnabled(false);

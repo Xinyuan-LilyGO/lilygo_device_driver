@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 V1 板级硬件配置
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-06-30 13:47:35
+ * @LastEditTime: 2026-09-23 11:15:22
  */
 #pragma once
 
@@ -263,6 +263,14 @@ inline constexpr uint8_t kI2cAddress = 0x55;
 namespace icm20948 {
 inline constexpr uint8_t kI2cAddress = 0x68;
 }  // namespace icm20948
+
+namespace qmi8658 {
+inline constexpr uint8_t kI2cAddress = 0x6A;
+}  // namespace qmi8658
+
+namespace qmc6309 {
+inline constexpr uint8_t kI2cAddress = 0x7C;
+}  // namespace qmc6309
 
 namespace sx1262 {
 inline constexpr int32_t kSpiFrequencyHz = 10000000;
