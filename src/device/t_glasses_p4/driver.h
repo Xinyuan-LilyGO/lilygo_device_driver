@@ -202,6 +202,7 @@ class TGlassesP4Driver {
   bool SetLr2021OperatingMode(Lr2021OperatingMode mode);
   bool SetEsp32c5PowerEnabled(bool enabled);
   bool SetCameraPowerEnabled(bool enabled);
+
   bool PrepareMinimalDriversForPowerOff();
   bool PrepareDriversForPowerOff();
 

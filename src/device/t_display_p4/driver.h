@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 设备驱动接口
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-09-23 11:38:11
+ * @LastEditTime: 2026-09-24 17:29:07
  * @License: GPL 3.0
  */
 
@@ -363,7 +363,19 @@ class TDisplayP4Driver {
   bool SetCameraPowerEnabled(bool enabled);
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
   bool SetUsbHostPowerEnabled(bool enabled);
+  /**
+   * @brief 设置外设 3.3V 电源使能，不自动处理信号 IO 隔离
+   * @param enabled true 开启供电，false 关闭供电
+   * @return 电平写入成功返回 true，平台未创建或写入失败返回 false
+   *
+   * 输出模式由 InitPower 配置，此接口只切换电平，不改变 GPIO 模式。
+   * 关闭前须停止外设通信并释放驱动，调用方须配合信号 IO 高阻隔离，
+   * 避免反向供电导致芯片断电不完全、下次初始化锁死。电源使能脚有
+   * 外部下拉，睡眠高阻态下无需 GPIO 保持；重新上电前应保证放电时间。
+   */
+  bool SetPower3v3Enabled(bool enabled);
 #endif
+
   bool PrepareDriversForPowerOff();
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
@@ -372,6 +384,7 @@ class TDisplayP4Driver {
   bool SetBhi260apSleep(bool sleep);
   bool SetQmc6309Sleep(bool sleep);
   bool SetEsp32c5PowerEnabled(bool enabled);
+
   bool PrepareMinimalDriversForPowerOff();
 #else
   bool SetImuSleep(bool sleep);

@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-09-22 14:58:46
+ * @LastEditTime: 2026-09-24 17:37:33
  * @License: GPL 3.0
  */
 #include "device/t_display_p4_air/driver.h"
@@ -1053,11 +1053,11 @@ bool TDisplayP4AirDriver::InitPower() {
   if (power_initialized_) {
     return true;
   }
-  bool power_enabled = true;
-  power_enabled &= platform_hal_->SetGpioMode(
-      gpio::power::kEnable3v3, cpp_bus_driver::PlatformHal::GpioMode::kOutput);
-  power_enabled &= platform_hal_->GpioWrite(gpio::power::kEnable3v3, 1);
-  if (!power_enabled) {
+  // 先预置使能电平，再配置输出方向；后续开关电源只需切换电平。
+  if (!SetPower3v3Enabled(true) ||
+      !platform_hal_->SetGpioMode(gpio::power::kEnable3v3,
+          cpp_bus_driver::PlatformHal::GpioMode::kOutput,
+          cpp_bus_driver::PlatformHal::GpioStatus::kDisable)) {
     return false;
   }
   if (!InitLdoPower(3, 2500)) {
@@ -1328,16 +1328,17 @@ bool TDisplayP4AirDriver::DeinitEs8389() {
   return result;
 }
 
+bool TDisplayP4AirDriver::SetPower3v3Enabled(bool enabled) {
+  if (platform_hal_ == nullptr) {
+    return false;
+  }
+  return platform_hal_->GpioWrite(gpio::power::kEnable3v3, enabled);
+}
+
 bool TDisplayP4AirDriver::DeinitPower() {
   bool result = true;
   result &= DeinitLdoPower(3);
   result &= DeinitLdoPower(4);
-  if (platform_hal_ != nullptr) {
-    // 关闭前需停止外设通信，将连接到断电外设的所有信号 IO 设为无上下拉的高阻态。
-    // 否则 IO 反向供电可能导致断电不完全，使部分 I2C 设备下次初始化失败。
-    // 电源使能脚需保持关闭电平；此处不自动配置其他 IO 的高阻态。
-    result &= platform_hal_->GpioWrite(gpio::power::kEnable3v3, 0);
-  }
   power_initialized_ = false;
   return result;
 }
