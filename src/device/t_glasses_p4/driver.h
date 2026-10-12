@@ -203,6 +203,18 @@ class TGlassesP4Driver {
   bool SetEsp32c5PowerEnabled(bool enabled);
   bool SetCameraPowerEnabled(bool enabled);
 
+  /**
+   * @brief 设置外设 3.3V 电源使能，不自动处理信号 IO 隔离
+   * @param enabled true 开启供电，false 关闭供电
+   * @return 电平写入成功返回 true，平台未创建或写入失败返回 false
+   *
+   * 输出模式由 InitPower 配置，此接口只切换电平，不改变 GPIO 模式。
+   * 库内初始化仅开启供电，关闭操作由库外调用方负责；关闭前须停止
+   * 外设通信并释放驱动，将连接到断电外设的信号 IO 配置为无上下拉
+   * 的高阻态，避免反向供电导致断电不完全、下次初始化失败。
+   */
+  bool SetPower3v3Enabled(bool enabled);
+
   bool PrepareMinimalDriversForPowerOff();
   bool PrepareDriversForPowerOff();
 

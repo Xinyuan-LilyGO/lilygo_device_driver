@@ -575,9 +575,11 @@ bool TGlassesP4Driver::InitPower() {
     DeinitLdoPower(4);
     return false;
   }
-  if (!platform_hal_->SetGpioMode(gpio::power::kEnable3v3,
-          cpp_bus_driver::PlatformHal::GpioMode::kOutput) ||
-      !platform_hal_->GpioWrite(gpio::power::kEnable3v3, 1)) {
+  // 先预置开启电平，再配置输出方向；关闭供电由库外调用方控制。
+  if (!SetPower3v3Enabled(true) ||
+      !platform_hal_->SetGpioMode(gpio::power::kEnable3v3,
+          cpp_bus_driver::PlatformHal::GpioMode::kOutput,
+          cpp_bus_driver::PlatformHal::GpioStatus::kDisable)) {
     DeinitLdoPower(3);
     DeinitLdoPower(4);
     return false;
@@ -670,16 +672,17 @@ bool TGlassesP4Driver::DeinitSdmmc() {
   return result;
 }
 
+bool TGlassesP4Driver::SetPower3v3Enabled(bool enabled) {
+  if (platform_hal_ == nullptr) {
+    return false;
+  }
+  return platform_hal_->GpioWrite(gpio::power::kEnable3v3, enabled);
+}
+
 bool TGlassesP4Driver::DeinitPower() {
   bool result = true;
   result &= DeinitLdoPower(3);
   result &= DeinitLdoPower(4);
-  if (platform_hal_ != nullptr) {
-    // 关闭前需停止外设通信，将连接到断电外设的所有信号 IO 设为无上下拉的高阻态。
-    // 否则 IO 反向供电可能导致断电不完全，使部分 I2C 设备下次初始化失败。
-    // 电源使能脚需保持关闭电平；此处不自动配置其他 IO 的高阻态。
-    result &= platform_hal_->GpioWrite(gpio::power::kEnable3v3, 0);
-  }
   power_initialized_ = false;
   return result;
 }
@@ -904,7 +907,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 }
 // 新板外围实现参考：当前整段停用，尚未完成本板硬件验证。
 // 恢复时须同步恢复头文件成员和依赖，并替换下方同名 false 空壳。
-// BQ27220 保留现有电池配置；ES8389 不套用 Air 板特有的功放和极性设置。
+// BQ27220 保留现有电池配置；ES8389 的功放和极性设置须按本板硬件配置。
 // bool TGlassesP4Driver::InitBq27220() {
 //   CreateDrivers();
 //   if (IsBq27220Ready()) {
