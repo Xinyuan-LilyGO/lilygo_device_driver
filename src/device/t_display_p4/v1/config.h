@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 V1 板级硬件配置
  * @Author: LILYGO_L
  * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-09-23 11:15:22
+ * @LastEditTime: 2026-10-12 10:07:33
  */
 #pragma once
 
@@ -118,6 +118,16 @@ namespace icm20948 {
 inline constexpr int kSda = i2c::kPort2Sda;
 inline constexpr int kScl = i2c::kPort2Scl;
 }  // namespace icm20948
+
+namespace qmi8658 {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
+}  // namespace qmi8658
+
+namespace qmc6309 {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
+}  // namespace qmc6309
 
 namespace hi8561 {
 inline constexpr int kTouchSda = i2c::kPort1Sda;
