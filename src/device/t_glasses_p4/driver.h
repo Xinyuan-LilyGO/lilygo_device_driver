@@ -213,7 +213,7 @@ class TGlassesP4Driver {
    * 外设通信并释放驱动，将连接到断电外设的信号 IO 配置为无上下拉
    * 的高阻态，避免反向供电导致断电不完全、下次初始化失败。
    */
-  bool SetPower3v3Enabled(bool enabled);
+  bool Set3v3PowerEnabled(bool enabled);
 
   bool PrepareMinimalDriversForPowerOff();
   bool PrepareDriversForPowerOff();

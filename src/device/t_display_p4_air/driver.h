@@ -239,7 +239,7 @@ class TDisplayP4AirDriver {
    * 避免反向供电导致芯片断电不完全、下次初始化锁死。电源使能脚有
    * 外部下拉，睡眠高阻态下无需 GPIO 保持；重新上电前应保证放电时间。
    */
-  bool SetPower3v3Enabled(bool enabled);
+  bool Set3v3PowerEnabled(bool enabled);
 
   bool PrepareMinimalDriversForPowerOff();
   bool PrepareDriversForPowerOff();

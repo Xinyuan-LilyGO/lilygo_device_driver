@@ -723,7 +723,7 @@ bool TDisplayP4Driver::InitPower() {
     return true;
   }
   // 先预置使能电平，再配置输出方向；后续开关电源只需切换电平。
-  if (!SetPower3v3Enabled(true) ||
+  if (!Set3v3PowerEnabled(true) ||
       !platform_hal_->SetGpioMode(gpio::power::kEnable3v3,
           cpp_bus_driver::PlatformHal::GpioMode::kOutput,
           cpp_bus_driver::PlatformHal::GpioStatus::kDisable)) {
@@ -828,7 +828,7 @@ bool TDisplayP4Driver::DeinitLr2021() {
   return result;
 }
 
-bool TDisplayP4Driver::SetPower3v3Enabled(bool enabled) {
+bool TDisplayP4Driver::Set3v3PowerEnabled(bool enabled) {
   if (platform_hal_ == nullptr) {
     return false;
   }

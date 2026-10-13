@@ -576,7 +576,7 @@ bool TGlassesP4Driver::InitPower() {
     return false;
   }
   // 先预置开启电平，再配置输出方向；关闭供电由库外调用方控制。
-  if (!SetPower3v3Enabled(true) ||
+  if (!Set3v3PowerEnabled(true) ||
       !platform_hal_->SetGpioMode(gpio::power::kEnable3v3,
           cpp_bus_driver::PlatformHal::GpioMode::kOutput,
           cpp_bus_driver::PlatformHal::GpioStatus::kDisable)) {
@@ -672,7 +672,7 @@ bool TGlassesP4Driver::DeinitSdmmc() {
   return result;
 }
 
-bool TGlassesP4Driver::SetPower3v3Enabled(bool enabled) {
+bool TGlassesP4Driver::Set3v3PowerEnabled(bool enabled) {
   if (platform_hal_ == nullptr) {
     return false;
   }
