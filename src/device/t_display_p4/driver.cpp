@@ -179,10 +179,10 @@ bool TDisplayP4Driver::InitSgm38121() {
 
   bool result = true;
   result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
       cpp_bus_driver::Sgm38121::Status::kOff);
   result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
       cpp_bus_driver::Sgm38121::Status::kOff);
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2,
@@ -1170,6 +1170,7 @@ bool TDisplayP4Driver::SetCameraPowerEnabled(bool enabled) {
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710) || \
     defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
+  // 特殊硬件限制：AVDD1 开启时必须同时开启 DVDD1，否则摄像头会卡住 I2C。
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kDvdd1, status);
   result &= chip_.sgm38121->SetChannelStatus(

@@ -238,10 +238,10 @@ bool TGlassesP4Driver::InitSgm38121() {
 
   bool result = true;
   result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
       cpp_bus_driver::Sgm38121::Status::kOff);
   result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+      cpp_bus_driver::Sgm38121::Channel::kDvdd1,
       cpp_bus_driver::Sgm38121::Status::kOff);
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2,
@@ -265,7 +265,11 @@ bool TGlassesP4Driver::InitSgm38121() {
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
 #endif
   if (result) {
-    result = chip_.sgm38121->SetChannelStatus(
+    // 特殊硬件限制：AVDD1 开启时必须同时开启 DVDD1，否则摄像头会卡住 I2C。
+    result &= chip_.sgm38121->SetChannelStatus(
+        cpp_bus_driver::Sgm38121::Channel::kDvdd1,
+        cpp_bus_driver::Sgm38121::Status::kOn);
+    result &= chip_.sgm38121->SetChannelStatus(
         cpp_bus_driver::Sgm38121::Channel::kAvdd1,
         cpp_bus_driver::Sgm38121::Status::kOn);
   }
@@ -809,14 +813,15 @@ bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
   const auto status = enabled ? cpp_bus_driver::Sgm38121::Status::kOn
                               : cpp_bus_driver::Sgm38121::Status::kOff;
   bool result = true;
-  // AVDD1 与屏幕共享，摄像头电源切换只操作独立电源通道。
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
+  // AVDD1 与屏幕共用，摄像头单独关闭时只关闭 AVDD2。
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
 #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710) || \
     defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
-  result &= chip_.sgm38121->SetChannelStatus(
-      cpp_bus_driver::Sgm38121::Channel::kDvdd1, status);
+  // 特殊硬件限制：AVDD1 与屏幕、外部时钟共用，摄像头单独关闭时不能关闭。
+  // DVDD1 必须随 AVDD1 保持开启，否则摄像头会卡住共享 I2C；这里只切换 AVDD2。
+  // AVDD1、DVDD1 由 InitSgm38121 开启，仅在整板关机时一起关闭。
   result &= chip_.sgm38121->SetChannelStatus(
       cpp_bus_driver::Sgm38121::Channel::kAvdd2, status);
 #else
@@ -859,6 +864,9 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
   if (IsSgm38121Ready()) {
     result &= chip_.sgm38121->SetChannelStatus(
         cpp_bus_driver::Sgm38121::Channel::kAvdd1,
+        cpp_bus_driver::Sgm38121::Status::kOff);
+    result &= chip_.sgm38121->SetChannelStatus(
+        cpp_bus_driver::Sgm38121::Channel::kDvdd1,
         cpp_bus_driver::Sgm38121::Status::kOff);
     result &= chip_.sgm38121->Deinit(false);
   }
