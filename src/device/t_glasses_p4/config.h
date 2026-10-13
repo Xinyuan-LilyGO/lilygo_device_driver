@@ -25,8 +25,8 @@ inline constexpr int kPort1Sda = 46;
 inline constexpr int kPort1Scl = 45;
 inline constexpr int kPort2Sda = 6;
 inline constexpr int kPort2Scl = 7;
-inline constexpr int kSensorSda = 51;
-inline constexpr int kSensorScl = 50;
+inline constexpr int kPort3Sda = 51;
+inline constexpr int kPort3Scl = 50;
 }  // namespace i2c
 
 namespace bq25896 {
@@ -40,8 +40,8 @@ inline constexpr int kScl = i2c::kPort2Scl;
 }  // namespace sgm38121
 
 namespace s023msafjf10111e1 {
-inline constexpr int kSda = i2c::kSensorSda;
-inline constexpr int kScl = i2c::kSensorScl;
+inline constexpr int kSda = i2c::kPort3Sda;
+inline constexpr int kScl = i2c::kPort3Scl;
 inline constexpr int kRst = 52;
 }  // namespace s023msafjf10111e1
 
@@ -110,8 +110,8 @@ inline constexpr int kCs = sdio1::kD3;
 }  // namespace sd
 //
 // namespace bhi260ap {
-// inline constexpr int kSda = i2c::kSensorSda;
-// inline constexpr int kScl = i2c::kSensorScl;
+// inline constexpr int kSda = i2c::kPort3Sda;
+// inline constexpr int kScl = i2c::kPort3Scl;
 // inline constexpr int kRst = 53;
 // inline constexpr int kInt = 49;
 // }  // namespace bhi260ap
@@ -123,8 +123,8 @@ inline constexpr int kCs = sdio1::kD3;
 //
 // BMM350 经 RM1/RM2 的 0 欧姆电阻连接传感器 I2C，RM3/RM4 未装。
 // namespace bmm350 {
-// inline constexpr int kSda = i2c::kSensorSda;
-// inline constexpr int kScl = i2c::kSensorScl;
+// inline constexpr int kSda = i2c::kPort3Sda;
+// inline constexpr int kScl = i2c::kPort3Scl;
 // inline constexpr int kInt = 54;
 // }  // namespace bmm350
 //
