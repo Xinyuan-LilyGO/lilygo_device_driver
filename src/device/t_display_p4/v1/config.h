@@ -241,8 +241,10 @@ namespace xl9535 {
 inline constexpr uint8_t kI2cAddress = 0x20;
 inline constexpr int kSdPowerEnabled = 0;
 inline constexpr int kSdPowerDisabled = 1;
-inline constexpr int kResetAsserted = 0;
-inline constexpr int kResetReleased = 1;
+inline constexpr int kTouchRstActiveLevel = 0;
+inline constexpr int kTouchRstInactiveLevel = 1;
+inline constexpr int kScreenRstActiveLevel = 0;
+inline constexpr int kScreenRstInactiveLevel = 1;
 }  // namespace xl9535
 
 namespace es8311 {

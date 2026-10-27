@@ -33,8 +33,8 @@ inline constexpr int kPort2Scl = 53;
 }  // namespace i2c
 
 namespace spi {
-inline constexpr int kPort1Sclk = 2;
-inline constexpr int kPort1Mosi = 3;
+inline constexpr int kPort1Sclk = 6;
+inline constexpr int kPort1Mosi = 5;
 inline constexpr int kPort1Miso = 4;
 }  // namespace spi
 
@@ -64,7 +64,9 @@ inline constexpr auto kNrf9151En = cpp_bus_driver::Xl95x5::Pin::kIo1;
 inline constexpr auto kBhi260apRst = cpp_bus_driver::Xl95x5::Pin::kIo2;
 inline constexpr auto kAdl161Trig = cpp_bus_driver::Xl95x5::Pin::kIo3;
 inline constexpr auto kAdl161Rst = cpp_bus_driver::Xl95x5::Pin::kIo4;
-inline constexpr auto kLr1121PowerEn = cpp_bus_driver::Xl95x5::Pin::kIo5;
+inline constexpr auto kLr2021PowerEn = cpp_bus_driver::Xl95x5::Pin::kIo5;
+inline constexpr auto kAw86224Rst = cpp_bus_driver::Xl95x5::Pin::kIo6;
+inline constexpr auto kUsbPhyPowerEn = cpp_bus_driver::Xl95x5::Pin::kIo10;
 inline constexpr auto kEsp32p4Esp32c5UartSwitch =
     cpp_bus_driver::Xl95x5::Pin::kIo11;
 inline constexpr auto kEsp32c5En = cpp_bus_driver::Xl95x5::Pin::kIo12;
@@ -95,7 +97,7 @@ inline constexpr int kSda = i2c::kPort1Sda;
 inline constexpr int kScl = i2c::kPort1Scl;
 }  // namespace aw86224
 
-namespace es8389 {
+namespace es8390 {
 inline constexpr int kSda = i2c::kPort1Sda;
 inline constexpr int kScl = i2c::kPort1Scl;
 inline constexpr int kAdcData = 33;
@@ -103,7 +105,7 @@ inline constexpr int kDacData = 32;
 inline constexpr int kBclk = 31;
 inline constexpr int kMclk = 30;
 inline constexpr int kWsLrck = 34;
-}  // namespace es8389
+}  // namespace es8390
 
 namespace bhi260ap {
 inline constexpr int kSda = i2c::kPort2Sda;
@@ -111,25 +113,25 @@ inline constexpr int kScl = i2c::kPort2Scl;
 inline constexpr int kInt = 51;
 }  // namespace bhi260ap
 
-namespace qmc6310n {
+namespace qmc6309 {
 inline constexpr int kSda = i2c::kPort1Sda;
 inline constexpr int kScl = i2c::kPort1Scl;
-}  // namespace qmc6310n
+}  // namespace qmc6309
 
 namespace sgm38121 {
 inline constexpr int kSda = i2c::kPort2Sda;
 inline constexpr int kScl = i2c::kPort2Scl;
 }  // namespace sgm38121
 
-namespace lr1121 {
+namespace lr2021 {
 inline constexpr int kCs = 7;
-inline constexpr int kBusy = 6;
-inline constexpr int kInt = 5;
-inline constexpr int kRst = 8;
-inline constexpr int kSclk = spi::kPort1Sclk;
-inline constexpr int kMosi = spi::kPort1Mosi;
-inline constexpr int kMiso = spi::kPort1Miso;
-}  // namespace lr1121
+inline constexpr int kBusy = 8;
+inline constexpr int kInt = 2;
+inline constexpr int kRst = 3;
+inline constexpr int kSclk = 6;
+inline constexpr int kMosi = 5;
+inline constexpr int kMiso = 4;
+}  // namespace lr2021
 
 namespace st25r3916 {
 inline constexpr int kSda = i2c::kPort1Sda;
@@ -165,10 +167,10 @@ inline constexpr int kSdioD3 = sdio2::kD3;
 }  // namespace esp32c5
 
 namespace nrf9151 {
-inline constexpr int kUartRx = 22;
-inline constexpr int kUartTx = 23;
-inline constexpr int kUartRts = 21;
-inline constexpr int kUartCts = 20;
+inline constexpr int kUartRx = 23;
+inline constexpr int kUartTx = 22;
+inline constexpr int kUartRts = 20;
+inline constexpr int kUartCts = 21;
 }  // namespace nrf9151
 }  // namespace gpio
 
@@ -214,6 +216,27 @@ inline constexpr uint8_t kTouchI2cAddress = 0x68;
 inline constexpr int32_t kI2cFrequencyHz = 400000;
 }  // namespace hi8561
 
+namespace rm69a10 {
+inline constexpr int kScreenWidth = 568;
+inline constexpr int kScreenHeight = 1232;
+inline constexpr int kScreenMipiDsiDpiClkMhz = 60;
+inline constexpr int kScreenMipiDsiHsync = 50;
+inline constexpr int kScreenMipiDsiHbp = 150;
+inline constexpr int kScreenMipiDsiHfp = 50;
+inline constexpr int kScreenMipiDsiVsync = 40;
+inline constexpr int kScreenMipiDsiVbp = 120;
+inline constexpr int kScreenMipiDsiVfp = 80;
+inline constexpr int kScreenDataLaneNum = 2;
+inline constexpr int kScreenLaneBitRateMbps = 1000;
+}  // namespace rm69a10
+
+namespace gt9895 {
+inline constexpr uint8_t kI2cAddress = 0x5D;
+inline constexpr int32_t kI2cFrequencyHz = 400000;
+inline constexpr uint16_t kRawCoordinateWidth = 1060;
+inline constexpr uint16_t kRawCoordinateHeight = 2400;
+}  // namespace gt9895
+
 namespace sy7200a {
 // EN/PWM 引脚推荐使用 20 kHz～1 MHz 调光频率。
 inline constexpr uint32_t kPwmFrequencyHz = 20000;
@@ -240,13 +263,13 @@ inline constexpr uint8_t kI2cAddress = 0x58;
 inline constexpr int32_t kI2cFrequencyHz = 500000;
 }  // namespace aw86224
 
-namespace es8389 {
-inline constexpr uint8_t kI2cAddress = 0x10;
+namespace es8390 {
+inline constexpr uint8_t kI2cAddress = 0x11;
 inline constexpr int kMclkMultiple = 256;
 inline constexpr int kSampleRate = 44100;
 inline constexpr int kBitsPerSample = 16;
 inline constexpr int kChannel = 2;
-}  // namespace es8389
+}  // namespace es8390
 
 namespace spiffs {
 inline constexpr const char* kBasePath = "/spiffs";
@@ -256,13 +279,13 @@ namespace bhi260ap {
 inline constexpr uint8_t kI2cAddress = 0x29;
 }  // namespace bhi260ap
 
-namespace qmc6310n {
-inline constexpr uint8_t kI2cAddress = 0x3C;
-}  // namespace qmc6310n
+namespace qmc6309 {
+inline constexpr uint8_t kI2cAddress = 0x7C;
+}  // namespace qmc6309
 
-namespace lr1121 {
+namespace lr2021 {
 inline constexpr int32_t kSpiFrequencyHz = 10000000;
-}  // namespace lr1121
+}  // namespace lr2021
 
 namespace sgm38121 {
 inline constexpr uint8_t kI2cAddress = 0x28;

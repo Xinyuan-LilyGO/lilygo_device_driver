@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-09-24 17:37:33
+ * @LastEditTime: 2026-10-21 17:47:12
  * @License: GPL 3.0
  */
 #include "device/t_display_p4_air/driver.h"
@@ -14,9 +14,11 @@
 #include "driver/sdmmc_host.h"
 #include "driver/sdspi_host.h"
 #include "driver/spi_master.h"
+#include "chip/esp32p4/spiffs.h"
 #include "esp_vfs_fat.h"
 #include "firmware/bhi260ap/BHI260AP.fw.h"
 #include "sdmmc_cmd.h"
+#include "es8389_codec.h"
 
 namespace lilygo_device_driver {
 namespace gpio = t_display_p4_air::gpio;
@@ -44,10 +46,44 @@ constexpr ScreenInfo kHi8561ScreenInfo = {
     .lane_bit_rate_mbps = device::hi8561::kScreenLaneBitRateMbps,
 };
 
+constexpr ScreenInfo kRm69a10ScreenInfo = {
+    .type = ScreenType::kRm69a10,
+    .name = "rm69a10",
+    .width = device::rm69a10::kScreenWidth,
+    .height = device::rm69a10::kScreenHeight,
+    .bits_per_pixel = device::screen::kBitsPerPixel,
+    .pixel_format = GetRgbPixelFormatName(device::screen::kBitsPerPixel),
+    .mipi_dsi_dpi_clk_mhz = device::rm69a10::kScreenMipiDsiDpiClkMhz,
+    .mipi_dsi_hsync = device::rm69a10::kScreenMipiDsiHsync,
+    .mipi_dsi_hbp = device::rm69a10::kScreenMipiDsiHbp,
+    .mipi_dsi_hfp = device::rm69a10::kScreenMipiDsiHfp,
+    .mipi_dsi_vsync = device::rm69a10::kScreenMipiDsiVsync,
+    .mipi_dsi_vbp = device::rm69a10::kScreenMipiDsiVbp,
+    .mipi_dsi_vfp = device::rm69a10::kScreenMipiDsiVfp,
+    .data_lane_num = device::rm69a10::kScreenDataLaneNum,
+    .lane_bit_rate_mbps = device::rm69a10::kScreenLaneBitRateMbps,
+};
+
+constexpr ScreenInfo kScreenInfoRegistry[] = {
+    kHi8561ScreenInfo,
+    kRm69a10ScreenInfo,
+};
+
 constexpr const ScreenInfo* kDefaultScreenInfo = &kHi8561ScreenInfo;
 constexpr uint32_t kInitializationShutdownTimeoutMs = 5 * 1000;
-constexpr int kEs8389DacMiscControl2Register = 0x45;
-constexpr int kEs8389Dac1OutputInvertMask = 1 << 6;
+constexpr uint8_t kLr2021ExpectedVersionMajor = 0x01;
+constexpr uint8_t kLr2021ExpectedVersionMinor = 0x18;
+constexpr int kEs8390DacMiscControl2Register = 0x45;
+constexpr int kEs8390Dac1OutputInvertMask = 1 << 6;
+
+const ScreenInfo* ScreenInfoForType(ScreenType type) {
+  for (const auto& info : kScreenInfoRegistry) {
+    if (info.type == type) {
+      return &info;
+    }
+  }
+  return kDefaultScreenInfo;
+}
 
 }  // namespace
 
@@ -77,27 +113,27 @@ void TDisplayP4AirDriver::CreateDrivers() {
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.bhi260ap_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
-  bus_.qmc6310n_i2c_bus =
+  bus_.qmc6309_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
   bus_.aw86224_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
   bus_.st25r3916_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
 
-  bus_.es8389_i2s_bus = std::make_shared<cpp_bus_driver::HardwareI2s>(
-      gpio::es8389::kAdcData, gpio::es8389::kDacData, gpio::es8389::kWsLrck,
-      gpio::es8389::kBclk, gpio::es8389::kMclk, i2s_port_t::I2S_NUM_0,
+  bus_.es8390_i2s_bus = std::make_shared<cpp_bus_driver::HardwareI2s>(
+      gpio::es8390::kAdcData, gpio::es8390::kDacData, gpio::es8390::kWsLrck,
+      gpio::es8390::kBclk, gpio::es8390::kMclk, i2s_port_t::I2S_NUM_0,
       cpp_bus_driver::HardwareI2s::DataMode::kInputOutput,
       cpp_bus_driver::HardwareI2s::I2sMode::kStd,
       i2s_clock_src_t::I2S_CLK_SRC_DEFAULT);
 
-  bus_.lr1121_spi_bus =
-      std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::lr1121::kMosi,
-          gpio::lr1121::kSclk, gpio::lr1121::kMiso, SPI2_HOST, 0);
+  bus_.lr2021_spi_bus =
+      std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::lr2021::kMosi,
+          gpio::lr2021::kSclk, gpio::lr2021::kMiso, SPI2_HOST, 0);
 
   bus_.nrf9151_uart_bus = std::make_shared<cpp_bus_driver::HardwareUart>(
-      gpio::nrf9151::kUartTx, gpio::nrf9151::kUartRx, UART_NUM_1,
-      gpio::nrf9151::kUartRts, gpio::nrf9151::kUartCts);
+      gpio::nrf9151::kUartRx, gpio::nrf9151::kUartTx, UART_NUM_1,
+      gpio::nrf9151::kUartCts, gpio::nrf9151::kUartRts);
 
   chip_.axp517 = std::make_unique<cpp_bus_driver::Axp517>(
       bus_.axp517_i2c_bus, device::axp517::kI2cAddress);
@@ -113,17 +149,29 @@ void TDisplayP4AirDriver::CreateDrivers() {
           device::st25r3916::kI2cAddress);
   chip_.hi8561_touch = std::make_unique<cpp_bus_driver::Hi8561Touch>(
       bus_.hi8561_i2c_touch_bus, device::hi8561::kTouchI2cAddress);
+  cpp_bus_driver::TouchCoordinateTransform gt9895_coordinate_transform;
+  gt9895_coordinate_transform.source_width =
+      device::gt9895::kRawCoordinateWidth;
+  gt9895_coordinate_transform.source_height =
+      device::gt9895::kRawCoordinateHeight;
+  gt9895_coordinate_transform.target_width =
+      static_cast<uint16_t>(device::rm69a10::kScreenWidth);
+  gt9895_coordinate_transform.target_height =
+      static_cast<uint16_t>(device::rm69a10::kScreenHeight);
+  chip_.gt9895 = std::make_unique<cpp_bus_driver::Gt9895>(
+      bus_.hi8561_i2c_touch_bus, device::gt9895::kI2cAddress, -1, -1,
+      gt9895_coordinate_transform);
   chip_.bhi260ap = std::make_unique<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy>(
       bus_.bhi260ap_i2c_bus, device::bhi260ap::kI2cAddress);
-  chip_.qmc6310n = std::make_unique<SensorQMC6310>();
+  chip_.qmc6309 = std::make_unique<SensorQMC6309>();
   chip_.sy7200a = std::make_unique<cpp_bus_driver::Pwm>(gpio::sy7200a::kEn);
   chip_.nrf9151 =
       std::make_unique<cpp_bus_driver::Nrf9151>(bus_.nrf9151_uart_bus);
-  chip_.lr1121 =
-      std::make_unique<usp_cpp_bus_driver::Lr11xx>(bus_.lr1121_spi_bus,
-          gpio::lr1121::kBusy, gpio::lr1121::kCs, [this](bool released) {
+  chip_.lr2021 =
+      std::make_unique<usp_cpp_bus_driver::Lr20xx>(bus_.lr2021_spi_bus,
+          gpio::lr2021::kBusy, gpio::lr2021::kCs, [this](bool released) {
             return platform_hal_ != nullptr &&
-                   platform_hal_->GpioWrite(gpio::lr1121::kRst, released);
+                   platform_hal_->GpioWrite(gpio::lr2021::kRst, released);
           });
 }
 
@@ -192,11 +240,11 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
         [](void* arg) {
           auto* self = static_cast<TDisplayP4AirDriver*>(arg);
           if (!self->async_init_manager_.stop_requested()) {
-            self->InitQmc6310n();
+            self->InitQmc6309();
           }
           self->async_init_manager_.FinishTask();
         },
-        "InitQmc6310nTask", 4096, this, 3);
+        "InitQmc6309Task", 4096, this, 3);
 
     result &= async_init_manager_.StartTask(
         [](void* arg) {
@@ -212,22 +260,22 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
         [](void* arg) {
           auto* self = static_cast<TDisplayP4AirDriver*>(arg);
           if (!self->async_init_manager_.stop_requested()) {
-            self->InitLr1121();
+            self->InitLr2021();
           }
           self->async_init_manager_.FinishTask();
         },
-        "InitLr1121Task", 4096, this, 3);
+        "InitLr2021Task", 4096, this, 3);
 
     result &= async_init_manager_.StartTask(
         [](void* arg) {
           auto* self = static_cast<TDisplayP4AirDriver*>(arg);
           if (!self->async_init_manager_.stop_requested() &&
-              !self->InitEs8389()) {
+              !self->InitEs8390()) {
             self->SetNs4150Enabled(false);
           }
           self->async_init_manager_.FinishTask();
         },
-        "InitEs8389Task", 4096, this, 3);
+        "InitEs8390Task", 4096, this, 3);
 
   } else {
     const bool screen_initialized = InitScreen();
@@ -238,12 +286,12 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     }
 
     result &= InitBhi260ap();
-    result &= InitQmc6310n();
+    result &= InitQmc6309();
 
     result &= InitAw86224();
-    result &= InitLr1121();
+    result &= InitLr2021();
 
-    result &= InitEs8389();
+    result &= InitEs8390();
   }
 
   return result;
@@ -297,6 +345,10 @@ bool TDisplayP4AirDriver::InitXl9535() {
   constexpr auto kOutput = cpp_bus_driver::Xl95x5::Mode::kOutput;
   // 先预装关闭和复位状态，再切换输出方向，避免默认高电平产生无效脉冲。
   bool result = true;
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 1);
+  result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kUsbPhyPowerEn, kOutput);
+  result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAw86224Rst, 0);
+  result &= chip_.xl9535->SetGpioMode(gpio::xl9535::kAw86224Rst, kOutput);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Trig, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Rst, 0);
   result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
@@ -373,6 +425,25 @@ bool TDisplayP4AirDriver::InitSgm38121() {
   return result;
 }
 
+bool TDisplayP4AirDriver::ConfigureEs8390OutputPolarity() {
+  if (es8390_ctrl_if_ == nullptr || es8390_ctrl_if_->read_reg == nullptr ||
+      es8390_ctrl_if_->write_reg == nullptr) {
+    return false;
+  }
+
+  int register_value = 0;
+  if (es8390_ctrl_if_->read_reg(es8390_ctrl_if_,
+          kEs8390DacMiscControl2Register, 1, &register_value, 1) !=
+      ESP_CODEC_DEV_OK) {
+    return false;
+  }
+
+  register_value |= kEs8390Dac1OutputInvertMask;
+  return es8390_ctrl_if_->write_reg(es8390_ctrl_if_,
+             kEs8390DacMiscControl2Register, 1, &register_value,
+             1) == ESP_CODEC_DEV_OK;
+}
+
 bool TDisplayP4AirDriver::InitBhi260ap() {
   if (IsBhi260apReady()) {
     return true;
@@ -390,7 +461,8 @@ bool TDisplayP4AirDriver::InitBhi260ap() {
   }
   bool reset_pin_initialized = true;
   reset_pin_initialized &=
-      chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
+      chip_.xl9535->GpioWrite(
+        gpio::xl9535::kBhi260apRst, 1);
   reset_pin_initialized &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kBhi260apRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   if (!reset_pin_initialized) {
@@ -399,7 +471,8 @@ bool TDisplayP4AirDriver::InitBhi260ap() {
     return false;
   }
   platform_hal_->DelayMs(2);
-  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 1)) {
+  if (!chip_.xl9535->GpioWrite(
+          gpio::xl9535::kBhi260apRst, 0)) {
     chip_status_.bhi260ap.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBhi260ap failed\n");
     return false;
@@ -432,37 +505,45 @@ bool TDisplayP4AirDriver::InitBhi260ap() {
   } else {
     const int8_t last_error = chip_.bhi260ap->last_error();
     chip_.bhi260ap->Deinit(false);
-    chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
+    chip_.xl9535->GpioWrite(
+        gpio::xl9535::kBhi260apRst, 1);
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitBhi260ap failed (error code: %d)\n", static_cast<int>(last_error));
   }
   return result;
 }
 
-bool TDisplayP4AirDriver::InitQmc6310n() {
-  if (IsQmc6310nReady()) {
+bool TDisplayP4AirDriver::InitQmc6309() {
+  if (IsQmc6309Ready()) {
     return true;
   }
-  if (chip_.qmc6310n == nullptr || bus_.qmc6310n_i2c_bus == nullptr ||
-      !bus_.qmc6310n_i2c_bus->InitBus()) {
-    chip_status_.qmc6310n.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitQmc6310n failed\n");
+  if (chip_.qmc6309 == nullptr || bus_.qmc6309_i2c_bus == nullptr ||
+      !bus_.qmc6309_i2c_bus->InitBus()) {
+    chip_status_.qmc6309.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitQmc6309 failed\n");
     return false;
   }
 
-  bool result = chip_.qmc6310n->begin(
-      bus_.qmc6310n_i2c_bus->bus_handle(), device::qmc6310n::kI2cAddress);
+  bool result = chip_.qmc6309->begin(
+      bus_.qmc6309_i2c_bus->bus_handle(), device::qmc6309::kI2cAddress);
   if (result) {
-    chip_.qmc6310n->setOffset(0, 0, 0);
-    result &= chip_.qmc6310n->configMagnetometer(
-        OperationMode::CONTINUOUS_MEASUREMENT, MagFullScaleRange::FS_8G, 200.0f,
-        MagOverSampleRatio::OSR_1, MagDownSampleRatio::DSR_1);
-    result &= chip_.qmc6310n->setOperationMode(OperationMode::SUSPEND);
+    chip_.qmc6309->setOffset(0, 0, 0);
+    // SensorLib 0.4.1 的 ODR 接口写入了 0x0A 而非 0x0B。
+    // 使用不依赖 ODR 的连续测量模式，并显式覆盖默认 OSR/LPF 配置。
+    result = chip_.qmc6309->setOperationMode(OperationMode::SUSPEND) &&
+             chip_.qmc6309->setFullScaleRange(MagFullScaleRange::FS_8G) &&
+             chip_.qmc6309->setOversamplingRate(MagOverSampleRatio::OSR_8) &&
+             chip_.qmc6309->setLowPassFilter(MagLowPassFilter::LPF_8) &&
+             chip_.qmc6309->setSetResetMode(
+                 SensorQMC6309::MagSetResetMode::SET_AND_RESET_ON);
+    if (!result) {
+      chip_.qmc6309->setOperationMode(OperationMode::SUSPEND);
+    }
   }
-  chip_status_.qmc6310n.init_flag = result;
+  chip_status_.qmc6309.init_flag = result;
 
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
-      result ? "InitQmc6310n success\n" : "InitQmc6310n failed\n");
+      result ? "InitQmc6309 success\n" : "InitQmc6309 failed\n");
   return result;
 }
 
@@ -504,7 +585,8 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
 
   bool reset_result = true;
   // Air 板的触摸复位信号经过反相，高电平为复位状态。
-  reset_result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
+  reset_result &= chip_.xl9535->GpioWrite(
+      gpio::xl9535::kTouchRst, 1);
   reset_result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   if (!reset_result) {
@@ -514,7 +596,8 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
   }
   platform_hal_->DelayMs(10);
 
-  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 0)) {
+  if (!chip_.xl9535->GpioWrite(
+      gpio::xl9535::kTouchRst, 0)) {
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
     return false;
@@ -528,9 +611,61 @@ bool TDisplayP4AirDriver::InitHi8561Touch() {
     return true;
   }
 
-  chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
+  chip_.xl9535->GpioWrite(
+      gpio::xl9535::kTouchRst, 1);
   LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitHi8561Touch failed\n");
   return false;
+}
+
+bool TDisplayP4AirDriver::InitRm69a10() {
+  if (chip_.rm69a10 == nullptr) {
+    chip_status_.rm69a10.init_flag = false;
+    return false;
+  }
+
+  const auto& screen = screen_info();
+  bool result = chip_.rm69a10->Init(
+      screen.mipi_dsi_dpi_clk_mhz, screen.lane_bit_rate_mbps);
+  if (result) {
+    result &= chip_.rm69a10->SetBrightness(0);
+    result &= chip_.rm69a10->SetScreenOff(true);
+    result &= chip_.rm69a10->SetSleep(true);
+  }
+  if (!result) {
+    chip_.rm69a10->Deinit();
+  }
+  chip_status_.rm69a10.init_flag = result;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitRm69a10 success\n" : "InitRm69a10 failed\n");
+  return result;
+}
+
+bool TDisplayP4AirDriver::InitGt9895() {
+  chip_status_.gt9895.init_flag = false;
+  if (!chip_status_.xl9535.init_flag || chip_.gt9895 == nullptr) {
+    return false;
+  }
+  bool reset_result = chip_.xl9535->GpioWrite(
+      gpio::xl9535::kTouchRst, 1);
+  reset_result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  if (!reset_result) {
+    return false;
+  }
+  platform_hal_->DelayMs(30);
+  if (!chip_.xl9535->GpioWrite(
+      gpio::xl9535::kTouchRst, 0)) {
+    return false;
+  }
+  platform_hal_->DelayMs(100);
+  if (!chip_.gt9895->Init(device::gt9895::kI2cFrequencyHz)) {
+    chip_.xl9535->GpioWrite(
+        gpio::xl9535::kTouchRst, 1);
+    return false;
+  }
+  chip_status_.gt9895.init_flag = true;
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitGt9895 success\n");
+  return true;
 }
 
 bool TDisplayP4AirDriver::InitSy7200a() {
@@ -563,7 +698,18 @@ bool TDisplayP4AirDriver::InitAw86224() {
   if (IsAw86224Ready()) {
     return true;
   }
-  if (!chip_.aw86224->Init(device::aw86224::kI2cFrequencyHz)) {
+  if (!chip_status_.xl9535.init_flag || chip_.aw86224 == nullptr) {
+    return false;
+  }
+  bool reset_result = chip_.xl9535->GpioWrite(gpio::xl9535::kAw86224Rst, 0);
+  reset_result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kAw86224Rst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  platform_hal_->DelayMs(2);
+  reset_result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAw86224Rst, 1);
+  platform_hal_->DelayMs(5);
+  if (!reset_result ||
+      !chip_.aw86224->Init(device::aw86224::kI2cFrequencyHz)) {
+    chip_.xl9535->GpioWrite(gpio::xl9535::kAw86224Rst, 0);
     chip_status_.aw86224.init_flag = false;
     chip_status_.aw86224.ram_waveform_info =
         cpp_bus_driver::Aw862xx::RamWaveformInfo();
@@ -638,32 +784,32 @@ bool TDisplayP4AirDriver::InitSt25r3916() {
   return true;
 }
 
-bool TDisplayP4AirDriver::InitEs8389() {
-  if (IsEs8389Ready()) {
+bool TDisplayP4AirDriver::InitEs8390() {
+  if (IsEs8390Ready()) {
     return true;
   }
-  if ((bus_.xl9535_i2c_bus == nullptr) || (bus_.es8389_i2s_bus == nullptr)) {
-    chip_status_.es8389.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
+  if ((bus_.xl9535_i2c_bus == nullptr) || (bus_.es8390_i2s_bus == nullptr)) {
+    chip_status_.es8390.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8390 failed\n");
     return false;
   }
 
   i2c_master_bus_handle_t i2c_bus_handle = bus_.xl9535_i2c_bus->bus_handle();
   if (i2c_bus_handle == nullptr) {
-    chip_status_.es8389.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
+    chip_status_.es8390.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8390 failed\n");
     return false;
   }
 
   audio_codec_i2c_cfg_t i2c_cfg = {
       .port = static_cast<uint8_t>(I2C_NUM_1),
-      .addr = static_cast<uint8_t>(device::es8389::kI2cAddress << 1),
+      .addr = static_cast<uint8_t>(device::es8390::kI2cAddress << 1),
       .bus_handle = i2c_bus_handle,
   };
-  es8389_ctrl_if_ = audio_codec_new_i2c_ctrl(&i2c_cfg);
+  es8390_ctrl_if_ = audio_codec_new_i2c_ctrl(&i2c_cfg);
 
-  if (es8389_ctrl_if_ == nullptr ||
-      !bus_.es8389_i2s_bus->Init(
+  if (es8390_ctrl_if_ == nullptr ||
+      !bus_.es8390_i2s_bus->Init(
           [](int value) -> i2s_mclk_multiple_t {
             switch (value) {
               case 128:
@@ -689,8 +835,8 @@ bool TDisplayP4AirDriver::InitEs8389() {
                     "Value out of range\n");
                 return i2s_mclk_multiple_t::I2S_MCLK_MULTIPLE_256;
             }
-          }(device::es8389::kMclkMultiple),
-          device::es8389::kSampleRate,
+          }(device::es8390::kMclkMultiple),
+          device::es8390::kSampleRate,
           [](int value) -> i2s_data_bit_width_t {
             switch (value) {
               case 8:
@@ -706,27 +852,27 @@ bool TDisplayP4AirDriver::InitEs8389() {
                     "Value out of range\n");
                 return i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_16BIT;
             }
-          }(device::es8389::kBitsPerSample))) {
-    DeinitEs8389();
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
+          }(device::es8390::kBitsPerSample))) {
+    DeinitEs8390();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8390 failed\n");
     return false;
   }
 
   audio_codec_i2s_cfg_t i2s_cfg = {
-      .port = static_cast<uint8_t>(bus_.es8389_i2s_bus->port()),
-      .rx_handle = bus_.es8389_i2s_bus->rx_handle(),
-      .tx_handle = bus_.es8389_i2s_bus->tx_handle(),
+      .port = static_cast<uint8_t>(bus_.es8390_i2s_bus->port()),
+      .rx_handle = bus_.es8390_i2s_bus->rx_handle(),
+      .tx_handle = bus_.es8390_i2s_bus->tx_handle(),
       .clk_src = static_cast<int>(I2S_CLK_SRC_DEFAULT),
   };
-  es8389_data_if_ = audio_codec_new_i2s_data(&i2s_cfg);
-  if (es8389_data_if_ == nullptr) {
-    DeinitEs8389();
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
+  es8390_data_if_ = audio_codec_new_i2s_data(&i2s_cfg);
+  if (es8390_data_if_ == nullptr) {
+    DeinitEs8390();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8390 failed\n");
     return false;
   }
   if (!chip_status_.xl9535.init_flag || chip_.xl9535 == nullptr) {
-    chip_status_.es8389.init_flag = false;
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
+    chip_status_.es8390.init_flag = false;
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8390 failed\n");
     return false;
   }
   bool amplifier_pin_initialized = true;
@@ -735,21 +881,21 @@ bool TDisplayP4AirDriver::InitEs8389() {
   amplifier_pin_initialized &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kNs4150En, cpp_bus_driver::Xl95x5::Mode::kOutput);
   if (!amplifier_pin_initialized) {
-    DeinitEs8389();
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
+    DeinitEs8390();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8390 failed\n");
     return false;
   }
 
-  es8389_gpio_if_ = audio_codec_new_gpio();
-  if (es8389_gpio_if_ == nullptr) {
-    DeinitEs8389();
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
+  es8390_gpio_if_ = audio_codec_new_gpio();
+  if (es8390_gpio_if_ == nullptr) {
+    DeinitEs8390();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8390 failed\n");
     return false;
   }
 
   es8389_codec_cfg_t codec_cfg = {
-      .ctrl_if = es8389_ctrl_if_,
-      .gpio_if = es8389_gpio_if_,
+      .ctrl_if = es8390_ctrl_if_,
+      .gpio_if = es8390_gpio_if_,
       .codec_mode = ESP_CODEC_DEV_WORK_MODE_BOTH,
       .pa_pin = -1,
       .pa_reverted = false,
@@ -765,216 +911,208 @@ bool TDisplayP4AirDriver::InitEs8389() {
               .pa_gain = 0.0f,
           },
       .no_dac_ref = false,
-      .mclk_div = device::es8389::kMclkMultiple,
+      .mclk_div = device::es8390::kMclkMultiple,
   };
-  es8389_codec_if_ = es8389_codec_new(&codec_cfg);
-  if (es8389_codec_if_ == nullptr) {
-    DeinitEs8389();
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
+  es8390_codec_if_ = es8389_codec_new(&codec_cfg);
+  if (es8390_codec_if_ == nullptr) {
+    DeinitEs8390();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8390 failed\n");
     return false;
   }
 
   esp_codec_dev_cfg_t output_dev_cfg = {
       .dev_type = ESP_CODEC_DEV_TYPE_OUT,
-      .codec_if = es8389_codec_if_,
-      .data_if = es8389_data_if_,
+      .codec_if = es8390_codec_if_,
+      .data_if = es8390_data_if_,
   };
-  es8389_output_codec_dev_ = esp_codec_dev_new(&output_dev_cfg);
-  if (es8389_output_codec_dev_ == nullptr) {
-    DeinitEs8389();
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
+  es8390_output_codec_dev_ = esp_codec_dev_new(&output_dev_cfg);
+  if (es8390_output_codec_dev_ == nullptr) {
+    DeinitEs8390();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8390 failed\n");
     return false;
   }
 
   esp_codec_dev_cfg_t input_dev_cfg = {
       .dev_type = ESP_CODEC_DEV_TYPE_IN,
-      .codec_if = es8389_codec_if_,
-      .data_if = es8389_data_if_,
+      .codec_if = es8390_codec_if_,
+      .data_if = es8390_data_if_,
   };
-  es8389_input_codec_dev_ = esp_codec_dev_new(&input_dev_cfg);
-  if (es8389_input_codec_dev_ == nullptr) {
-    DeinitEs8389();
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
+  es8390_input_codec_dev_ = esp_codec_dev_new(&input_dev_cfg);
+  if (es8390_input_codec_dev_ == nullptr) {
+    DeinitEs8390();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8390 failed\n");
     return false;
   }
 
   esp_codec_dev_sample_info_t output_sample_info = {
-      .bits_per_sample = device::es8389::kBitsPerSample,
-      .channel = device::es8389::kChannel,
+      .bits_per_sample = device::es8390::kBitsPerSample,
+      .channel = device::es8390::kChannel,
       .channel_mask = ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0) |
                       ESP_CODEC_DEV_MAKE_CHANNEL_MASK(1),
-      .sample_rate = device::es8389::kSampleRate,
-      .mclk_multiple = device::es8389::kMclkMultiple,
+      .sample_rate = device::es8390::kSampleRate,
+      .mclk_multiple = device::es8390::kMclkMultiple,
   };
   esp_codec_dev_sample_info_t input_sample_info = output_sample_info;
-  const bool output_opened = esp_codec_dev_open(es8389_output_codec_dev_,
+  const bool output_opened = esp_codec_dev_open(es8390_output_codec_dev_,
                                  &output_sample_info) == ESP_CODEC_DEV_OK;
   const bool input_opened =
-      output_opened && esp_codec_dev_open(es8389_input_codec_dev_,
+      output_opened && esp_codec_dev_open(es8390_input_codec_dev_,
                            &input_sample_info) == ESP_CODEC_DEV_OK;
   bool result = output_opened && input_opened;
   if (result) {
-    result &= ConfigureEs8389OutputPolarity();
-    result &= (esp_codec_dev_set_out_vol(es8389_output_codec_dev_, 100) ==
+    result &= ConfigureEs8390OutputPolarity();
+    result &= (esp_codec_dev_set_out_vol(es8390_output_codec_dev_, 100) ==
                ESP_CODEC_DEV_OK);
-    result &= (esp_codec_dev_set_in_gain(es8389_input_codec_dev_, 20.0f) ==
+    result &= (esp_codec_dev_set_in_gain(es8390_input_codec_dev_, 20.0f) ==
                ESP_CODEC_DEV_OK);
   }
 
   // 关闭操作属于回滚，必须尽量释放所有已经打开的通道。
   if (input_opened) {
     result &=
-        (esp_codec_dev_close(es8389_input_codec_dev_) == ESP_CODEC_DEV_OK);
+        (esp_codec_dev_close(es8390_input_codec_dev_) == ESP_CODEC_DEV_OK);
   }
   if (output_opened) {
     result &=
-        (esp_codec_dev_close(es8389_output_codec_dev_) == ESP_CODEC_DEV_OK);
+        (esp_codec_dev_close(es8390_output_codec_dev_) == ESP_CODEC_DEV_OK);
   }
   result &= SetNs4150Enabled(false);
-  es8389_operating_mode_ = Es8389OperatingMode::kSleep;
-  chip_status_.es8389.init_flag = result;
+  es8390_operating_mode_ = Es8390OperatingMode::kSleep;
+  chip_status_.es8390.init_flag = result;
   if (result) {
-    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitEs8389 success\n");
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitEs8390 success\n");
   } else {
-    DeinitEs8389();
-    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8389 failed\n");
+    DeinitEs8390();
+    LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8390 failed\n");
   }
   return result;
 }
 
-bool TDisplayP4AirDriver::InitLr1121() {
-  if (IsLr1121Ready()) {
+bool TDisplayP4AirDriver::InitLr2021() {
+  if (IsLr2021Ready()) {
     return true;
   }
-  chip_status_.lr1121.init_flag = false;
-  if (chip_.lr1121 == nullptr || !chip_status_.xl9535.init_flag) {
+  chip_status_.lr2021.init_flag = false;
+  if (chip_.lr2021 == nullptr || !chip_status_.xl9535.init_flag) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitLr1121 power enable failed\n");
+        "InitLr2021 power enable failed\n");
     return false;
   }
   bool power_enabled = true;
-  power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
+  power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr2021PowerEn, 0);
   power_enabled &= chip_.xl9535->SetGpioMode(
-      gpio::xl9535::kLr1121PowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
-  power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 1);
+      gpio::xl9535::kLr2021PowerEn, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  power_enabled &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr2021PowerEn, 1);
   if (!power_enabled) {
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitLr1121 power enable failed\n");
+        "InitLr2021 power enable failed\n");
     return false;
   }
   platform_hal_->DelayMs(10);
 
   bool transport_initialized = true;
   transport_initialized &= platform_hal_->SetGpioMode(
-      gpio::lr1121::kRst, cpp_bus_driver::PlatformHal::GpioMode::kOutput);
+      gpio::lr2021::kRst, cpp_bus_driver::PlatformHal::GpioMode::kOutput);
   transport_initialized &= platform_hal_->SetGpioMode(
-      gpio::lr1121::kInt, cpp_bus_driver::PlatformHal::GpioMode::kInput);
+      gpio::lr2021::kInt, cpp_bus_driver::PlatformHal::GpioMode::kInput);
   if (!transport_initialized ||
-      !chip_.lr1121->Init(device::lr1121::kSpiFrequencyHz)) {
-    platform_hal_->GpioWrite(gpio::lr1121::kRst, 0);
-    chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
+      !chip_.lr2021->Init(device::lr2021::kSpiFrequencyHz)) {
+    platform_hal_->GpioWrite(gpio::lr2021::kRst, 0);
+    chip_.xl9535->GpioWrite(gpio::xl9535::kLr2021PowerEn, 0);
     LogMessage(
-        LogLevel::kError, __FILE__, __LINE__, "InitLr1121 transport failed\n");
+        LogLevel::kError, __FILE__, __LINE__, "InitLr2021 transport failed\n");
     return false;
   }
 
-  lr11xx_system_version_t version = {};
-  if (chip_.lr1121->Invoke(lr11xx_system_get_version, &version) !=
-          LR11XX_STATUS_OK ||
-      version.type != LR11XX_SYSTEM_VERSION_TYPE_LR1121) {
-    chip_.lr1121->Deinit();
-    platform_hal_->GpioWrite(gpio::lr1121::kRst, 0);
-    chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
+  lr20xx_system_version_t version = {};
+  bool detected = false;
+  for (uint8_t attempt = 0; attempt < 10; ++attempt) {
+    detected = chip_.lr2021->Invoke(lr20xx_system_get_version, &version) ==
+                   LR20XX_STATUS_OK &&
+               version.major == kLr2021ExpectedVersionMajor &&
+               version.minor == kLr2021ExpectedVersionMinor;
+    if (detected || !chip_.lr2021->Reset()) {
+      break;
+    }
+    platform_hal_->DelayMs(10);
+  }
+  if (!detected) {
+    chip_.lr2021->Deinit(false);
+    platform_hal_->GpioWrite(gpio::lr2021::kRst, 0);
+    chip_.xl9535->GpioWrite(gpio::xl9535::kLr2021PowerEn, 0);
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitLr1121 chip detection failed\n");
+        "InitLr2021 chip detection failed (fw: %u.%u)\n",
+        static_cast<unsigned>(version.major),
+        static_cast<unsigned>(version.minor));
     return false;
   }
 
-  const lr11xx_system_rfswitch_cfg_t rf_switch_config = {
-      .enable = LR11XX_SYSTEM_RFSW0_HIGH | LR11XX_SYSTEM_RFSW1_HIGH,
-      .standby = 0x00,
-      .rx = LR11XX_SYSTEM_RFSW1_HIGH,
-      .tx = 0x00,
-      .tx_hp = LR11XX_SYSTEM_RFSW0_HIGH,
-      .tx_hf = 0x00,
-      .gnss = 0x00,
-      .wifi = 0x00,
-  };
-  usp_cpp_bus_driver::Lr11xx::LoraConfig lora_config = {
-      .frequency_hz = 868000000U,
-      .modulation =
-          {
-              .sf = LR11XX_RADIO_LORA_SF12,
-              .bw = LR11XX_RADIO_LORA_BW_125,
-              .cr = LR11XX_RADIO_LORA_CR_4_7,
-              .ldro = 1,
-          },
-      .packet =
-          {
-              .preamble_len_in_symb = 8,
-              .header_type = LR11XX_RADIO_LORA_PKT_EXPLICIT,
-              .pld_len_in_bytes = 255,
-              .crc = LR11XX_RADIO_LORA_CRC_ON,
-              .iq = LR11XX_RADIO_LORA_IQ_STANDARD,
-          },
-      .sync_word = 0x12,
-      .rx_boosted = true,
-      .pa =
-          {
-              .pa_sel = LR11XX_RADIO_PA_SEL_HP,
-              .pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VBAT,
-              .pa_duty_cycle = 0x04,
-              .pa_hp_sel = 0x07,
-          },
-      .output_power_dbm = 22,
-      .ramp_time = LR11XX_RADIO_RAMP_48_US,
-  };
-  const lr11xx_system_sleep_cfg_t sleep_config = {
-      .is_warm_start = true,
-      .is_rtc_timeout = false,
-  };
+  const auto configure_rf_switch =
+      [this](
+          lr20xx_system_dio_t dio, lr20xx_system_dio_rf_switch_cfg_t config) {
+        if (chip_.lr2021->Invoke(lr20xx_system_set_dio_function, dio,
+                LR20XX_SYSTEM_DIO_FUNC_RF_SWITCH,
+                LR20XX_SYSTEM_DIO_DRIVE_NONE) != LR20XX_STATUS_OK) {
+          return false;
+        }
+        return chip_.lr2021->Invoke(lr20xx_system_set_dio_rf_switch_cfg, dio,
+                   config) == LR20XX_STATUS_OK;
+      };
+  constexpr auto kCalibrationMask =
+      static_cast<lr20xx_system_calibration_mask_t>(
+          LR20XX_SYSTEM_CALIB_LF_RC_MASK | LR20XX_SYSTEM_CALIB_HF_RC_MASK |
+          LR20XX_SYSTEM_CALIB_PLL_MASK | LR20XX_SYSTEM_CALIB_AAF_MASK |
+          LR20XX_SYSTEM_CALIB_MU_MASK | LR20XX_SYSTEM_CALIB_PA_OFF_MASK);
 
+  const lr20xx_system_sleep_cfg_t sleep_config = {
+      .is_clk_32k_enabled = false,
+      .is_ram_retention_enabled = true,
+  };
   bool result = true;
-  result &= (chip_.lr1121->Invoke(lr11xx_system_set_standby,
-                 LR11XX_SYSTEM_STANDBY_CFG_RC) == LR11XX_STATUS_OK);
-  result &= (chip_.lr1121->Invoke(lr11xx_system_set_tcxo_mode,
-                 LR11XX_SYSTEM_TCXO_CTRL_1_6V, 163U) == LR11XX_STATUS_OK);
-  result &= (chip_.lr1121->Invoke(lr11xx_radio_set_rx_tx_fallback_mode,
-                 LR11XX_RADIO_FALLBACK_STDBY_RC) == LR11XX_STATUS_OK);
-  result &= (chip_.lr1121->Invoke(lr11xx_system_clear_irq_status,
-                 LR11XX_SYSTEM_IRQ_ALL_MASK) == LR11XX_STATUS_OK);
+  result &= (chip_.lr2021->Invoke(lr20xx_system_set_standby_mode,
+                 LR20XX_SYSTEM_STANDBY_MODE_RC) == LR20XX_STATUS_OK);
+  result &= (chip_.lr2021->Invoke(lr20xx_system_set_tcxo_mode,
+                 LR20XX_SYSTEM_TCXO_CTRL_3_0V, 32768U) == LR20XX_STATUS_OK);
+  result &= (chip_.lr2021->Invoke(lr20xx_system_set_reg_mode,
+                 LR20XX_SYSTEM_REG_MODE_DCDC) == LR20XX_STATUS_OK);
+  result &= (chip_.lr2021->Invoke(lr20xx_radio_common_set_rx_tx_fallback_mode,
+                 LR20XX_RADIO_FALLBACK_STDBY_RC) == LR20XX_STATUS_OK);
+  result &= (chip_.lr2021->Invoke(lr20xx_system_clear_irq_status,
+                 LR20XX_SYSTEM_IRQ_ALL_MASK) == LR20XX_STATUS_OK);
+  result &= (chip_.lr2021->Invoke(lr20xx_system_calibrate, kCalibrationMask) ==
+             LR20XX_STATUS_OK);
+  result &= configure_rf_switch(
+      LR20XX_SYSTEM_DIO_6, LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_RX_HF);
+  result &= configure_rf_switch(
+      LR20XX_SYSTEM_DIO_7, LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_TX_HF);
+  result &= configure_rf_switch(
+      LR20XX_SYSTEM_DIO_8, LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_RX_LF |
+                               LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_TX_LF);
+  result &= configure_rf_switch(
+      LR20XX_SYSTEM_DIO_10, LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_RX_HF |
+                                LR20XX_SYSTEM_DIO_RF_SWITCH_WHEN_TX_HF);
+  result &= (chip_.lr2021->Invoke(lr20xx_system_set_dio_function,
+                 LR20XX_SYSTEM_DIO_11, LR20XX_SYSTEM_DIO_FUNC_IRQ,
+                 LR20XX_SYSTEM_DIO_DRIVE_NONE) == LR20XX_STATUS_OK);
   result &=
-      (chip_.lr1121->Invoke(lr11xx_system_set_dio_irq_params,
-           LR11XX_SYSTEM_IRQ_NONE, LR11XX_SYSTEM_IRQ_NONE) == LR11XX_STATUS_OK);
-  result &=
-      (chip_.lr1121->Invoke(lr11xx_system_calibrate,
-           static_cast<uint8_t>(
-               LR11XX_SYSTEM_CALIB_LF_RC_MASK | LR11XX_SYSTEM_CALIB_HF_RC_MASK |
-               LR11XX_SYSTEM_CALIB_PLL_MASK | LR11XX_SYSTEM_CALIB_ADC_MASK |
-               LR11XX_SYSTEM_CALIB_IMG_MASK |
-               LR11XX_SYSTEM_CALIB_PLL_TX_MASK)) == LR11XX_STATUS_OK);
-  result &= (chip_.lr1121->Invoke(lr11xx_system_drive_dio_in_sleep_mode,
-                 true) == LR11XX_STATUS_OK);
-  result &= (chip_.lr1121->Invoke(lr11xx_system_set_dio_as_rf_switch,
-                 &rf_switch_config) == LR11XX_STATUS_OK);
-  result &= chip_.lr1121->Configure(lora_config);
-  result &= (chip_.lr1121->Invoke(lr11xx_system_set_sleep, sleep_config, 0U) ==
-             LR11XX_STATUS_OK);
+      (chip_.lr2021->Invoke(lr20xx_system_set_dio_irq_cfg, LR20XX_SYSTEM_DIO_11,
+           LR20XX_SYSTEM_IRQ_NONE) == LR20XX_STATUS_OK);
+  result &= chip_.lr2021->SetSleep(sleep_config);
   if (!result) {
-    chip_.lr1121->Deinit();
-    platform_hal_->GpioWrite(gpio::lr1121::kRst, 0);
-    chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
-    chip_status_.lr1121.init_flag = false;
+    chip_.lr2021->Deinit(false);
+    platform_hal_->GpioWrite(gpio::lr2021::kRst, 0);
+    chip_.xl9535->GpioWrite(gpio::xl9535::kLr2021PowerEn, 0);
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "InitLr1121 configuration failed\n");
+        "InitLr2021 hardware configuration failed\n");
     return false;
   }
 
-  chip_status_.lr1121.init_flag = result;
+  chip_status_.lr2021.init_flag = true;
   LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-      "InitLr1121 success (hw: %u, fw: 0x%04x)\n",
-      static_cast<unsigned>(version.hw), static_cast<unsigned>(version.fw));
-  return result;
+      "InitLr2021 success (fw: %u.%u)\n",
+      static_cast<unsigned>(version.major),
+      static_cast<unsigned>(version.minor));
+  return true;
 }
 
 bool TDisplayP4AirDriver::InitNrf9151() {
@@ -1076,19 +1214,27 @@ bool TDisplayP4AirDriver::InitScreen() {
     return false;
   }
   bool reset_pin_initialized = true;
-  reset_pin_initialized &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
+  reset_pin_initialized &= chip_.xl9535->GpioWrite(
+      gpio::xl9535::kScreenRst, 1);
   reset_pin_initialized &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kScreenRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   if (!reset_pin_initialized) {
     return false;
   }
   platform_hal_->DelayMs(10);
-  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 0)) {
+  if (!chip_.xl9535->GpioWrite(
+      gpio::xl9535::kScreenRst, 0)) {
     return false;
   }
   platform_hal_->DelayMs(120);
 
-  screen_info_ = kDefaultScreenInfo;
+  if (!DetectScreenType()) {
+    chip_.xl9535->GpioWrite(
+        gpio::xl9535::kScreenRst, 1);
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "DetectScreenType failed\n");
+    return false;
+  }
   const auto& screen = screen_info();
 
   bus_.screen_mipi_bus = std::make_shared<cpp_bus_driver::HardwareMipi>(
@@ -1107,32 +1253,72 @@ bool TDisplayP4AirDriver::InitScreen() {
             return cpp_bus_driver::HardwareMipi::ColorFormat::kRgb565;
         }
       }(screen.bits_per_pixel));
-  chip_.hi8561 = std::make_unique<cpp_bus_driver::Hi8561>(bus_.screen_mipi_bus);
 
-  const bool result = InitHi8561();
+  chip_.hi8561.reset();
+  chip_.rm69a10.reset();
+  chip_status_.hi8561.init_flag = false;
+  chip_status_.hi8561_touch.init_flag = false;
+  chip_status_.sy7200a.init_flag = false;
+  chip_status_.rm69a10.init_flag = false;
+
+  bool result = false;
+  switch (screen.type) {
+    case ScreenType::kHi8561:
+      chip_.hi8561 =
+          std::make_unique<cpp_bus_driver::Hi8561>(bus_.screen_mipi_bus);
+      result = InitHi8561();
+      break;
+    case ScreenType::kRm69a10:
+      chip_.rm69a10 =
+          std::make_unique<cpp_bus_driver::Rm69a10>(bus_.screen_mipi_bus);
+      result = InitRm69a10();
+      break;
+    default:
+      break;
+  }
   if (!result) {
+    DeinitTouch();
     DeinitScreen();
   }
   return result;
 }
 
-bool TDisplayP4AirDriver::InitTouch() { return InitHi8561Touch(); }
+bool TDisplayP4AirDriver::InitTouch() {
+  switch (screen_type()) {
+    case ScreenType::kHi8561:
+      return InitHi8561Touch();
+    case ScreenType::kRm69a10:
+      return chip_status_.gt9895.init_flag || InitGt9895();
+    default:
+      return false;
+  }
+}
 
-bool TDisplayP4AirDriver::InitScreenBacklight() { return InitSy7200a(); }
+bool TDisplayP4AirDriver::InitScreenBacklight() {
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return InitSy7200a();
+    case device::ScreenType::kRm69a10:
+      return true;
+    default:
+      return false;
+  }
+}
 
 bool TDisplayP4AirDriver::InitSpiffs(
     const char* base_path, esp_vfs_spiffs_conf_t& spiffs_conf) {
+  if (base_path == nullptr || base_path[0] == '\0') {
+    return false;
+  }
   SpiffsConfig config;
   config.base_path = base_path;
   if (!lilygo_device_driver::InitSpiffs(config)) {
     return false;
   }
-  spiffs_conf = {
-      .base_path = base_path,
-      .partition_label = config.partition_label,
-      .max_files = config.max_files,
-      .format_if_mount_failed = config.format_if_mount_failed,
-  };
+  spiffs_conf.base_path = base_path;
+  spiffs_conf.partition_label = config.partition_label;
+  spiffs_conf.max_files = config.max_files;
+  spiffs_conf.format_if_mount_failed = config.format_if_mount_failed;
   return true;
 }
 
@@ -1225,18 +1411,19 @@ bool TDisplayP4AirDriver::DeinitBhi260ap() {
     result &= chip_.bhi260ap->Deinit(false);
   }
   if (chip_status_.xl9535.init_flag) {
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
+    result &= chip_.xl9535->GpioWrite(
+        gpio::xl9535::kBhi260apRst, 1);
   }
   chip_status_.bhi260ap.init_flag = false;
   return result;
 }
 
-bool TDisplayP4AirDriver::DeinitQmc6310n() {
+bool TDisplayP4AirDriver::DeinitQmc6309() {
   bool result = true;
-  if (chip_status_.qmc6310n.init_flag && chip_.qmc6310n != nullptr) {
-    result = chip_.qmc6310n->setOperationMode(OperationMode::SUSPEND);
+  if (chip_status_.qmc6309.init_flag && chip_.qmc6309 != nullptr) {
+    result = chip_.qmc6309->setOperationMode(OperationMode::SUSPEND);
   }
-  chip_status_.qmc6310n.init_flag = false;
+  chip_status_.qmc6309.init_flag = false;
   return result;
 }
 
@@ -1245,6 +1432,9 @@ bool TDisplayP4AirDriver::DeinitAw86224() {
   if (chip_status_.aw86224.init_flag && chip_.aw86224 != nullptr) {
     result &= chip_.aw86224->StopRamPlaybackWaveform();
     result &= chip_.aw86224->Deinit(false);
+  }
+  if (chip_status_.xl9535.init_flag) {
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAw86224Rst, 0);
   }
   chip_status_.aw86224.init_flag = false;
   chip_status_.aw86224.ram_waveform_info = {};
@@ -1264,17 +1454,17 @@ bool TDisplayP4AirDriver::DeinitSt25r3916() {
              stsw_st25rfal002_cpp_bus_driver::PlatformError::kNone;
 }
 
-bool TDisplayP4AirDriver::DeinitLr1121() {
+bool TDisplayP4AirDriver::DeinitLr2021() {
   bool result = true;
-  if (chip_status_.lr1121.init_flag && chip_.lr1121 != nullptr) {
-    result &= SetLr1121OperatingMode(Lr1121OperatingMode::kSleep);
-    result &= chip_.lr1121->Deinit(false);
-    result &= platform_hal_->GpioWrite(gpio::lr1121::kRst, 0);
+  if (chip_status_.lr2021.init_flag && chip_.lr2021 != nullptr) {
+    result &= SetLr2021OperatingMode(Lr2021OperatingMode::kSleep);
+    result &= chip_.lr2021->Deinit(false);
+    result &= platform_hal_->GpioWrite(gpio::lr2021::kRst, 0);
   }
   if (chip_status_.xl9535.init_flag) {
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr2021PowerEn, 0);
   }
-  chip_status_.lr1121.init_flag = false;
+  chip_status_.lr2021.init_flag = false;
   return result;
 }
 
@@ -1285,46 +1475,48 @@ bool TDisplayP4AirDriver::DeinitNrf9151() {
   }
   if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAw86224Rst, 0);
   }
   chip_status_.nrf9151.init_flag = false;
   return result;
 }
 
-bool TDisplayP4AirDriver::DeinitEs8389() {
+bool TDisplayP4AirDriver::DeinitEs8390() {
   bool result = true;
-  result &= SetEs8389OperatingMode(Es8389OperatingMode::kSleep);
+  result &= SetEs8390OperatingMode(Es8390OperatingMode::kSleep);
 
-  if (es8389_input_codec_dev_ != nullptr) {
-    esp_codec_dev_delete(es8389_input_codec_dev_);
-    es8389_input_codec_dev_ = nullptr;
+  if (es8390_input_codec_dev_ != nullptr) {
+    esp_codec_dev_delete(es8390_input_codec_dev_);
+    es8390_input_codec_dev_ = nullptr;
   }
-  if (es8389_output_codec_dev_ != nullptr) {
-    esp_codec_dev_delete(es8389_output_codec_dev_);
-    es8389_output_codec_dev_ = nullptr;
+  if (es8390_output_codec_dev_ != nullptr) {
+    esp_codec_dev_delete(es8390_output_codec_dev_);
+    es8390_output_codec_dev_ = nullptr;
   }
-  if (es8389_codec_if_ != nullptr) {
+  if (es8390_codec_if_ != nullptr) {
     result &=
-        (audio_codec_delete_codec_if(es8389_codec_if_) == ESP_CODEC_DEV_OK);
-    es8389_codec_if_ = nullptr;
+        (audio_codec_delete_codec_if(es8390_codec_if_) == ESP_CODEC_DEV_OK);
+    es8390_codec_if_ = nullptr;
   }
-  if (es8389_ctrl_if_ != nullptr) {
-    result &= (audio_codec_delete_ctrl_if(es8389_ctrl_if_) == ESP_CODEC_DEV_OK);
-    es8389_ctrl_if_ = nullptr;
+  if (es8390_ctrl_if_ != nullptr) {
+    result &= (audio_codec_delete_ctrl_if(es8390_ctrl_if_) == ESP_CODEC_DEV_OK);
+    es8390_ctrl_if_ = nullptr;
   }
-  if (es8389_data_if_ != nullptr) {
-    result &= (audio_codec_delete_data_if(es8389_data_if_) == ESP_CODEC_DEV_OK);
-    es8389_data_if_ = nullptr;
+  if (es8390_data_if_ != nullptr) {
+    result &= (audio_codec_delete_data_if(es8390_data_if_) == ESP_CODEC_DEV_OK);
+    es8390_data_if_ = nullptr;
   }
-  if (es8389_gpio_if_ != nullptr) {
-    result &= (audio_codec_delete_gpio_if(es8389_gpio_if_) == ESP_CODEC_DEV_OK);
-    es8389_gpio_if_ = nullptr;
+  if (es8390_gpio_if_ != nullptr) {
+    result &= (audio_codec_delete_gpio_if(es8390_gpio_if_) == ESP_CODEC_DEV_OK);
+    es8390_gpio_if_ = nullptr;
   }
-  if (bus_.es8389_i2s_bus != nullptr) {
-    result &= bus_.es8389_i2s_bus->Deinit();
+  if (bus_.es8390_i2s_bus != nullptr) {
+    result &= bus_.es8390_i2s_bus->Deinit();
   }
 
-  chip_status_.es8389.init_flag = false;
-  es8389_operating_mode_ = Es8389OperatingMode::kSleep;
+  chip_status_.es8390.init_flag = false;
+  es8390_operating_mode_ = Es8390OperatingMode::kSleep;
   return result;
 }
 
@@ -1345,29 +1537,55 @@ bool TDisplayP4AirDriver::DeinitPower() {
 
 bool TDisplayP4AirDriver::DeinitScreen() {
   bool result = true;
-  if (chip_status_.hi8561.init_flag) {
-    result &= chip_.hi8561->Deinit();
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      if (chip_status_.hi8561.init_flag) {
+        result &= chip_.hi8561->Deinit();
+      }
+      break;
+    case device::ScreenType::kRm69a10:
+      if (chip_status_.rm69a10.init_flag) {
+        result &= chip_.rm69a10->Deinit();
+      }
+      break;
+    default:
+      break;
   }
   if (bus_.screen_mipi_bus != nullptr) {
     result &= bus_.screen_mipi_bus->Deinit();
     bus_.screen_mipi_bus.reset();
   }
   if (chip_status_.xl9535.init_flag) {
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
+    result &= chip_.xl9535->GpioWrite(
+        gpio::xl9535::kScreenRst, 1);
   }
   chip_status_.hi8561.init_flag = false;
+  chip_status_.rm69a10.init_flag = false;
   return result;
 }
 
 bool TDisplayP4AirDriver::DeinitTouch() {
   bool result = true;
-  if (chip_status_.hi8561_touch.init_flag) {
-    result &= chip_.hi8561_touch->Deinit(false);
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      if (chip_status_.hi8561_touch.init_flag) {
+        result &= chip_.hi8561_touch->Deinit(false);
+      }
+      break;
+    case device::ScreenType::kRm69a10:
+      if (chip_status_.gt9895.init_flag) {
+        result &= chip_.gt9895->Deinit(false);
+      }
+      break;
+    default:
+      break;
   }
   if (chip_status_.xl9535.init_flag) {
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
+    result &= chip_.xl9535->GpioWrite(
+        gpio::xl9535::kTouchRst, 1);
   }
   chip_status_.hi8561_touch.init_flag = false;
+  chip_status_.gt9895.init_flag = false;
   return result;
 }
 
@@ -1413,8 +1631,8 @@ bool TDisplayP4AirDriver::IsBhi260apReady() const {
          chip_.bhi260ap->initialized() && chip_.bhi260ap->firmware_running();
 }
 
-bool TDisplayP4AirDriver::IsQmc6310nReady() const {
-  return chip_status_.qmc6310n.init_flag && chip_.qmc6310n != nullptr;
+bool TDisplayP4AirDriver::IsQmc6309Ready() const {
+  return chip_status_.qmc6309.init_flag && chip_.qmc6309 != nullptr;
 }
 
 bool TDisplayP4AirDriver::IsHi8561Ready() const {
@@ -1423,6 +1641,14 @@ bool TDisplayP4AirDriver::IsHi8561Ready() const {
 
 bool TDisplayP4AirDriver::IsHi8561TouchReady() const {
   return chip_status_.hi8561_touch.init_flag && chip_.hi8561_touch != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsRm69a10Ready() const {
+  return chip_status_.rm69a10.init_flag && chip_.rm69a10 != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsGt9895Ready() const {
+  return chip_status_.gt9895.init_flag && chip_.gt9895 != nullptr;
 }
 
 bool TDisplayP4AirDriver::IsSy7200aReady() const {
@@ -1439,14 +1665,14 @@ bool TDisplayP4AirDriver::IsSt25r3916Ready() const {
          chip_.st25r3916->initialized();
 }
 
-bool TDisplayP4AirDriver::IsEs8389Ready() const {
-  return chip_status_.es8389.init_flag && es8389_input_codec_dev_ != nullptr &&
-         es8389_output_codec_dev_ != nullptr;
+bool TDisplayP4AirDriver::IsEs8390Ready() const {
+  return chip_status_.es8390.init_flag && es8390_input_codec_dev_ != nullptr &&
+         es8390_output_codec_dev_ != nullptr;
 }
 
-bool TDisplayP4AirDriver::IsLr1121Ready() const {
-  return chip_status_.lr1121.init_flag && chip_.lr1121 != nullptr &&
-         chip_.lr1121->initialized();
+bool TDisplayP4AirDriver::IsLr2021Ready() const {
+  return chip_status_.lr2021.init_flag && chip_.lr2021 != nullptr &&
+         chip_.lr2021->initialized();
 }
 
 bool TDisplayP4AirDriver::IsNrf9151Ready() const {
@@ -1454,17 +1680,40 @@ bool TDisplayP4AirDriver::IsNrf9151Ready() const {
 }
 
 bool TDisplayP4AirDriver::IsScreenReady() const {
-  return bus_.screen_mipi_bus != nullptr &&
-         bus_.screen_mipi_bus->device_handle() != nullptr && IsHi8561Ready() &&
-         IsScreenBacklightReady();
+  if (bus_.screen_mipi_bus == nullptr ||
+      bus_.screen_mipi_bus->device_handle() == nullptr) {
+    return false;
+  }
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return IsHi8561Ready() && IsSy7200aReady();
+    case device::ScreenType::kRm69a10:
+      return IsRm69a10Ready();
+    default:
+      return false;
+  }
 }
 
 bool TDisplayP4AirDriver::IsTouchReady() const {
-  return IsHi8561TouchReady();
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return IsHi8561TouchReady();
+    case device::ScreenType::kRm69a10:
+      return IsGt9895Ready();
+    default:
+      return false;
+  }
 }
 
 bool TDisplayP4AirDriver::IsScreenBacklightReady() const {
-  return IsSy7200aReady();
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      return IsSy7200aReady();
+    case device::ScreenType::kRm69a10:
+      return IsRm69a10Ready();
+    default:
+      return false;
+  }
 }
 
 bool TDisplayP4AirDriver::IsSdmmcReady() const {
@@ -1509,121 +1758,145 @@ bool TDisplayP4AirDriver::SetBhi260apSleep(bool sleep) {
   return bhy2_set_host_intf_ctrl(host_interface_control, context) == BHY2_OK;
 }
 
-bool TDisplayP4AirDriver::SetQmc6310nSleep(bool sleep) {
-  if (!IsQmc6310nReady()) {
+bool TDisplayP4AirDriver::SetQmc6309Sleep(bool sleep) {
+  if (!IsQmc6309Ready()) {
     return sleep;
   }
-  return chip_.qmc6310n->setOperationMode(
+  return chip_.qmc6309->setOperationMode(
       sleep ? OperationMode::SUSPEND : OperationMode::CONTINUOUS_MEASUREMENT);
 }
 
 bool TDisplayP4AirDriver::SetScreenSleep(bool sleep) {
-  if (!chip_status_.hi8561.init_flag) {
-    return sleep;
+  switch (screen_type()) {
+    case device::ScreenType::kHi8561:
+      if (!chip_status_.hi8561.init_flag) {
+        return sleep;
+      }
+      if (sleep) {
+        return chip_.hi8561->SetScreenOff(true) &&
+               chip_.hi8561->SetSleep(true);
+      }
+      return chip_.hi8561->SetSleep(false) &&
+             chip_.hi8561->SetScreenOff(false);
+    case device::ScreenType::kRm69a10:
+      if (!chip_status_.rm69a10.init_flag) {
+        return sleep;
+      }
+      if (sleep) {
+        return chip_.rm69a10->SetScreenOff(true) &&
+               chip_.rm69a10->SetSleep(true);
+      }
+      return chip_.rm69a10->SetSleep(false) &&
+             chip_.rm69a10->SetScreenOff(false);
+    default:
+      return false;
   }
-  bool result = true;
-  if (sleep) {
-    result &= chip_.hi8561->SetScreenOff(true);
-    result &= chip_.hi8561->SetSleep(true);
-  } else {
-    result &= chip_.hi8561->SetSleep(false);
-    result &= chip_.hi8561->SetScreenOff(false);
-  }
-  return result;
 }
 
-bool TDisplayP4AirDriver::SetEs8389OperatingMode(Es8389OperatingMode mode) {
-  if (!chip_status_.es8389.init_flag) {
-    return mode == Es8389OperatingMode::kSleep && SetNs4150Enabled(false);
+bool TDisplayP4AirDriver::DetectScreenType() {
+  if (!DeinitTouch()) {
+    return false;
   }
-  if (mode == es8389_operating_mode_) {
-    return mode != Es8389OperatingMode::kSleep || SetNs4150Enabled(false);
+  screen_info_ = nullptr;
+
+  if (!chip_status_.xl9535.init_flag || chip_.xl9535 == nullptr ||
+      chip_.gt9895 == nullptr) {
+    return false;
+  }
+  bool reset_result = chip_.xl9535->GpioWrite(
+      gpio::xl9535::kTouchRst, 1);
+  reset_result &= chip_.xl9535->SetGpioMode(
+      gpio::xl9535::kTouchRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
+  if (!reset_result) {
+    return false;
+  }
+  platform_hal_->DelayMs(30);
+  if (!chip_.xl9535->GpioWrite(
+      gpio::xl9535::kTouchRst, 0)) {
+    return false;
+  }
+  platform_hal_->DelayMs(100);
+
+  if (chip_.gt9895->Init(device::gt9895::kI2cFrequencyHz)) {
+    screen_info_ = ScreenInfoForType(device::ScreenType::kRm69a10);
+    chip_status_.gt9895.init_flag = true;
+    LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+        "Auto detected T-Display-P4-Air screen: %s\n", screen_info_->name);
+  } else {
+    if (!chip_.gt9895->Deinit(false)) {
+      return false;
+    }
+    chip_status_.gt9895.init_flag = false;
+    screen_info_ = ScreenInfoForType(device::ScreenType::kHi8561);
+    LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
+        "GT9895 detection failed; trying HI8561 (screen type not confirmed)\n");
+  }
+  return true;
+}
+
+bool TDisplayP4AirDriver::SetEs8390OperatingMode(Es8390OperatingMode mode) {
+  if (!chip_status_.es8390.init_flag) {
+    return mode == Es8390OperatingMode::kSleep && SetNs4150Enabled(false);
+  }
+  if (mode == es8390_operating_mode_) {
+    return mode != Es8390OperatingMode::kSleep || SetNs4150Enabled(false);
   }
 
   bool result = true;
-  if (mode == Es8389OperatingMode::kSleep) {
+  if (mode == Es8390OperatingMode::kSleep) {
     result &=
-        (esp_codec_dev_close(es8389_input_codec_dev_) == ESP_CODEC_DEV_OK);
+        (esp_codec_dev_close(es8390_input_codec_dev_) == ESP_CODEC_DEV_OK);
     result &=
-        (esp_codec_dev_close(es8389_output_codec_dev_) == ESP_CODEC_DEV_OK);
+        (esp_codec_dev_close(es8390_output_codec_dev_) == ESP_CODEC_DEV_OK);
     result &= SetNs4150Enabled(false);
-    es8389_operating_mode_ = Es8389OperatingMode::kSleep;
+    es8390_operating_mode_ = Es8390OperatingMode::kSleep;
   } else {
     esp_codec_dev_sample_info_t output_sample_info = {
-        .bits_per_sample = device::es8389::kBitsPerSample,
-        .channel = device::es8389::kChannel,
+        .bits_per_sample = device::es8390::kBitsPerSample,
+        .channel = device::es8390::kChannel,
         .channel_mask = ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0) |
                         ESP_CODEC_DEV_MAKE_CHANNEL_MASK(1),
-        .sample_rate = device::es8389::kSampleRate,
-        .mclk_multiple = device::es8389::kMclkMultiple,
+        .sample_rate = device::es8390::kSampleRate,
+        .mclk_multiple = device::es8390::kMclkMultiple,
     };
     esp_codec_dev_sample_info_t input_sample_info = output_sample_info;
-    const bool output_opened = esp_codec_dev_open(es8389_output_codec_dev_,
+    const bool output_opened = esp_codec_dev_open(es8390_output_codec_dev_,
                                    &output_sample_info) == ESP_CODEC_DEV_OK;
     const bool input_opened =
-        output_opened && esp_codec_dev_open(es8389_input_codec_dev_,
+        output_opened && esp_codec_dev_open(es8390_input_codec_dev_,
                              &input_sample_info) == ESP_CODEC_DEV_OK;
-    result = output_opened && input_opened && ConfigureEs8389OutputPolarity() &&
-             SetNs4150Enabled(true);
+    result = output_opened && input_opened &&
+             ConfigureEs8390OutputPolarity() && SetNs4150Enabled(true);
     if (!result) {
       if (input_opened) {
-        esp_codec_dev_close(es8389_input_codec_dev_);
+        esp_codec_dev_close(es8390_input_codec_dev_);
       }
       if (output_opened) {
-        esp_codec_dev_close(es8389_output_codec_dev_);
+        esp_codec_dev_close(es8390_output_codec_dev_);
       }
       SetNs4150Enabled(false);
     }
   }
-  if (result && mode == Es8389OperatingMode::kActive) {
-    es8389_operating_mode_ = mode;
+  if (result && mode == Es8390OperatingMode::kActive) {
+    es8390_operating_mode_ = mode;
   }
   return result;
 }
 
-bool TDisplayP4AirDriver::ConfigureEs8389OutputPolarity() {
-  if (es8389_ctrl_if_ == nullptr || es8389_ctrl_if_->read_reg == nullptr ||
-      es8389_ctrl_if_->write_reg == nullptr) {
-    return false;
+bool TDisplayP4AirDriver::SetLr2021OperatingMode(Lr2021OperatingMode mode) {
+  if (!chip_status_.lr2021.init_flag || chip_.lr2021 == nullptr) {
+    return mode == Lr2021OperatingMode::kSleep;
   }
-
-  int register_value = 0;
-  if (es8389_ctrl_if_->read_reg(es8389_ctrl_if_, kEs8389DacMiscControl2Register,
-          1, &register_value, 1) != ESP_CODEC_DEV_OK) {
-    return false;
-  }
-
-  // T-Display-P4-Air V1.0 的 DAC 输出声道采用不同极性：左声道为
-  // 负极性，右声道为正极性。因此必须反转左声道的输出极性，
-  // 否则两个扬声器的声学相位不一致，输出声音会失真。
-  register_value |= kEs8389Dac1OutputInvertMask;
-  return es8389_ctrl_if_->write_reg(es8389_ctrl_if_,
-             kEs8389DacMiscControl2Register, 1, &register_value,
-             1) == ESP_CODEC_DEV_OK;
-}
-
-bool TDisplayP4AirDriver::SetLr1121OperatingMode(Lr1121OperatingMode mode) {
-  if (!chip_status_.lr1121.init_flag || chip_.lr1121 == nullptr) {
-    return mode == Lr1121OperatingMode::kSleep;
-  }
-  lr11xx_status_t result = LR11XX_STATUS_ERROR;
-  if (mode == Lr1121OperatingMode::kSleep) {
-    const lr11xx_system_sleep_cfg_t sleep_config = {
-        .is_warm_start = true,
-        .is_rtc_timeout = false,
+  if (mode == Lr2021OperatingMode::kSleep) {
+    const lr20xx_system_sleep_cfg_t sleep_config = {
+        .is_clk_32k_enabled = false,
+        .is_ram_retention_enabled = true,
     };
-    result = chip_.lr1121->Invoke(lr11xx_system_set_sleep, sleep_config, 0U);
-  } else if (chip_.lr1121->Wakeup()) {
-    result = chip_.lr1121->Invoke(
-        lr11xx_system_set_standby, LR11XX_SYSTEM_STANDBY_CFG_RC);
+    return chip_.lr2021->SetSleep(sleep_config);
   }
-  if (result != LR11XX_STATUS_OK) {
-    LogMessage(LogLevel::kError, __FILE__, __LINE__,
-        "LR1121 operating mode change failed (error code: %d)\n",
-        static_cast<int>(result));
-    return false;
-  }
-  return true;
+  return chip_.lr2021->Wakeup() &&
+         chip_.lr2021->Invoke(lr20xx_system_set_standby_mode,
+             LR20XX_SYSTEM_STANDBY_MODE_RC) == LR20XX_STATUS_OK;
 }
 
 bool TDisplayP4AirDriver::SetEsp32c5PowerEnabled(bool enabled) {
@@ -1688,10 +1961,10 @@ bool TDisplayP4AirDriver::PrepareDriversForPowerOff() {
   result &= DeinitTouch();
   result &= DeinitScreen();
   result &= DeinitBhi260ap();
-  result &= DeinitQmc6310n();
+  result &= DeinitQmc6309();
   result &= DeinitAw86224();
-  result &= DeinitEs8389();
-  result &= DeinitLr1121();
+  result &= DeinitEs8390();
+  result &= DeinitLr2021();
   result &= DeinitSt25r3916();
   result &= DeinitNrf9151();
   result &= SetCameraPowerEnabled(false);
@@ -1702,15 +1975,19 @@ bool TDisplayP4AirDriver::PrepareDriversForPowerOff() {
   if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kSdPowerEn, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNrf9151En, 0);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kBhi260apRst, 0);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Trig, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbPhyPowerEn, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAw86224Rst, 0);
+    result &= chip_.xl9535->GpioWrite(
+        gpio::xl9535::kBhi260apRst, 1);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kAdl161Rst, 0);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr1121PowerEn, 0);
+    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr2021PowerEn, 0);
     result &=
         chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32p4Esp32c5UartSwitch, 0);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5En, 0);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kTouchRst, 1);
-    result &= chip_.xl9535->GpioWrite(gpio::xl9535::kScreenRst, 1);
+    result &= chip_.xl9535->GpioWrite(
+        gpio::xl9535::kTouchRst, 1);
+    result &= chip_.xl9535->GpioWrite(
+        gpio::xl9535::kScreenRst, 1);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kEsp32c5Boot, 1);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kNs4150En, 0);
   }

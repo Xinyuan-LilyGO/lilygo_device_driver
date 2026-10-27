@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 V2 板级硬件配置
  * @Author: LILYGO_L
  * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-09-22 15:18:33
+ * @LastEditTime: 2026-10-23 09:15:09
  * @License: GPL 3.0
  */
 
@@ -213,9 +213,10 @@ namespace xl9535 {
 inline constexpr uint8_t kI2cAddress = 0x20;
 inline constexpr int kSdPowerEnabled = 1;
 inline constexpr int kSdPowerDisabled = 0;
-// 屏幕、触摸、BHI260AP 和 LR2021 的复位控制经 NMOS 反相。
-inline constexpr int kResetAsserted = 1;
-inline constexpr int kResetReleased = 0;
+inline constexpr int kTouchRstActiveLevel = 1;
+inline constexpr int kTouchRstInactiveLevel = 0;
+inline constexpr int kScreenRstActiveLevel = 1;
+inline constexpr int kScreenRstInactiveLevel = 0;
 }  // namespace xl9535
 
 namespace sy7200a {

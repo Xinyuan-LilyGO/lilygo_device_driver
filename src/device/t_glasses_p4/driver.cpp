@@ -523,7 +523,7 @@ bool TGlassesP4Driver::InitLr2021() {
   result &= (chip_.lr2021->Invoke(lr20xx_system_set_standby_mode,
                  LR20XX_SYSTEM_STANDBY_MODE_RC) == LR20XX_STATUS_OK);
   result &= (chip_.lr2021->Invoke(lr20xx_system_set_tcxo_mode,
-                 LR20XX_SYSTEM_TCXO_CTRL_3_3V, 32768U) == LR20XX_STATUS_OK);
+                   LR20XX_SYSTEM_TCXO_CTRL_3_0V, 32768U) == LR20XX_STATUS_OK);
   result &= (chip_.lr2021->Invoke(lr20xx_system_set_reg_mode,
                  LR20XX_SYSTEM_REG_MODE_DCDC) == LR20XX_STATUS_OK);
   result &= (chip_.lr2021->Invoke(lr20xx_radio_common_set_rx_tx_fallback_mode,

@@ -12,7 +12,7 @@
 #include <memory>
 #include <string>
 
-#include "SensorQMC6310.hpp"
+#include "SensorQMC6309.hpp"
 #include "bhi2xy_sensorapi_cpp_bus_driver.h"
 #include "cpp_bus_driver.h"
 #include "chip/esp32p4/sd_card.h"
@@ -34,6 +34,7 @@ namespace t_display_p4_air::device {
 enum class ScreenType {
   kUnknown,
   kHi8561,
+  kRm69a10,
 };
 
 // 屏幕型号、分辨率和 MIPI 参数信息
@@ -111,19 +112,17 @@ inline constexpr BatteryInfo kBatteryInfo = {
 
 /**
  * @brief T-Display-P4-Air 板级设备驱动。
- * @note 当前屏幕型号固定，Screen、Touch、ScreenBacklight 仍以通用
- * 名称提供公共接口，为后续不同型号屏幕及其配套器件预留扩展入口；
- * 对应的具体芯片实现放在私有区域。其他无需型号选择的芯片接口
- * 使用具体芯片名称。
+ * @note Screen、Touch、ScreenBacklight 以通用名称提供公共接口，
+ * 屏幕型号及其配套器件由驱动自动检测后分派。
  */
 class TDisplayP4AirDriver {
  public:
   enum class InitMode { kAsync, kSync };
-  enum class Lr1121OperatingMode {
+  enum class Lr2021OperatingMode {
     kStandby,
     kSleep,
   };
-  enum class Es8389OperatingMode {
+  enum class Es8390OperatingMode {
     kActive,
     kSleep,
   };
@@ -155,11 +154,11 @@ class TDisplayP4AirDriver {
   const t_display_p4_air::device::BatteryInfo& battery_info() const {
     return t_display_p4_air::device::kBatteryInfo;
   }
-  esp_codec_dev_handle_t es8389_input_codec_dev() const {
-    return es8389_input_codec_dev_;
+  esp_codec_dev_handle_t es8390_input_codec_dev() const {
+    return es8390_input_codec_dev_;
   }
-  esp_codec_dev_handle_t es8389_output_codec_dev() const {
-    return es8389_output_codec_dev_;
+  esp_codec_dev_handle_t es8390_output_codec_dev() const {
+    return es8390_output_codec_dev_;
   }
   t_display_p4_air::device::DeviceInfo device_info() const {
     return {
@@ -176,11 +175,11 @@ class TDisplayP4AirDriver {
   bool InitXl9535();
   bool InitSgm38121();
   bool InitBhi260ap();
-  bool InitQmc6310n();
+  bool InitQmc6309();
   bool InitAw86224();
   bool InitSt25r3916();
-  bool InitEs8389();
-  bool InitLr1121();
+  bool InitEs8390();
+  bool InitLr2021();
   bool InitNrf9151();
   bool InitPower();
   bool InitScreen();
@@ -191,12 +190,12 @@ class TDisplayP4AirDriver {
   bool InitSdspi(const char* base_path, spi_host_device_t host_id,
       int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
-  bool DeinitEs8389();
+  bool DeinitEs8390();
   bool DeinitBhi260ap();
-  bool DeinitQmc6310n();
+  bool DeinitQmc6309();
   bool DeinitAw86224();
   bool DeinitSt25r3916();
-  bool DeinitLr1121();
+  bool DeinitLr2021();
   bool DeinitNrf9151();
   bool DeinitPower();
   bool DeinitScreen();
@@ -208,11 +207,11 @@ class TDisplayP4AirDriver {
   bool IsXl9535Ready() const;
   bool IsSgm38121Ready() const;
   bool IsBhi260apReady() const;
-  bool IsQmc6310nReady() const;
+  bool IsQmc6309Ready() const;
   bool IsAw86224Ready() const;
   bool IsSt25r3916Ready() const;
-  bool IsEs8389Ready() const;
-  bool IsLr1121Ready() const;
+  bool IsEs8390Ready() const;
+  bool IsLr2021Ready() const;
   bool IsNrf9151Ready() const;
   bool IsScreenReady() const;
   bool IsTouchReady() const;
@@ -223,10 +222,10 @@ class TDisplayP4AirDriver {
 
   bool SetAw86224Standby();
   bool SetBhi260apSleep(bool sleep);
-  bool SetQmc6310nSleep(bool sleep);
+  bool SetQmc6309Sleep(bool sleep);
   bool SetScreenSleep(bool sleep);
-  bool SetEs8389OperatingMode(Es8389OperatingMode mode);
-  bool SetLr1121OperatingMode(Lr1121OperatingMode mode);
+  bool SetEs8390OperatingMode(Es8390OperatingMode mode);
+  bool SetLr2021OperatingMode(Lr2021OperatingMode mode);
   bool SetEsp32c5PowerEnabled(bool enabled);
   bool SetCameraPowerEnabled(bool enabled);
   /**
@@ -266,10 +265,10 @@ class TDisplayP4AirDriver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c> st25r3916_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> hi8561_i2c_touch_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> bhi260ap_i2c_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2c> qmc6310n_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> qmc6309_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
-    std::shared_ptr<cpp_bus_driver::HardwareSpi> lr1121_spi_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2s> es8390_i2s_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareSpi> lr2021_spi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareUart> nrf9151_uart_bus;
   };
 
@@ -281,11 +280,13 @@ class TDisplayP4AirDriver {
     std::unique_ptr<stsw_st25rfal002_cpp_bus_driver::St25r3916x> st25r3916;
     std::unique_ptr<cpp_bus_driver::Hi8561> hi8561;
     std::unique_ptr<cpp_bus_driver::Hi8561Touch> hi8561_touch;
+    std::unique_ptr<cpp_bus_driver::Rm69a10> rm69a10;
+    std::unique_ptr<cpp_bus_driver::Gt9895> gt9895;
     std::unique_ptr<cpp_bus_driver::Pwm> sy7200a;
     std::unique_ptr<cpp_bus_driver::Nrf9151> nrf9151;
     std::unique_ptr<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy> bhi260ap;
-    std::unique_ptr<SensorQMC6310> qmc6310n;
-    std::unique_ptr<usp_cpp_bus_driver::Lr11xx> lr1121;
+    std::unique_ptr<SensorQMC6309> qmc6309;
+    std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
   };
 
   struct ChipStatus {
@@ -307,7 +308,7 @@ class TDisplayP4AirDriver {
 
     struct {
       bool init_flag = false;
-    } qmc6310n;
+    } qmc6309;
 
     struct {
       bool init_flag = false;
@@ -331,15 +332,23 @@ class TDisplayP4AirDriver {
 
     struct {
       bool init_flag = false;
+    } rm69a10;
+
+    struct {
+      bool init_flag = false;
+    } gt9895;
+
+    struct {
+      bool init_flag = false;
     } sy7200a;
 
     struct {
       bool init_flag = false;
-    } es8389;
+    } es8390;
 
     struct {
       bool init_flag = false;
-    } lr1121;
+    } lr2021;
 
     struct {
       bool init_flag = false;
@@ -356,15 +365,20 @@ class TDisplayP4AirDriver {
   bool InitMinimalDrivers();
   bool InitHi8561();
   bool InitHi8561Touch();
+  bool InitRm69a10();
+  bool InitGt9895();
   bool InitSy7200a();
 
   bool IsHi8561Ready() const;
   bool IsHi8561TouchReady() const;
+  bool IsRm69a10Ready() const;
+  bool IsGt9895Ready() const;
   bool IsSy7200aReady() const;
 
-  bool SetNs4150Enabled(bool enabled);
+  bool DetectScreenType();
 
-  bool ConfigureEs8389OutputPolarity();
+  bool SetNs4150Enabled(bool enabled);
+  bool ConfigureEs8390OutputPolarity();
 
   AsyncInitManager async_init_manager_;
   std::unique_ptr<cpp_bus_driver::PlatformHal> platform_hal_;
@@ -376,13 +390,13 @@ class TDisplayP4AirDriver {
   bool power_initialized_ = false;
   const t_display_p4_air::device::ScreenInfo* screen_info_ = nullptr;
 
-  const audio_codec_ctrl_if_t* es8389_ctrl_if_ = nullptr;
-  const audio_codec_data_if_t* es8389_data_if_ = nullptr;
-  const audio_codec_gpio_if_t* es8389_gpio_if_ = nullptr;
-  const audio_codec_if_t* es8389_codec_if_ = nullptr;
-  esp_codec_dev_handle_t es8389_input_codec_dev_ = nullptr;
-  esp_codec_dev_handle_t es8389_output_codec_dev_ = nullptr;
-  Es8389OperatingMode es8389_operating_mode_ = Es8389OperatingMode::kSleep;
+  const audio_codec_ctrl_if_t* es8390_ctrl_if_ = nullptr;
+  const audio_codec_data_if_t* es8390_data_if_ = nullptr;
+  const audio_codec_gpio_if_t* es8390_gpio_if_ = nullptr;
+  const audio_codec_if_t* es8390_codec_if_ = nullptr;
+  esp_codec_dev_handle_t es8390_input_codec_dev_ = nullptr;
+  esp_codec_dev_handle_t es8390_output_codec_dev_ = nullptr;
+  Es8390OperatingMode es8390_operating_mode_ = Es8390OperatingMode::kSleep;
 
   TDisplayP4AirDriver() = default;
   ~TDisplayP4AirDriver() = default;

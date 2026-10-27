@@ -160,13 +160,13 @@ bool TDisplayP4Driver::InitXl9535() {
       {gpio::xl9535::kGpsWakeUp, 0},
       {gpio::xl9535::kEsp32c5Boot, 1},
       {gpio::xl9535::kEsp32c5En, 0},
-      {gpio::xl9535::kScreenRst, device::xl9535::kResetAsserted},
+      {gpio::xl9535::kScreenRst, device::xl9535::kScreenRstActiveLevel},
       {gpio::xl9535::kNs4150En, 0},
       {gpio::xl9535::kUsbHostPowerEn, 0},
-      {gpio::xl9535::kTouchRst, device::xl9535::kResetAsserted},
+      {gpio::xl9535::kTouchRst, device::xl9535::kTouchRstActiveLevel},
       {gpio::xl9535::kLed, 1},
-      {gpio::xl9535::kBhi260apRst, device::xl9535::kResetAsserted},
-      {gpio::xl9535::kLr2021Rst, device::xl9535::kResetAsserted},
+      {gpio::xl9535::kBhi260apRst, 1},
+      {gpio::xl9535::kLr2021Rst, 1},
       {gpio::xl9535::kLr2021PowerEn, 0},
       {gpio::xl9535::kSdPowerEn, 0},
   };
@@ -200,13 +200,13 @@ bool TDisplayP4Driver::InitBhi260ap() {
   }
 
   bool result = chip_.xl9535->GpioWrite(
-      gpio::xl9535::kBhi260apRst, device::xl9535::kResetAsserted);
+      gpio::xl9535::kBhi260apRst, 1);
   result &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kBhi260apRst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   if (result) {
     platform_hal_->DelayMs(2);
     result = chip_.xl9535->GpioWrite(
-        gpio::xl9535::kBhi260apRst, device::xl9535::kResetReleased);
+        gpio::xl9535::kBhi260apRst, 0);
   }
   if (result) {
     platform_hal_->DelayMs(120);
@@ -229,7 +229,7 @@ bool TDisplayP4Driver::InitBhi260ap() {
     const int8_t last_error = chip_.bhi260ap->last_error();
     chip_.bhi260ap->Deinit(false);
     chip_.xl9535->GpioWrite(
-        gpio::xl9535::kBhi260apRst, device::xl9535::kResetAsserted);
+        gpio::xl9535::kBhi260apRst, 1);
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitBhi260ap failed (error code: %d)\n", static_cast<int>(last_error));
   }
@@ -522,13 +522,13 @@ bool TDisplayP4Driver::InitLr2021() {
   reset_pin_initialized &= platform_hal_->SetGpioMode(
       gpio::lr2021::kInt, cpp_bus_driver::PlatformHal::GpioMode::kInput);
   reset_pin_initialized &= chip_.xl9535->GpioWrite(
-      gpio::xl9535::kLr2021Rst, device::xl9535::kResetAsserted);
+      gpio::xl9535::kLr2021Rst, 1);
   reset_pin_initialized &= chip_.xl9535->SetGpioMode(
       gpio::xl9535::kLr2021Rst, cpp_bus_driver::Xl95x5::Mode::kOutput);
   if (!reset_pin_initialized ||
       !chip_.lr2021->Init(device::lr2021::kSpiFrequencyHz)) {
     chip_.xl9535->GpioWrite(
-        gpio::xl9535::kLr2021Rst, device::xl9535::kResetAsserted);
+        gpio::xl9535::kLr2021Rst, 1);
     chip_.xl9535->GpioWrite(gpio::xl9535::kLr2021PowerEn, 0);
     LogMessage(
         LogLevel::kError, __FILE__, __LINE__, "InitLr2021 transport failed\n");
@@ -558,7 +558,7 @@ bool TDisplayP4Driver::InitLr2021() {
   if (!detected) {
     chip_.lr2021->Deinit(false);
     chip_.xl9535->GpioWrite(
-        gpio::xl9535::kLr2021Rst, device::xl9535::kResetAsserted);
+        gpio::xl9535::kLr2021Rst, 1);
     chip_.xl9535->GpioWrite(gpio::xl9535::kLr2021PowerEn, 0);
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitLr2021 chip detection failed (fw: %u.%u)\n",
@@ -592,7 +592,7 @@ bool TDisplayP4Driver::InitLr2021() {
   result &= (chip_.lr2021->Invoke(lr20xx_system_set_standby_mode,
                  LR20XX_SYSTEM_STANDBY_MODE_RC) == LR20XX_STATUS_OK);
   result &= (chip_.lr2021->Invoke(lr20xx_system_set_tcxo_mode,
-                 LR20XX_SYSTEM_TCXO_CTRL_3_3V, 32768U) == LR20XX_STATUS_OK);
+                 LR20XX_SYSTEM_TCXO_CTRL_3_0V, 32768U) == LR20XX_STATUS_OK);
   result &= (chip_.lr2021->Invoke(lr20xx_system_set_reg_mode,
                  LR20XX_SYSTEM_REG_MODE_DCDC) == LR20XX_STATUS_OK);
   result &= (chip_.lr2021->Invoke(lr20xx_radio_common_set_rx_tx_fallback_mode,
@@ -621,7 +621,7 @@ bool TDisplayP4Driver::InitLr2021() {
   if (!result) {
     chip_.lr2021->Deinit(false);
     chip_.xl9535->GpioWrite(
-        gpio::xl9535::kLr2021Rst, device::xl9535::kResetAsserted);
+        gpio::xl9535::kLr2021Rst, 1);
     chip_.xl9535->GpioWrite(gpio::xl9535::kLr2021PowerEn, 0);
     LogMessage(LogLevel::kError, __FILE__, __LINE__,
         "InitLr2021 hardware configuration failed\n");
@@ -797,7 +797,7 @@ bool TDisplayP4Driver::DeinitBhi260ap() {
   }
   if (IsXl9535Ready()) {
     result &= chip_.xl9535->GpioWrite(
-        gpio::xl9535::kBhi260apRst, device::xl9535::kResetAsserted);
+        gpio::xl9535::kBhi260apRst, 1);
   }
   chip_status_.bhi260ap.init_flag = false;
   return result;
@@ -822,7 +822,7 @@ bool TDisplayP4Driver::DeinitLr2021() {
   chip_status_.lr2021.init_flag = false;
   if (chip_status_.xl9535.init_flag) {
     result &= chip_.xl9535->GpioWrite(
-        gpio::xl9535::kLr2021Rst, device::xl9535::kResetAsserted);
+        gpio::xl9535::kLr2021Rst, 1);
     result &= chip_.xl9535->GpioWrite(gpio::xl9535::kLr2021PowerEn, 0);
   }
   return result;
@@ -1172,9 +1172,8 @@ void TDisplayP4Driver::CreateDrivers() {
       bus_.radio_spi_bus, gpio::lr2021::kBusy, gpio::lr2021::kCs,
       [this](bool released) {
         return IsXl9535Ready() &&
-               chip_.xl9535->GpioWrite(gpio::xl9535::kLr2021Rst,
-                   released ? device::xl9535::kResetReleased
-                            : device::xl9535::kResetAsserted);
+               chip_.xl9535->GpioWrite(
+                   gpio::xl9535::kLr2021Rst, released ? 0 : 1);
       });
 }
 
