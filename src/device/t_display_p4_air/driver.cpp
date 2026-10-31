@@ -2,7 +2,7 @@
  * @Description: T-Display-P4-Air 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-10-21 17:47:12
+ * @LastEditTime: 2026-10-31 15:53:30
  * @License: GPL 3.0
  */
 #include "device/t_display_p4_air/driver.h"
@@ -109,6 +109,8 @@ void TDisplayP4AirDriver::CreateDrivers() {
 
   bus_.axp517_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
+  bus_.rx8130ce_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
   bus_.hi8561_i2c_touch_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.bhi260ap_i2c_bus =
@@ -137,6 +139,8 @@ void TDisplayP4AirDriver::CreateDrivers() {
 
   chip_.axp517 = std::make_unique<cpp_bus_driver::Axp517>(
       bus_.axp517_i2c_bus, device::axp517::kI2cAddress);
+  chip_.rx8130ce = std::make_unique<cpp_bus_driver::Rx8130ce>(
+      bus_.rx8130ce_i2c_bus, device::rx8130ce::kI2cAddress);
   chip_.xl9535 = std::make_unique<cpp_bus_driver::Xl95x5>(
       bus_.xl9535_i2c_bus, device::xl9535::kI2cAddress);
   chip_.sgm38121 = std::make_unique<cpp_bus_driver::Sgm38121>(
@@ -277,6 +281,16 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
         },
         "InitEs8390Task", 4096, this, 3);
 
+    result &= async_init_manager_.StartTask(
+        [](void* arg) {
+          auto* self = static_cast<TDisplayP4AirDriver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
+            self->InitRx8130ce();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitRx8130ceTask", 4096, this, 1);
+
   } else {
     const bool screen_initialized = InitScreen();
     result &= screen_initialized;
@@ -292,6 +306,7 @@ bool TDisplayP4AirDriver::InitDrivers(InitMode mode) {
     result &= InitLr2021();
 
     result &= InitEs8390();
+    result &= InitRx8130ce();
   }
 
   return result;
@@ -332,6 +347,30 @@ bool TDisplayP4AirDriver::InitAxp517() {
   }
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitAxp517 success\n" : "InitAxp517 failed\n");
+  return result;
+}
+
+bool TDisplayP4AirDriver::InitRx8130ce() {
+  if (IsRx8130ceReady()) {
+    return true;
+  }
+  chip_status_.rx8130ce.init_flag = false;
+  if (bus_.rx8130ce_i2c_bus == nullptr || chip_.rx8130ce == nullptr ||
+      !bus_.rx8130ce_i2c_bus->Init(device::rx8130ce::kI2cFrequencyHz,
+          device::rx8130ce::kI2cAddress) ||
+      !bus_.rx8130ce_i2c_bus->Probe(device::rx8130ce::kI2cAddress)) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitRx8130ce I2C probe failed\n");
+    return false;
+  }
+  bool result = chip_.rx8130ce->Init(device::rx8130ce::kI2cFrequencyHz);
+  if (result) {
+    result = chip_.rx8130ce->SetChargerEnabled(true);
+  }
+  chip_status_.rx8130ce.init_flag = result;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitRx8130ce success\n"
+             : "InitRx8130ce failed\n");
   return result;
 }
 
@@ -1616,6 +1655,10 @@ bool TDisplayP4AirDriver::DeinitSdmmc(bool release_bus) {
 
 bool TDisplayP4AirDriver::IsAxp517Ready() const {
   return chip_status_.axp517.init_flag && chip_.axp517 != nullptr;
+}
+
+bool TDisplayP4AirDriver::IsRx8130ceReady() const {
+  return chip_status_.rx8130ce.init_flag && chip_.rx8130ce != nullptr;
 }
 
 bool TDisplayP4AirDriver::IsXl9535Ready() const {

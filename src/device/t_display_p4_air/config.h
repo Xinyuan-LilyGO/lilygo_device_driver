@@ -258,6 +258,11 @@ namespace axp517 {
 inline constexpr uint8_t kI2cAddress = 0x34;
 }  // namespace axp517
 
+namespace rx8130ce {
+inline constexpr uint8_t kI2cAddress = 0x32;
+inline constexpr uint32_t kI2cFrequencyHz = 100000;
+}  // namespace rx8130ce
+
 namespace aw86224 {
 inline constexpr uint8_t kI2cAddress = 0x58;
 inline constexpr int32_t kI2cFrequencyHz = 500000;

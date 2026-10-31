@@ -172,6 +172,7 @@ class TDisplayP4AirDriver {
   bool Init(InitMode mode = InitMode::kSync);
   bool InitMinimal();
   bool InitAxp517();
+  bool InitRx8130ce();
   bool InitXl9535();
   bool InitSgm38121();
   bool InitBhi260ap();
@@ -204,6 +205,7 @@ class TDisplayP4AirDriver {
   bool DeinitSdmmc(bool release_bus = true);
 
   bool IsAxp517Ready() const;
+  bool IsRx8130ceReady() const;
   bool IsXl9535Ready() const;
   bool IsSgm38121Ready() const;
   bool IsBhi260apReady() const;
@@ -259,6 +261,7 @@ class TDisplayP4AirDriver {
  private:
   struct Bus {
     std::shared_ptr<cpp_bus_driver::HardwareI2c> axp517_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> rx8130ce_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> xl9535_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> sgm38121_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
@@ -274,6 +277,7 @@ class TDisplayP4AirDriver {
 
   struct Chip {
     std::unique_ptr<cpp_bus_driver::Axp517> axp517;
+    std::unique_ptr<cpp_bus_driver::Rx8130ce> rx8130ce;
     std::unique_ptr<cpp_bus_driver::Xl95x5> xl9535;
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
     std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
@@ -293,6 +297,10 @@ class TDisplayP4AirDriver {
     struct {
       bool init_flag = false;
     } axp517;
+
+    struct {
+      bool init_flag = false;
+    } rx8130ce;
 
     struct {
       bool init_flag = false;
