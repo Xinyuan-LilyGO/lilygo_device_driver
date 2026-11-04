@@ -2,7 +2,7 @@
  * @Description: T-Display-P4 V2 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:51:14
- * @LastEditTime: 2026-09-28 11:05:29
+ * @LastEditTime: 2026-11-04 11:27:28
  * @License: GPL 3.0
  */
 #include "device/t_display_p4/driver.h"
@@ -47,44 +47,15 @@ bool TDisplayP4Driver::Init(InitMode mode) {
   return result;
 }
 
-bool TDisplayP4Driver::InitUsbHostPower() {
-  if (!chip_status_.axp517.init_flag || !chip_status_.xl9535.init_flag) {
-    return false;
+bool TDisplayP4Driver::SetTypeAUsbPowerEnabled(bool enabled) {
+  if (!chip_status_.xl9535.init_flag) {
+    return !enabled;
   }
-  // 先断开 Type-A 负载并关闭 Boost，再配置电源和输出引脚。
-  if (!SetUsbHostPowerEnabled(false) ||
-      !chip_.xl9535->SetGpioMode(gpio::xl9535::kUsbHostPowerEn,
-          cpp_bus_driver::Xl95x5::Mode::kOutput) ||
-      !chip_.axp517->SetRbfetForceEnable(false) ||
-      !chip_.axp517->SetTypeCRole(cpp_bus_driver::Axp517::TypeCRole::kSink) ||
-      !chip_.axp517->SetBoostVoltage(5000)) {
-    SetUsbHostPowerEnabled(false);
-    return false;
-  }
-  return true;
-}
-
-bool TDisplayP4Driver::SetUsbHostPowerEnabled(bool enabled) {
-  if (!enabled) {
-    bool result = true;
-    if (chip_status_.xl9535.init_flag) {
-      result &= chip_.xl9535->GpioWrite(gpio::xl9535::kUsbHostPowerEn, 0);
+  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kTypeAUsbPowerEn,
+          enabled ? 1 : 0)) {
+    if (enabled) {
+      chip_.xl9535->GpioWrite(gpio::xl9535::kTypeAUsbPowerEn, 0);
     }
-    if (chip_status_.axp517.init_flag) {
-      result &= chip_.axp517->SetBoostEnable(false);
-    }
-    return result;
-  }
-  if (!chip_status_.axp517.init_flag || !chip_status_.xl9535.init_flag) {
-    return false;
-  }
-  if (!chip_.axp517->SetBoostEnable(true)) {
-    SetUsbHostPowerEnabled(false);
-    return false;
-  }
-  // RBFET 通向 Type-C 输入，保持关闭。
-  if (!chip_.xl9535->GpioWrite(gpio::xl9535::kUsbHostPowerEn, 1)) {
-    SetUsbHostPowerEnabled(false);
     return false;
   }
   return true;
@@ -162,7 +133,7 @@ bool TDisplayP4Driver::InitXl9535() {
       {gpio::xl9535::kEsp32c5En, 0},
       {gpio::xl9535::kScreenRst, device::xl9535::kScreenRstActiveLevel},
       {gpio::xl9535::kNs4150En, 0},
-      {gpio::xl9535::kUsbHostPowerEn, 0},
+      {gpio::xl9535::kTypeAUsbPowerEn, 0},
       {gpio::xl9535::kTouchRst, device::xl9535::kTouchRstActiveLevel},
       {gpio::xl9535::kLed, 1},
       {gpio::xl9535::kBhi260apRst, 1},
@@ -1020,8 +991,8 @@ bool TDisplayP4Driver::PrepareMinimalDriversForPowerOff() {
   // 应用若在轮询 PD，须先停止任务，再释放 AXP517 或关闭其电源。
   bool result = true;
   result &= DeinitKeyboardExpansion();
-  // 在释放 AXP517 与 XL9535 前关闭 Type-A 负载及 Boost。
-  result &= SetUsbHostPowerEnabled(false);
+  // 在释放 XL9535 前关闭 Type-A 电源。
+  result &= SetTypeAUsbPowerEnabled(false);
   result &= DeinitBhi260ap();
   result &= DeinitQmc6309();
   if (!result) {

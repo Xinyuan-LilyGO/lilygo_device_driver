@@ -290,7 +290,6 @@ class TDisplayP4Driver {
   bool InitQmc6309();
   bool InitEs8389();
   bool InitLr2021();
-  bool InitUsbHostPower();
 #else
   bool InitImu();
   bool InitBq27220();
@@ -362,7 +361,7 @@ class TDisplayP4Driver {
   bool SetScreenSleep(bool sleep);
   bool SetCameraPowerEnabled(bool enabled);
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
-  bool SetUsbHostPowerEnabled(bool enabled);
+  bool SetTypeAUsbPowerEnabled(bool enabled);
   /**
    * @brief 设置外设 3.3V 电源使能，不自动处理信号 IO 隔离
    * @param enabled true 开启供电，false 关闭供电
