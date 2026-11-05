@@ -82,6 +82,8 @@ bool TDisplayP4Driver::InitAxp517() {
       static_cast<uint8_t>(
           cpp_bus_driver::Axp517::AdcChannel::kBatteryVoltage) |
       static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kTs) |
+      // PD 合同建立后需读取 VBUS ADC，确认输入电压已稳定到合同值。
+      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kVbusVoltage) |
       static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kChargeCurrent) |
       static_cast<uint8_t>(
           cpp_bus_driver::Axp517::AdcChannel::kDischargeCurrent) |
