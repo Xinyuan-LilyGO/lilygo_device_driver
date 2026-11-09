@@ -2,7 +2,7 @@
  * @Description: T-Glasses-P4 板级设备驱动实现
  * @Author: LILYGO_L
  * @Date: 2026-01-22 13:58:49
- * @License: GPL 3.0
+ * @LastEditTime: 2026-11-09 10:11:17
  */
 #include "device/t_glasses_p4/driver.h"
 

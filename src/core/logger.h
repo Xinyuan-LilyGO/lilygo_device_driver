@@ -2,8 +2,7 @@
  * @Description: 设备驱动库日志工具接口
  * @Author: LILYGO_L
  * @Date: 2025-12-19 10:50:07
- * @LastEditTime: 2026-04-16 15:42:32
- * @License: GPL 3.0
+ * @LastEditTime: 2026-11-09 10:05:08
  */
 #pragma once
 

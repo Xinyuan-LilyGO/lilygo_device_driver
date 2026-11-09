@@ -2,8 +2,7 @@
  * @Description: 设备驱动库日志工具实现
  * @Author: LILYGO_L
  * @Date: 2025-12-19 10:50:16
- * @LastEditTime: 2026-04-16 15:43:18
- * @License: GPL 3.0
+ * @LastEditTime: 2026-11-09 10:05:08
  */
 #include "logger.h"
 

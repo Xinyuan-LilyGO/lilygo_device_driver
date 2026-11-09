@@ -1,6 +1,8 @@
 /*
  * @Description: T-Display-P4 共用设备流程
- * @License: GPL 3.0
+ * @Author: LILYGO_L
+ * @Date: 2026-01-22 13:51:14
+ * @LastEditTime: 2026-11-09 10:11:17
  */
 #include "device/t_display_p4/driver.h"
 

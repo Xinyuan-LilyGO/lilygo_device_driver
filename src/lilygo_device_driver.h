@@ -2,8 +2,7 @@
  * @Description: LILYGO 设备驱动库统一入口
  * @Author: LILYGO_L
  * @Date: 2025-12-19 10:32:32
- * @LastEditTime: 2026-06-12 12:00:34
- * @License: GPL 3.0
+ * @LastEditTime: 2026-11-09 10:05:08
  */
 
 #pragma once
