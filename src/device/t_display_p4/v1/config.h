@@ -1,8 +1,5 @@
 /*
  * @Description: T-Display-P4 V1 板级硬件配置
- * @Author: LILYGO_L
- * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-10-12 10:07:33
  */
 #pragma once
 

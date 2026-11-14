@@ -1,8 +1,5 @@
 /*
  * @Description: T-Glasses-P4 设备驱动接口
- * @Author: LILYGO_L
- * @Date: 2026-01-22 13:58:49
- * @LastEditTime: 2026-11-09 10:11:17
  */
 #pragma once
 

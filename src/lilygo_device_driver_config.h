@@ -1,8 +1,5 @@
 /*
  * @Description: lilygo_device_driver 编译配置与平台选择
- * @Author: LILYGO_L
- * @Date: 2025-12-19 10:52:38
- * @LastEditTime: 2026-11-09 10:05:08
  */
 #pragma once
 

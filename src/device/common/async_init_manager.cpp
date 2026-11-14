@@ -1,8 +1,5 @@
 /*
  * @Description: 异步初始化任务生命周期管理实现
- * @Author: LILYGO_L
- * @Date: 2026-08-17 16:22:19
- * @LastEditTime: 2026-11-09 10:11:16
  */
 
 #include "async_init_manager.h"

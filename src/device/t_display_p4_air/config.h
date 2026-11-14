@@ -1,8 +1,5 @@
 /*
  * @Description: T-Display-P4-Air 板级硬件配置
- * @Author: LILYGO_L
- * @Date: 2026-01-22 09:15:30
- * @LastEditTime: 2026-11-09 10:05:08
  */
 
 #pragma once

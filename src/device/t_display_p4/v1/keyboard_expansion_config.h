@@ -1,8 +1,5 @@
 /*
  * @Description: T-Display-P4 V1 键盘扩展硬件配置
- * @Author: LILYGO_L
- * @Date: 2024-12-06 10:32:28
- * @LastEditTime: 2026-08-21 18:02:24
  */
 #pragma once
 
