@@ -194,6 +194,7 @@ inline constexpr cpp_bus_driver::Axp517::NtcConfig kNtcConfig = {
 
 namespace xl9535 {
 inline constexpr uint8_t kI2cAddress = 0x20;
+inline constexpr auto kPort = I2C_NUM_1;
 }  // namespace xl9535
 
 namespace hi8561 {
@@ -266,6 +267,7 @@ inline constexpr int32_t kI2cFrequencyHz = 500000;
 
 namespace es8390 {
 inline constexpr uint8_t kI2cAddress = 0x11;
+inline constexpr auto kPort = I2C_NUM_1;
 inline constexpr int kMclkMultiple = 256;
 inline constexpr int kSampleRate = 44100;
 inline constexpr int kBitsPerSample = 16;
@@ -290,6 +292,7 @@ inline constexpr int32_t kSpiFrequencyHz = 10000000;
 
 namespace sgm38121 {
 inline constexpr uint8_t kI2cAddress = 0x28;
+inline constexpr auto kPort = I2C_NUM_0;
 }  // namespace sgm38121
 
 namespace camera {

@@ -99,9 +99,9 @@ void TDisplayP4AirDriver::CreateDrivers() {
   platform_hal_ = std::make_unique<cpp_bus_driver::PlatformHal>();
 
   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
-      gpio::sgm38121::kSda, gpio::sgm38121::kScl, I2C_NUM_0);
+      gpio::sgm38121::kSda, gpio::sgm38121::kScl, device::sgm38121::kPort);
   bus_.xl9535_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
-      gpio::xl9535::kSda, gpio::xl9535::kScl, I2C_NUM_1);
+      gpio::xl9535::kSda, gpio::xl9535::kScl, device::xl9535::kPort);
 
   bus_.axp517_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);
@@ -837,7 +837,7 @@ bool TDisplayP4AirDriver::InitEs8390() {
   }
 
   audio_codec_i2c_cfg_t i2c_cfg = {
-      .port = static_cast<uint8_t>(I2C_NUM_1),
+      .port = static_cast<uint8_t>(device::es8390::kPort),
       .addr = static_cast<uint8_t>(device::es8390::kI2cAddress << 1),
       .bus_handle = i2c_bus_handle,
   };

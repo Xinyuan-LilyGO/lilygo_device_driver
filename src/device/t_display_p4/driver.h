@@ -282,6 +282,7 @@ class TDisplayP4Driver {
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
   bool InitAxp517();
+  bool InitKeyboardAxp517();
   bool InitBhi260ap();
   bool InitQmc6309();
   bool InitEs8389();
@@ -309,6 +310,7 @@ class TDisplayP4Driver {
   bool DeinitSdmmc(bool release_bus = true);
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  void DeinitKeyboardAxp517();
   bool DeinitEs8389();
   bool DeinitBhi260ap();
   bool DeinitQmc6309();
@@ -479,6 +481,7 @@ class TDisplayP4Driver {
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
     std::unique_ptr<cpp_bus_driver::Pwm> sy7200a;
     std::unique_ptr<cpp_bus_driver::Axp517> axp517;
+    std::unique_ptr<cpp_bus_driver::Axp517> keyboard_axp517;
     std::unique_ptr<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy> bhi260ap;
     std::unique_ptr<SensorQMC6309> qmc6309;
 #else

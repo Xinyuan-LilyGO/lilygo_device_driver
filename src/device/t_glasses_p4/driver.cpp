@@ -68,11 +68,12 @@ void TGlassesP4Driver::CreateDrivers() {
   }
   platform_hal_ = std::make_unique<cpp_bus_driver::PlatformHal>();
   bus_.bq25896_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
-      gpio::bq25896::kSda, gpio::bq25896::kScl, I2C_NUM_1);
+      gpio::bq25896::kSda, gpio::bq25896::kScl, device::bq25896::kPort);
   bus_.screen_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
-      gpio::s023msafjf10111e1::kSda, gpio::s023msafjf10111e1::kScl, I2C_NUM_0);
+      gpio::s023msafjf10111e1::kSda, gpio::s023msafjf10111e1::kScl,
+      device::s023msafjf10111e1::kPort);
   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
-      gpio::sgm38121::kSda, gpio::sgm38121::kScl, LP_I2C_NUM_0);
+      gpio::sgm38121::kSda, gpio::sgm38121::kScl, device::sgm38121::kPort);
   chip_.bq25896 = std::make_unique<cpp_bus_driver::Bq2589x>(
       bus_.bq25896_i2c_bus, device::bq25896::kI2cAddress,
       cpp_bus_driver::Bq2589x::ChipModel::kBq25896);
@@ -343,7 +344,7 @@ bool TGlassesP4Driver::InitEs8389() {
     return false;
   }
   audio_codec_i2c_cfg_t i2c_cfg = {
-      .port = static_cast<uint8_t>(LP_I2C_NUM_0),
+      .port = static_cast<uint8_t>(device::es8389::kPort),
       .addr = static_cast<uint8_t>(device::es8389::kI2cAddress << 1),
       .bus_handle = bus_.sgm38121_i2c_bus->bus_handle(),
   };

@@ -35,6 +35,21 @@ inline constexpr int kPort1Mosi = 3;
 inline constexpr int kPort1Miso = 4;
 }  // namespace spi
 
+namespace ext {
+inline constexpr int k1x4P1Io47 = 47;
+inline constexpr int k1x4P1Io48 = 48;
+inline constexpr int k1x4P2Io45 = 45;
+inline constexpr int k1x4P2Io46 = 46;
+inline constexpr int k2x8PIo27 = 27;
+inline constexpr int k2x8PIo28 = 28;
+inline constexpr int k2x8PIo29 = 29;
+inline constexpr int k2x8PIo30 = 30;
+inline constexpr int k2x8PIo31 = 31;
+inline constexpr int k2x8PIo32 = 32;
+inline constexpr int k2x8PIo33 = 33;
+inline constexpr int k2x8PIo34 = 34;
+}  // namespace ext
+
 namespace sdio1 {
 inline constexpr int kClk = 43;
 inline constexpr int kCmd = 44;
@@ -207,6 +222,7 @@ inline constexpr cpp_bus_driver::Axp517::NtcConfig kNtcConfig = {
 
 namespace xl9535 {
 inline constexpr uint8_t kI2cAddress = 0x20;
+inline constexpr auto kPort = LP_I2C_NUM_0;
 inline constexpr int kSdPowerEnabled = 1;
 inline constexpr int kSdPowerDisabled = 0;
 inline constexpr int kTouchRstActiveLevel = 1;
@@ -240,6 +256,7 @@ inline constexpr int32_t kI2cFrequencyHz = 400000;
 
 namespace es8389 {
 inline constexpr uint8_t kI2cAddress = 0x10;
+inline constexpr auto kPort = LP_I2C_NUM_0;
 inline constexpr int kMclkMultiple = 256;
 inline constexpr int kSampleRate = 44100;
 inline constexpr int kBitsPerSample = 16;
@@ -256,6 +273,7 @@ inline constexpr int32_t kSpiFrequencyHz = 10000000;
 
 namespace sgm38121 {
 inline constexpr uint8_t kI2cAddress = 0x28;
+inline constexpr auto kPort = I2C_NUM_0;
 }  // namespace sgm38121
 
 namespace sd {

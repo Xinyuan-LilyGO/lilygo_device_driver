@@ -109,6 +109,47 @@ bool TDisplayP4Driver::InitAxp517() {
   return result;
 }
 
+bool TDisplayP4Driver::InitKeyboardAxp517() {
+  namespace keyboard = t_display_p4::keyboard_expansion;
+  if (chip_.keyboard_axp517) return true;
+  if (!minimal_drivers_initialized_) return false;
+  if (!bus_.xl9555_i2c_bus) {
+    bus_.xl9555_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
+        keyboard::gpio::xl9555::kSda, keyboard::gpio::xl9555::kScl,
+        keyboard::device::i2c::kPort);
+  }
+  constexpr auto address = keyboard::device::axp517::kI2cAddress;
+  if (!bus_.xl9555_i2c_bus->InitBus() ||
+      !bus_.xl9555_i2c_bus->Probe(address)) return false;
+  auto bus = std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9555_i2c_bus);
+  auto chip = std::make_unique<cpp_bus_driver::Axp517>(bus, address);
+  cpp_bus_driver::Axp517::Status status;
+  const uint8_t adc_channels =
+      static_cast<uint8_t>(
+          cpp_bus_driver::Axp517::AdcChannel::kBatteryVoltage) |
+      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kTs) |
+      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kVbusVoltage) |
+      static_cast<uint8_t>(
+          cpp_bus_driver::Axp517::AdcChannel::kDieTemperature) |
+      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kChargeCurrent) |
+      static_cast<uint8_t>(
+          cpp_bus_driver::Axp517::AdcChannel::kDischargeCurrent) |
+      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kVbusCurrent);
+  if (!chip->Init() ||
+      !chip->SetBatfetMode(cpp_bus_driver::Axp517::BatfetMode::kOn) ||
+      !chip->SetAdcChannels(adc_channels) || !chip->GetStatus(status) ||
+      !chip->SetJeitaEnable(false) || !chip->SetBoostEnable(false) ||
+      !chip->SetRbfetForceEnable(false) || !chip->SetBoostVoltage(5000) ||
+      !chip->InitTypeC(false, status.battery_present) ||
+      !chip->SetTypeCRole(cpp_bus_driver::Axp517::TypeCRole::kSink) ||
+      !chip->SetChargeCurrent(keyboard::device::axp517::kDefaultChargeCurrentMa)) {
+    chip->Deinit(false);
+    return false;
+  }
+  chip_.keyboard_axp517 = std::move(chip);
+  return true;
+}
+
 bool TDisplayP4Driver::InitXl9535() {
   CreateDrivers();
   if (IsXl9535Ready()) {
@@ -287,7 +328,7 @@ bool TDisplayP4Driver::InitEs8389() {
   }
 
   audio_codec_i2c_cfg_t i2c_cfg = {
-      .port = static_cast<uint8_t>(LP_I2C_NUM_0),
+      .port = static_cast<uint8_t>(device::es8389::kPort),
       .addr = static_cast<uint8_t>(device::es8389::kI2cAddress << 1),
       .bus_handle = i2c_bus_handle,
   };
@@ -720,6 +761,12 @@ bool TDisplayP4Driver::InitScreenBacklight() {
   }
 }
 
+void TDisplayP4Driver::DeinitKeyboardAxp517() {
+  if (!chip_.keyboard_axp517) return;
+  chip_.keyboard_axp517->Deinit(false);
+  chip_.keyboard_axp517.reset();
+}
+
 bool TDisplayP4Driver::DeinitEs8389() {
   bool result = true;
   result &= SetEs8389OperatingMode(Es8389OperatingMode::kSleep);
@@ -1086,9 +1133,9 @@ void TDisplayP4Driver::CreateDrivers() {
   platform_hal_ = std::make_unique<cpp_bus_driver::PlatformHal>();
 
   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
-      gpio::sgm38121::kSda, gpio::sgm38121::kScl, I2C_NUM_0);
+      gpio::sgm38121::kSda, gpio::sgm38121::kScl, device::sgm38121::kPort);
   bus_.xl9535_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
-      gpio::xl9535::kSda, gpio::xl9535::kScl, LP_I2C_NUM_0);
+      gpio::xl9535::kSda, gpio::xl9535::kScl, device::xl9535::kPort);
 
   bus_.axp517_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9535_i2c_bus);

@@ -122,11 +122,16 @@ void TDisplayP4Driver::CreateKeyboardExpansionDrivers() {
     return;
   }
 
-  bus_.xl9555_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
+  if (!bus_.xl9555_i2c_bus) {
+    bus_.xl9555_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
       keyboard_gpio::xl9555::kSda, keyboard_gpio::xl9555::kScl,
       keyboard_device::i2c::kPort);
+  }
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V1)
+  // V2 的 TCA8418 已断开 I2C，与 AXP517 同址 (0x34)。
   bus_.tca8418_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9555_i2c_bus);
+#endif
   bus_.cc1101_spi_bus =
       std::make_shared<cpp_bus_driver::HardwareSpi>(bus_.radio_spi_bus, 0);
   bus_.nrf24l01_spi_bus =
@@ -136,8 +141,10 @@ void TDisplayP4Driver::CreateKeyboardExpansionDrivers() {
 
   chip_.xl9555 = std::make_unique<cpp_bus_driver::Xl95x5>(
       bus_.xl9555_i2c_bus, keyboard_device::xl9555::kI2cAddress);
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V1)
   chip_.tca8418 = std::make_unique<cpp_bus_driver::Tca8418>(
       bus_.tca8418_i2c_bus, keyboard_device::tca8418::kI2cAddress);
+#endif
   chip_.keyboard_sy7200a =
       std::make_unique<cpp_bus_driver::Pwm>(keyboard_gpio::sy7200a::kEn);
   chip_.cc1101 = std::make_unique<cpp_bus_driver::Cc1101>(bus_.cc1101_spi_bus,
@@ -414,7 +421,7 @@ bool TDisplayP4Driver::InitXl9555() {
 }
 
 bool TDisplayP4Driver::InitTca8418() {
-  if (!chip_status_.xl9555.init_flag) {
+  if (chip_.tca8418 == nullptr || !chip_status_.xl9555.init_flag) {
     chip_status_.tca8418.init_flag = false;
     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitTca8418 failed\n");
     return false;
@@ -639,6 +646,8 @@ bool TDisplayP4Driver::InitKeyboardExpansion() {
     return false;
   }
 
+  bool result = true;
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V1)
   // 扩展板通过外部电阻上拉 TCA8418 INT。启用主板内部下拉后，
   // 扩展板断开时 INT 会自动变为低电平，供应用层确认连接状态。
   if (!platform_hal_->SetGpioMode(keyboard_gpio::tca8418::kInt,
@@ -649,8 +658,8 @@ bool TDisplayP4Driver::InitKeyboardExpansion() {
     return false;
   }
 
-  bool result = true;
   result &= InitTca8418();
+#endif
   result &= InitKeyboardBacklight();
   result &= InitCc1101();
   result &= InitNrf24l01();
@@ -928,7 +937,12 @@ bool TDisplayP4Driver::DeinitSt25r3916() {
 
 bool TDisplayP4Driver::DeinitKeyboardExpansion(
     KeyboardExpansionDeinitMode mode) {
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
+  DeinitKeyboardAxp517();
+#endif
   if (chip_.xl9555 == nullptr) {
+    if (bus_.xl9555_i2c_bus && !bus_.xl9555_i2c_bus->Deinit()) return false;
+    bus_.xl9555_i2c_bus.reset();
     return true;
   }
   bool result = true;
@@ -957,8 +971,10 @@ bool TDisplayP4Driver::DeinitKeyboardExpansion(
         result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed2, 1);
         result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kLed3, 1);
         result &= chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTMixRfEn, 0);
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V1)
         result &=
             chip_.xl9555->GpioWrite(keyboard_gpio::xl9555::kTca8418Rst, 0);
+#endif
       }
       result &= chip_.xl9555->Deinit(false);
     }
@@ -995,9 +1011,11 @@ bool TDisplayP4Driver::DeinitKeyboardExpansion(
   chip_status_.tca8418.init_flag = false;
   chip_status_.xl9555.init_flag = false;
 
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V1)
   if (platform_hal_ != nullptr) {
     result &= platform_hal_->ResetGpio(keyboard_gpio::tca8418::kInt);
   }
+#endif
 
   // 先注销两个设备，再释放键盘独占的硬件 I2C 总线。
   if (bus_.xl9555_i2c_bus != nullptr && !bus_.xl9555_i2c_bus->Deinit()) {

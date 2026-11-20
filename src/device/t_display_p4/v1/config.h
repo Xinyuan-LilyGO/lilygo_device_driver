@@ -236,6 +236,7 @@ inline constexpr int kPhyAddress = 1;
 
 namespace xl9535 {
 inline constexpr uint8_t kI2cAddress = 0x20;
+inline constexpr auto kPort = LP_I2C_NUM_0;
 inline constexpr int kSdPowerEnabled = 0;
 inline constexpr int kSdPowerDisabled = 1;
 inline constexpr int kTouchRstActiveLevel = 0;
@@ -259,6 +260,7 @@ inline constexpr int32_t kI2cFrequencyHz = 500000;
 
 namespace sgm38121 {
 inline constexpr uint8_t kI2cAddress = 0x28;
+inline constexpr auto kPort = I2C_NUM_1;
 }  // namespace sgm38121
 
 namespace pcf8563 {

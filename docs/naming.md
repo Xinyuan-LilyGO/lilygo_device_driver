@@ -1,5 +1,7 @@
 # 命名约定
 
+板级驱动接口默认用芯片型号命名；同一功能需要自动兼容多种替代芯片时，对外用功能名，具体芯片函数作为私有实现。例子和分组顺序见[板级驱动函数约定](board_driver.md)。
+
 按硬件语义命名板级 GPIO 常量，不根据网络名或芯片封装脚号猜测名称。
 
 - 表示电源轨或外设供电开关控制脚的常量，名称必须以 `PowerEn` 结尾，例如 `kTypeAUsbPowerEn`、`kSdPowerEn`。不要使用 `kTypeAUsbVbusEn`、`kEnableTypeAUsb` 或 `kTypeAUsbEn` 代替。

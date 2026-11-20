@@ -186,6 +186,7 @@ inline constexpr int kMiso = spi::kPort1Miso;
 namespace device {
 namespace bq25896 {
 inline constexpr uint8_t kI2cAddress = 0x6B;
+inline constexpr auto kPort = I2C_NUM_1;
 }  // namespace bq25896
 
 // 以下外围参数暂以注释保留，恢复相应驱动时再启用。
@@ -195,6 +196,7 @@ inline constexpr uint8_t kI2cAddress = 0x6B;
 //
 namespace es8389 {
 inline constexpr uint8_t kI2cAddress = 0x10;
+inline constexpr auto kPort = LP_I2C_NUM_0;
 inline constexpr int kMclkMultiple = 256;
 inline constexpr int kSampleRate = 48000;
 inline constexpr int kBitsPerSample = 16;
@@ -264,10 +266,12 @@ inline constexpr const char* kBasePath = "/sdcard";
 
 namespace sgm38121 {
 inline constexpr uint8_t kI2cAddress = 0x28;
+inline constexpr auto kPort = LP_I2C_NUM_0;
 }  // namespace sgm38121
 
 namespace s023msafjf10111e1 {
 inline constexpr uint8_t kI2cAddress = 0x54;
+inline constexpr auto kPort = I2C_NUM_0;
 inline constexpr int kScreenWidth = 640;
 inline constexpr int kScreenHeight = 400;
 inline constexpr int kScreenMipiDsiHsync = 64;

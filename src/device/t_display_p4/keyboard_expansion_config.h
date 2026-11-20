@@ -8,8 +8,10 @@
 
 #if defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V2)
 #include "device/t_display_p4/v2/keyboard_expansion_config.h"
-#else
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_DEVICE_VERSION_V1)
 #include "device/t_display_p4/v1/keyboard_expansion_config.h"
+#else
+#error "T-Display-P4 requires a keyboard of the same hardware version"
 #endif
 
 namespace lilygo_device_driver::t_display_p4::keyboard_expansion::device::tca8418 {
