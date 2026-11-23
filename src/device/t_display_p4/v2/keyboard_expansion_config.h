@@ -81,7 +81,7 @@ inline constexpr int kMiso = base_gpio::spi::kPort1Miso;
 namespace device {
 namespace axp517 {
 inline constexpr uint8_t kI2cAddress = 0x34;
-inline constexpr uint16_t kDefaultChargeCurrentMa = 2048;
+inline constexpr uint16_t kDefaultChargeCurrentMa = 1408;
 }
 namespace i2c {
 inline constexpr i2c_port_t kPort = I2C_NUM_1;

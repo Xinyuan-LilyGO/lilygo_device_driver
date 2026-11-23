@@ -25,6 +25,18 @@ constexpr uint32_t kInitializationShutdownTimeoutMs = 5 * 1000;
 constexpr uint8_t kLr2021ExpectedVersionMajor = 0x01;
 constexpr uint8_t kLr2021ExpectedVersionMinor = 0x18;
 
+using Axp517AdcChannel = cpp_bus_driver::Axp517::AdcChannel;
+constexpr uint8_t kAxp517AdcChannels =
+    static_cast<uint8_t>(Axp517AdcChannel::kBatteryVoltage) |
+    static_cast<uint8_t>(Axp517AdcChannel::kTs) |
+    // PD 合同建立后需读取 VBUS ADC，确认输入电压已稳定到合同值。
+    static_cast<uint8_t>(Axp517AdcChannel::kVbusVoltage) |
+    static_cast<uint8_t>(Axp517AdcChannel::kSystemVoltage) |
+    static_cast<uint8_t>(Axp517AdcChannel::kDieTemperature) |
+    static_cast<uint8_t>(Axp517AdcChannel::kChargeCurrent) |
+    static_cast<uint8_t>(Axp517AdcChannel::kDischargeCurrent) |
+    static_cast<uint8_t>(Axp517AdcChannel::kVbusCurrent);
+
 }  // namespace
 
 bool TDisplayP4Driver::Init(InitMode mode) {
@@ -74,22 +86,12 @@ bool TDisplayP4Driver::InitAxp517() {
     return false;
   }
 
-  const uint8_t adc_channels =
-      static_cast<uint8_t>(
-          cpp_bus_driver::Axp517::AdcChannel::kBatteryVoltage) |
-      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kTs) |
-      // PD 合同建立后需读取 VBUS ADC，确认输入电压已稳定到合同值。
-      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kVbusVoltage) |
-      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kChargeCurrent) |
-      static_cast<uint8_t>(
-          cpp_bus_driver::Axp517::AdcChannel::kDischargeCurrent) |
-      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kDieTemperature);
   const auto* ntc_config = battery_info().ntc_config;
   cpp_bus_driver::Axp517::Status power_status;
   bool result =
       platform_hal_->SetGpioMode(gpio::power::kExternalBatteryDetect,
           cpp_bus_driver::PlatformHal::GpioMode::kInput) &&
-      chip_.axp517->SetAdcChannels(adc_channels) &&
+      chip_.axp517->SetAdcChannels(kAxp517AdcChannels) &&
       ntc_config != nullptr &&
       chip_.axp517->ConfigureNtc(*ntc_config) &&
       chip_.axp517->SetJeitaEnable(false) &&
@@ -124,20 +126,9 @@ bool TDisplayP4Driver::InitKeyboardAxp517() {
   auto bus = std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.xl9555_i2c_bus);
   auto chip = std::make_unique<cpp_bus_driver::Axp517>(bus, address);
   cpp_bus_driver::Axp517::Status status;
-  const uint8_t adc_channels =
-      static_cast<uint8_t>(
-          cpp_bus_driver::Axp517::AdcChannel::kBatteryVoltage) |
-      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kTs) |
-      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kVbusVoltage) |
-      static_cast<uint8_t>(
-          cpp_bus_driver::Axp517::AdcChannel::kDieTemperature) |
-      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kChargeCurrent) |
-      static_cast<uint8_t>(
-          cpp_bus_driver::Axp517::AdcChannel::kDischargeCurrent) |
-      static_cast<uint8_t>(cpp_bus_driver::Axp517::AdcChannel::kVbusCurrent);
   if (!chip->Init() ||
       !chip->SetBatfetMode(cpp_bus_driver::Axp517::BatfetMode::kOn) ||
-      !chip->SetAdcChannels(adc_channels) || !chip->GetStatus(status) ||
+      !chip->SetAdcChannels(kAxp517AdcChannels) || !chip->GetStatus(status) ||
       !chip->SetJeitaEnable(false) || !chip->SetBoostEnable(false) ||
       !chip->SetRbfetForceEnable(false) || !chip->SetBoostVoltage(5000) ||
       !chip->InitTypeC(false, status.battery_present) ||
