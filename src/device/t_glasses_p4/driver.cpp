@@ -606,9 +606,13 @@ bool TGlassesP4Driver::InitPower() {
     DeinitLdoPower(4);
     return false;
   }
-  // 先预置开启电平，再配置输出方向；关闭供电由库外调用方控制。
+  // 先预置电平，再配置输出方向，避免初始化时产生电源脉冲。
   if (!Set3v3PowerEnabled(true) ||
       !platform_hal_->SetGpioMode(gpio::power::kEnable3v3,
+          cpp_bus_driver::PlatformHal::GpioMode::kOutput,
+          cpp_bus_driver::PlatformHal::GpioStatus::kDisable) ||
+      !SetAudioPowerEnabled(false) ||
+      !platform_hal_->SetGpioMode(gpio::power::kAudioPowerEn,
           cpp_bus_driver::PlatformHal::GpioMode::kOutput,
           cpp_bus_driver::PlatformHal::GpioStatus::kDisable)) {
     DeinitLdoPower(3);
@@ -706,6 +710,9 @@ bool TGlassesP4Driver::DeinitEs8389() {
   }
   chip_status_.es8389.init_flag = false;
   es8389_operating_mode_ = Es8389OperatingMode::kSleep;
+  if (power_initialized_) {
+    result &= SetAudioPowerEnabled(false);
+  }
   return result;
 }
 
@@ -741,6 +748,13 @@ bool TGlassesP4Driver::Set3v3PowerEnabled(bool enabled) {
     return false;
   }
   return platform_hal_->GpioWrite(gpio::power::kEnable3v3, enabled);
+}
+
+bool TGlassesP4Driver::SetAudioPowerEnabled(bool enabled) {
+  if (platform_hal_ == nullptr) {
+    return false;
+  }
+  return platform_hal_->GpioWrite(gpio::power::kAudioPowerEn, enabled);
 }
 
 bool TGlassesP4Driver::DeinitPower() {
@@ -800,6 +814,10 @@ bool TGlassesP4Driver::IsAw86224Ready() const {
 
 bool TGlassesP4Driver::IsLr2021Ready() const {
   return chip_status_.lr2021.init_flag && chip_.lr2021 != nullptr;
+}
+
+bool TGlassesP4Driver::SetAw86224Standby() {
+  return !IsAw86224Ready() || chip_.aw86224->StopRamPlaybackWaveform();
 }
 
 bool TGlassesP4Driver::SetEs8389OperatingMode(Es8389OperatingMode mode) {
@@ -1075,13 +1093,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 // bool TGlassesP4Driver::IsAw86224Ready() const {
 //   return chip_status_.aw86224.init_flag && chip_.aw86224 != nullptr;
 // }
-//
-//
-//
-// bool TGlassesP4Driver::SetAw86224Standby() {
-//   return !IsAw86224Ready() || chip_.aw86224->StopRamPlaybackWaveform();
-// }
-//
 
 // 以下为修改前 HEAD 的旧板实现，仅保留追溯，不可直接启用到当前新板。
 // 旧摄像头电源逻辑会关闭共享 AVDD1；恢复应使用上方新板参考实现。

@@ -16,6 +16,7 @@ inline constexpr int kEsp32p4Boot = 35;
 
 namespace power {
 inline constexpr int kEnable3v3 = 47;
+inline constexpr int kAudioPowerEn = 20;
 }  // namespace power
 
 namespace i2c {
@@ -178,7 +179,7 @@ namespace es8389 {
 inline constexpr uint8_t kI2cAddress = 0x10;
 inline constexpr auto kPort = LP_I2C_NUM_0;
 inline constexpr int kMclkMultiple = 256;
-inline constexpr int kSampleRate = 48000;
+inline constexpr int kSampleRate = 44100;
 inline constexpr int kBitsPerSample = 16;
 inline constexpr int kChannel = 2;
 }  // namespace es8389

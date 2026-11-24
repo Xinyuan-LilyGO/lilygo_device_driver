@@ -162,7 +162,7 @@ class TGlassesP4Driver {
   bool IsLr2021Ready() const;
   bool IsSdmmcReady() const;
 
-  // bool SetAw86224Standby();
+  bool SetAw86224Standby();
   bool SetEs8389OperatingMode(Es8389OperatingMode mode);
   bool SetLr2021OperatingMode(Lr2021OperatingMode mode);
   bool SetEsp32c5PowerEnabled(bool enabled);
@@ -179,6 +179,15 @@ class TGlassesP4Driver {
    * 的高阻态，避免反向供电导致断电不完全、下次初始化失败。
    */
   bool Set3v3PowerEnabled(bool enabled);
+
+  /**
+   * @brief 设置音频电源使能
+   * @param enabled true 开启供电，false 关闭供电
+   * @return GPIO 电平写入成功返回 true，否则返回 false
+   * @note InitPower 配置输出模式并默认关闭该电源。该电源同时为 ES8389 AVDD
+   * 和功放供电，使用音频前开启，停止音频后关闭。
+   */
+  bool SetAudioPowerEnabled(bool enabled);
 
   bool PrepareMinimalDriversForPowerOff();
   bool PrepareDriversForPowerOff();
