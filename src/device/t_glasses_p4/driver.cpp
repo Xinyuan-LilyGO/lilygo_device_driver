@@ -11,8 +11,6 @@
 
 // 其余外围恢复时再启用这些依赖。
 // #include "driver/gpio.h"
-// #include "driver/sdspi_host.h"
-// #include "driver/spi_master.h"
 
 namespace lilygo_device_driver {
 namespace gpio = t_glasses_p4::gpio;
@@ -46,6 +44,8 @@ constexpr device::ScreenInfo kScreenInfo = {
 constexpr uint32_t kInitializationShutdownTimeoutMs = 5 * 1000;
 constexpr uint8_t kLr2021ExpectedVersionMajor = 0x01;
 constexpr uint8_t kLr2021ExpectedVersionMinor = 0x18;
+constexpr auto kAw86224RamWaveformLibrary =
+    cpp_bus_driver::Aw862xx::RamWaveformLibrary::kRam12k041230_235;
 
 }  // namespace
 
@@ -74,11 +74,15 @@ void TGlassesP4Driver::CreateDrivers() {
       device::s023msafjf10111e1::kPort);
   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
       gpio::sgm38121::kSda, gpio::sgm38121::kScl, device::sgm38121::kPort);
+  bus_.aw86224_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   chip_.bq25896 = std::make_unique<cpp_bus_driver::Bq2589x>(
       bus_.bq25896_i2c_bus, device::bq25896::kI2cAddress,
       cpp_bus_driver::Bq2589x::ChipModel::kBq25896);
   chip_.sgm38121 = std::make_unique<cpp_bus_driver::Sgm38121>(
       bus_.sgm38121_i2c_bus, device::sgm38121::kI2cAddress);
+  chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
+      bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
   chip_.s023msafjf10111e1 = std::make_unique<cpp_bus_driver::S023msafjf10111e1>(
       bus_.screen_i2c_bus, device::s023msafjf10111e1::kI2cAddress,
       gpio::s023msafjf10111e1::kRst);
@@ -93,16 +97,11 @@ void TGlassesP4Driver::CreateDrivers() {
   // 新板外围对象创建参考，待硬件完善后连同头文件成员一起恢复。
   // bus_.bq27220_i2c_bus =
   //     std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.bq25896_i2c_bus);
-  // AW86224 与 SGM38121 共用引脚，恢复后共享 LP I2C 总线。
-  // bus_.aw86224_i2c_bus =
-  //     std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.lr2021_spi_bus =
       std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::lr2021::kMosi,
           gpio::lr2021::kSclk, gpio::lr2021::kMiso, SPI2_HOST, 0);
   // chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220>(
   //     bus_.bq27220_i2c_bus, device::bq27220::kI2cAddress);
-  // chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
-  //     bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
   chip_.lr2021 =
       std::make_unique<usp_cpp_bus_driver::Lr20xx>(bus_.lr2021_spi_bus,
           gpio::lr2021::kBusy, gpio::lr2021::kCs, [this](bool level) {
@@ -177,6 +176,16 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
         [](void* arg) {
           auto* self = static_cast<TGlassesP4Driver*>(arg);
           if (!self->async_init_manager_.stop_requested()) {
+            self->InitAw86224();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitAw86224Task", 4096, this, 3);
+
+    result &= async_init_manager_.StartTask(
+        [](void* arg) {
+          auto* self = static_cast<TGlassesP4Driver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
             self->InitLr2021();
           }
           self->async_init_manager_.FinishTask();
@@ -189,7 +198,6 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
     //       auto* self = static_cast<TGlassesP4Driver*>(arg);
     //       if (!self->async_init_manager_.stop_requested()) {
     //         self->InitBq27220();
-    //         self->InitAw86224();
     //       }
     //       self->async_init_manager_.FinishTask();
     //     },
@@ -197,7 +205,7 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
   } else {
     result &= InitS023msafjf10111e1();
     // result &= InitBq27220();
-    // result &= InitAw86224();
+    result &= InitAw86224();
     result &= InitLr2021();
     result &= InitEs8389();
   }
@@ -437,7 +445,28 @@ bool TGlassesP4Driver::InitEs8389() {
   return result;
 }
 
-bool TGlassesP4Driver::InitAw86224() { return false; }
+bool TGlassesP4Driver::InitAw86224() {
+  if (IsAw86224Ready()) {
+    return true;
+  }
+  if (!InitMinimal()) {
+    return false;
+  }
+
+  const bool result = chip_.aw86224->Init(device::aw86224::kI2cFrequencyHz) &&
+                      chip_.aw86224->InitRamMode(kAw86224RamWaveformLibrary) &&
+                      chip_.aw86224->StopRamPlaybackWaveform();
+  if (result) {
+    chip_status_.aw86224.ram_waveform_info =
+        cpp_bus_driver::Aw862xx::GetRamWaveformInfo(kAw86224RamWaveformLibrary);
+    chip_status_.aw86224.init_flag = true;
+  } else {
+    chip_.aw86224->Deinit(false);
+  }
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitAw86224 success\n" : "InitAw86224 failed\n");
+  return result;
+}
 
 bool TGlassesP4Driver::InitBhi260ap() { return false; }
 
@@ -619,6 +648,29 @@ bool TGlassesP4Driver::InitSdmmc(const char* base_path, int max_freq_khz) {
   return result;
 }
 
+bool TGlassesP4Driver::InitSdspi(
+    const char* base_path, spi_host_device_t host_id, int max_freq_khz) {
+  if (base_path == nullptr || base_path[0] == '\0' || max_freq_khz <= 0) {
+    return false;
+  }
+  if (!InitMinimal() || !DeinitSdmmc()) {
+    return false;
+  }
+
+  SdCard::SdspiConfig config;
+  config.host.slot = host_id;
+  config.host.max_freq_khz = max_freq_khz;
+  config.slot.host_id = host_id;
+  config.slot.gpio_cs = static_cast<gpio_num_t>(gpio::sd::kCs);
+  config.bus.mosi_io_num = gpio::sd::kMosi;
+  config.bus.miso_io_num = gpio::sd::kMiso;
+  config.bus.sclk_io_num = gpio::sd::kSclk;
+
+  const bool result = sd_card_.InitSdspi(base_path, config);
+  chip_status_.sd_card.init_flag = sd_card_.IsMounted();
+  return result;
+}
+
 bool TGlassesP4Driver::DeinitEs8389() {
   bool result = SetEs8389OperatingMode(Es8389OperatingMode::kSleep);
   if (es8389_input_codec_dev_ != nullptr) {
@@ -654,6 +706,16 @@ bool TGlassesP4Driver::DeinitEs8389() {
   }
   chip_status_.es8389.init_flag = false;
   es8389_operating_mode_ = Es8389OperatingMode::kSleep;
+  return result;
+}
+
+bool TGlassesP4Driver::DeinitAw86224() {
+  bool result = true;
+  if (IsAw86224Ready()) {
+    result &= chip_.aw86224->StopRamPlaybackWaveform();
+    result &= chip_.aw86224->Deinit(false);
+  }
+  chip_status_.aw86224 = {};
   return result;
 }
 
@@ -730,6 +792,10 @@ bool TGlassesP4Driver::IsS023msafjf10111e1Ready() const {
          chip_.s023msafjf10111e1 != nullptr &&
          bus_.screen_mipi_bus != nullptr &&
          bus_.screen_mipi_bus->device_handle() != nullptr;
+}
+
+bool TGlassesP4Driver::IsAw86224Ready() const {
+  return chip_status_.aw86224.init_flag && chip_.aw86224 != nullptr;
 }
 
 bool TGlassesP4Driver::IsLr2021Ready() const {
@@ -829,7 +895,7 @@ bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
 }
 
 bool TGlassesP4Driver::PrepareMinimalDriversForPowerOff() {
-  bool result = true;
+  bool result = DeinitAw86224();
   if (IsBq25896Ready()) {
     // 仅解除驱动和总线初始化，保留充电配置，不断开电池供电。
     result &= chip_.bq25896->Deinit(false);
@@ -848,8 +914,6 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
   }
   bool result = true;
   result &= DeinitS023msafjf10111e1();
-  // 外围关机参考，恢复外围后应在关闭公共电源前执行。
-  // result &= DeinitAw86224();
   result &= DeinitEs8389();
   result &= DeinitLr2021();
   result &= SetCameraPowerEnabled(false);
@@ -1019,37 +1083,7 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 // }
 //
 
-// SD 卡 SPI 模式参考，后续需要时再接入。
-//
-// bool TGlassesP4Driver::InitSdspi(
-//     const char* base_path, spi_host_device_t host_id, int max_freq_khz) {
-//   if (base_path == nullptr || base_path[0] == '\0' || max_freq_khz <= 0) {
-//     return false;
-//   }
-//   if (!InitMinimal()) {
-//     return false;
-//   }
-//   if (!DeinitSdmmc()) {
-//     return false;
-//   }
-//
-//   SdCard::SdspiConfig config;
-//   config.host.slot = host_id;
-//   config.host.max_freq_khz = max_freq_khz;
-//   config.slot.host_id = host_id;
-//   config.slot.gpio_cs = static_cast<gpio_num_t>(gpio::sd::kCs);
-//   config.bus.mosi_io_num = gpio::sd::kMosi;
-//   config.bus.miso_io_num = gpio::sd::kMiso;
-//   config.bus.sclk_io_num = gpio::sd::kSclk;
-//
-//   const bool result = sd_card_.InitSdspi(base_path, config);
-//   chip_status_.sd_card.init_flag = sd_card_.IsMounted();
-//   return result;
-// }
-//
-
 // 以下为修改前 HEAD 的旧板实现，仅保留追溯，不可直接启用到当前新板。
-// SY6970、ES8311、旧 I2C 分配和独立 5 V GPIO 均不匹配当前硬件。
 // 旧摄像头电源逻辑会关闭共享 AVDD1；恢复应使用上方新板参考实现。
 // void TGlassesP4Driver::CreateDrivers() {
 //   if (platform_hal_ != nullptr) {
@@ -1058,37 +1092,18 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   platform_hal_ = std::make_unique<cpp_bus_driver::PlatformHal>();
 //   screen_info_ = kDefaultScreenInfo;
 //
-//   bus_.sy6970_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
-//       gpio::sy6970::kSda, gpio::sy6970::kScl, I2C_NUM_0);
 //   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
 //       gpio::sgm38121::kSda, gpio::sgm38121::kScl, I2C_NUM_1);
 //
-//   bus_.bq27220_i2c_bus =
-//       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sy6970_i2c_bus);
 //   bus_.aw86224_i2c_bus =
-//       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
-//   bus_.es8311_i2c_bus =
 //       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
 //   bus_.screen_i2c_bus =
 //       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
 //
-//   bus_.es8311_i2s_bus = std::make_shared<cpp_bus_driver::HardwareI2s>(
-//       gpio::es8311::kAdcData, gpio::es8311::kDacData, gpio::es8311::kWsLrck,
-//       gpio::es8311::kBclk, gpio::es8311::kMclk, i2s_port_t::I2S_NUM_0,
-//       cpp_bus_driver::HardwareI2s::DataMode::kInputOutput,
-//       cpp_bus_driver::HardwareI2s::I2sMode::kStd,
-//       i2s_clock_src_t::I2S_CLK_SRC_DEFAULT);
-//
-//   chip_.sy6970 = std::make_unique<cpp_bus_driver::Sy6970>(
-//       bus_.sy6970_i2c_bus, device::sy6970::kI2cAddress);
-//   chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220>(
-//       bus_.bq27220_i2c_bus, device::bq27220::kI2cAddress);
 //   chip_.sgm38121 = std::make_unique<cpp_bus_driver::Sgm38121>(
 //       bus_.sgm38121_i2c_bus, device::sgm38121::kI2cAddress);
 //   chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
 //       bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
-//   chip_.es8311 = std::make_unique<cpp_bus_driver::Es8311>(
-//       bus_.es8311_i2c_bus, bus_.es8311_i2s_bus, device::es8311::kI2cAddress);
 //   chip_.s023msafjf10111e1 =
 //   std::make_unique<cpp_bus_driver::S023msafjf10111e1>(
 //       bus_.screen_i2c_bus, device::s023msafjf10111e1::kI2cAddress,
@@ -1120,7 +1135,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   }
 //
 //   bool result = true;
-//   result &= InitSy6970();
 //   result &= InitPower();
 //   result &= InitSgm38121();
 //   minimal_drivers_initialized_ = result;
@@ -1165,18 +1179,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //     result &= async_init_manager_.StartTask(
 //         [](void* arg) {
 //           auto* self = static_cast<TGlassesP4Driver*>(arg);
-//           if (!self->async_init_manager_.stop_requested() &&
-//               self->InitEs8311()) {
-//             self->SetEs8311OperatingMode(Es8311OperatingMode::kSleep);
-//           }
-//           self->async_init_manager_.FinishTask();
-//         },
-//         "InitEs8311Task", 4096, this, 3);
-//
-//
-//     result &= async_init_manager_.StartTask(
-//         [](void* arg) {
-//           auto* self = static_cast<TGlassesP4Driver*>(arg);
 //           if (!self->async_init_manager_.stop_requested()) {
 //             self->InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
 //           }
@@ -1187,35 +1189,15 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //     result &= InitS023msafjf10111e1();
 //     InitBq27220();
 //     result &= InitAw86224();
-//     bool es8311_initialized = InitEs8311();
-//     if (es8311_initialized) {
-//       es8311_initialized =
-//       SetEs8311OperatingMode(Es8311OperatingMode::kSleep);
-//     }
-//     result &= es8311_initialized;
 //
 //     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
 //
-//     result &= chip_status_.sy6970.init_flag;
 //     result &= chip_status_.sgm38121.init_flag;
 //     result &= chip_status_.bq27220.init_flag;
 //     result &= chip_status_.aw86224.init_flag;
-//     result &= chip_status_.es8311.init_flag;
 //   }
 //
 //   return result;
-// }
-//
-// bool TGlassesP4Driver::InitSy6970() {
-//   if (!chip_.sy6970->Init()) {
-//     chip_status_.sy6970.init_flag = false;
-//     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSy6970 failed\n");
-//     return false;
-//   }
-//
-//   chip_status_.sy6970.init_flag = true;
-//   LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSy6970 success\n");
-//   return true;
 // }
 //
 // 旧版电量计参数写入参考；恢复前需核对实际电池容量和 NTC 配置。
@@ -1243,122 +1225,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   } else {
 //     chip_.bq27220->Deinit(false);
 //     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBq27220 failed\n");
-//   }
-//   return result;
-// }
-//
-// bool TGlassesP4Driver::InitEs8311() {
-//   if (IsEs8311Ready()) {
-//     return true;
-//   }
-//
-//   chip_status_.es8311.init_flag = false;
-//   if (chip_.es8311 == nullptr || !chip_.es8311->Init() ||
-//       !chip_.es8311->Init(device::es8311::kMclkMultiple,
-//           device::es8311::kSampleRate, device::es8311::kBitsPerSample)) {
-//     if (chip_.es8311 != nullptr) {
-//       chip_.es8311->Deinit(false);
-//     }
-//     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitEs8311 failed\n");
-//     return false;
-//   }
-//
-//   const cpp_bus_driver::Es8311::PowerStatus power_status = {
-//       .contorl =
-//           {
-//               .analog_circuits = true,
-//               .analog_bias_circuits = true,
-//               .analog_adc_bias_circuits = true,
-//               .analog_adc_reference_circuits = true,
-//               .analog_dac_reference_circuit = true,
-//               .internal_reference_circuits = false,
-//           },
-//       .vmid = cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
-//   };
-//   bool result = true;
-//   result &= chip_.es8311->SetPowerStatus(power_status);
-//   result &= chip_.es8311->SetPgaPower(true);
-//   result &= chip_.es8311->SetAdcPower(true);
-//   result &= chip_.es8311->SetDacPower(true);
-//   result &= chip_.es8311->SetOutputToHpDrive(true);
-//   result &= chip_.es8311->SetAdcOffsetFreeze(
-//       cpp_bus_driver::Es8311::AdcOffsetFreeze::kDynamicHpf);
-//   result &= chip_.es8311->SetAdcHpfStage2Coeff(10);
-//   result &= chip_.es8311->SetDacEqualizer(false);
-//   result &= chip_.es8311->SetMic(cpp_bus_driver::Es8311::MicType::kAnalogMic,
-//       cpp_bus_driver::Es8311::MicInput::kMic1p1n);
-//   result &= chip_.es8311->SetAdcAutoVolumeControl(false);
-//   result &=
-//       chip_.es8311->SetAdcGain(cpp_bus_driver::Es8311::AdcGain::kGain18Db);
-//   result &= chip_.es8311->SetAdcPgaGain(
-//       cpp_bus_driver::Es8311::AdcPgaGain::kGain30Db);
-//   result &= chip_.es8311->SetAdcVolume(191);
-//   result &= chip_.es8311->SetDacVolume(191);
-//   if (!result) {
-//     chip_.es8311->Deinit(false);
-//   }
-//   chip_status_.es8311.init_flag = result;
-//   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
-//       result ? "InitEs8311 success\n" : "InitEs8311 failed\n");
-//   return result;
-// }
-//
-// bool TGlassesP4Driver::DeinitEs8311() {
-//   bool result = true;
-//   if (chip_status_.es8311.init_flag && chip_.es8311 != nullptr) {
-//     result &= SetEs8311OperatingMode(Es8311OperatingMode::kSleep);
-//     result &= chip_.es8311->Deinit(false);
-//   }
-//   chip_status_.es8311.init_flag = false;
-//   return result;
-// }
-//
-// bool TGlassesP4Driver::IsSy6970Ready() const {
-//   return chip_status_.sy6970.init_flag && chip_.sy6970 != nullptr;
-// }
-//
-// bool TGlassesP4Driver::IsEs8311Ready() const {
-//   return chip_status_.es8311.init_flag && chip_.es8311 != nullptr;
-// }
-//
-// bool TGlassesP4Driver::SetEs8311OperatingMode(Es8311OperatingMode mode) {
-//   if (!chip_status_.es8311.init_flag) {
-//     return mode == Es8311OperatingMode::kSleep;
-//   }
-//   const bool playback_enabled = mode == Es8311OperatingMode::kPlayback ||
-//                                 mode == Es8311OperatingMode::kDuplex;
-//   const bool capture_enabled = mode == Es8311OperatingMode::kCapture ||
-//                                mode == Es8311OperatingMode::kDuplex;
-//   const bool sleep = mode == Es8311OperatingMode::kSleep;
-//   cpp_bus_driver::Es8311::PowerStatus power_status = {
-//       .contorl =
-//           {
-//               .analog_circuits = !sleep,
-//               .analog_bias_circuits = !sleep,
-//               .analog_adc_bias_circuits = capture_enabled,
-//               .analog_adc_reference_circuits = capture_enabled,
-//               .analog_dac_reference_circuit = playback_enabled,
-//               .internal_reference_circuits = false,
-//           },
-//       .vmid = sleep
-//                   ? cpp_bus_driver::Es8311::Vmid::kPowerDown
-//                   :
-//                   cpp_bus_driver::Es8311::Vmid::kStartUpVmidNormalSpeedCharge,
-//   };
-//
-//   bool result = true;
-//   if (sleep) {
-//     result &= chip_.es8311->SetOutputToHpDrive(false);
-//     result &= chip_.es8311->SetPgaPower(false);
-//     result &= chip_.es8311->SetAdcPower(false);
-//     result &= chip_.es8311->SetDacPower(false);
-//     result &= chip_.es8311->SetPowerStatus(power_status);
-//   } else {
-//     result &= chip_.es8311->SetPowerStatus(power_status);
-//     result &= chip_.es8311->SetPgaPower(capture_enabled);
-//     result &= chip_.es8311->SetAdcPower(capture_enabled);
-//     result &= chip_.es8311->SetDacPower(playback_enabled);
-//     result &= chip_.es8311->SetOutputToHpDrive(playback_enabled);
 //   }
 //   return result;
 // }
@@ -1467,7 +1333,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   bool result = true;
 //   result &= DeinitS023msafjf10111e1();
 //   result &= DeinitAw86224();
-//   result &= DeinitEs8311();
 //   result &= SetCameraPowerEnabled(false);
 //   if (IsSdmmcReady()) {
 //     result &= DeinitSdmmc();

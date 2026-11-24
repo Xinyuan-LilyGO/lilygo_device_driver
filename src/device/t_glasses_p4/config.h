@@ -114,11 +114,6 @@ inline constexpr int kCs = sdio1::kD3;
 // inline constexpr int kInt = 49;
 // }  // namespace bhi260ap
 //
-// namespace aw86224 {
-// inline constexpr int kSda = i2c::kPort2Sda;
-// inline constexpr int kScl = i2c::kPort2Scl;
-// }  // namespace aw86224
-//
 // BMM350 经 RM1/RM2 的 0 欧姆电阻连接传感器 I2C，RM3/RM4 未装。
 // namespace bmm350 {
 // inline constexpr int kSda = i2c::kPort3Sda;
@@ -162,21 +157,6 @@ inline constexpr int kMiso = spi::kPort1Miso;
 // inline constexpr int kSdioD2 = sdio2::kD2;
 // inline constexpr int kSdioD3 = sdio2::kD3;
 // }  // namespace esp32c6
-//
-// namespace es8311 {
-// inline constexpr int kSda = i2c::kPort2Sda;
-// inline constexpr int kScl = i2c::kPort2Scl;
-// inline constexpr int kAdcData = 50;
-// inline constexpr int kDacData = 52;
-// inline constexpr int kBclk = 51;
-// inline constexpr int kMclk = 48;
-// inline constexpr int kWsLrck = 47;
-// }  // namespace es8311
-//
-// namespace sy6970 {
-// inline constexpr int kSda = i2c::kPort1Sda;
-// inline constexpr int kScl = i2c::kPort1Scl;
-// }  // namespace sy6970
 //
 // namespace usb {
 // inline constexpr int kHighSpeedEn = 9;
@@ -234,11 +214,11 @@ inline constexpr int kChannel = 2;
 // inline constexpr uint8_t kI2cAddress = 0x28;
 // }  // namespace bhi260ap
 //
-// namespace aw86224 {
-// inline constexpr uint8_t kI2cAddress = 0x58;
-// inline constexpr int32_t kI2cFrequencyHz = 500000;
-// }  // namespace aw86224
-//
+namespace aw86224 {
+inline constexpr uint8_t kI2cAddress = 0x58;
+inline constexpr int32_t kI2cFrequencyHz = 100000;
+}  // namespace aw86224
+
 // namespace bmm350 {
 // inline constexpr uint8_t kI2cAddress = 0x14;
 // }  // namespace bmm350
@@ -250,19 +230,6 @@ inline constexpr int32_t kSpiFrequencyHz = 10000000;
 namespace sd {
 inline constexpr const char* kBasePath = "/sdcard";
 }  // namespace sd
-
-// 以下器件仅为旧板参考，新板使用 BQ25896/ES8389，不能启用旧驱动。
-// namespace sy6970 {
-// inline constexpr uint8_t kI2cAddress = 0x6A;
-// }  // namespace sy6970
-//
-// namespace es8311 {
-// inline constexpr uint8_t kI2cAddress = 0x18;
-// inline constexpr int kMclkMultiple = 256;
-// inline constexpr int kSampleRate = 48000;
-// inline constexpr int kBitsPerSample = 16;
-// inline constexpr int kChannel = 2;
-// }  // namespace es8311
 
 namespace sgm38121 {
 inline constexpr uint8_t kI2cAddress = 0x28;

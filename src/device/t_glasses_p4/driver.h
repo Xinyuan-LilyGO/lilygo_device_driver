@@ -12,7 +12,7 @@
 #include "device/common/async_init_manager.h"
 #include "device/common/pixel_format.h"
 #include "driver/sdmmc_host.h"
-// #include "driver/spi_common.h"
+#include "driver/spi_common.h"
 #include "chip/esp32p4/driver.h"
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
@@ -70,25 +70,11 @@ inline constexpr DeviceModelInfo kDeviceModelInfo = {
 //     .bits_per_pixel = camera::kBitsPerPixel,
 //     .buffer_count = camera::kBufferCount,
 // };
-//
-// struct BatteryInfo {
-//   const char* charger_chip_name;
-//   const char* fuel_gauge_chip_name;
-//   uint16_t capacity_mah;
-// };
-//
-// 旧版电池信息；新板充电芯片为 BQ25896，容量需随实际电池核对。
-// inline constexpr BatteryInfo kBatteryInfo = {
-//     .charger_chip_name = "sy6970",
-//     .fuel_gauge_chip_name = "bq27220",
-//     .capacity_mah = 650,
-// };
 
 struct DeviceInfo {
   DeviceModelInfo model;
   ScreenInfo screen;
   // CameraInfo camera;
-  // BatteryInfo battery;
 };
 
 }  // namespace t_glasses_p4::device
@@ -97,14 +83,6 @@ class TGlassesP4Driver {
  public:
   enum class InitMode { kAsync, kSync };
 
-  // 旧版音频接口参考；新板为 ES8389，接入时需核对对应驱动 API。
-  // enum class Es8311OperatingMode {
-  //   kSleep,     // 关闭 ADC、DAC 和模拟偏置。
-  //   kPlayback,  // 仅开启播放路径。
-  //   kCapture,   // 仅开启采集路径。
-  //   kDuplex,    // 同时开启采集和播放路径。
-  // };
-  //
   enum class Es8389OperatingMode {
     kActive,
     kSleep,
@@ -129,9 +107,6 @@ class TGlassesP4Driver {
   // const t_glasses_p4::device::CameraInfo& camera_info() const {
   //   return t_glasses_p4::device::kCameraInfo;
   // }
-  // const t_glasses_p4::device::BatteryInfo& battery_info() const {
-  //   return t_glasses_p4::device::kBatteryInfo;
-  // }
   esp_codec_dev_handle_t es8389_input_codec_dev() const {
     return es8389_input_codec_dev_;
   }
@@ -143,7 +118,6 @@ class TGlassesP4Driver {
         .model = device_model_info(),
         .screen = screen_info(),
         // .camera = camera_info(),
-        // .battery = battery_info(),
     };
   }
 
@@ -160,41 +134,35 @@ class TGlassesP4Driver {
 
   bool InitSgm38121();
   bool InitS023msafjf10111e1();
-  // 以下外围暂未实现，不参与 Init/InitMinimal，调用均返回 false。
-  // bool InitSy6970();  // 旧版接口参考，新板为 BQ25896。
-  bool InitBq27220();
-  // bool InitEs8311();  // 旧版接口参考，新板为 ES8389。
-  bool InitEs8389();
   bool InitAw86224();
+  // 部分外围暂未实现，保留接口供后续接入。
+  bool InitBq27220();
+  bool InitEs8389();
   bool InitBhi260ap();
   bool InitBmm350();
   bool InitLr2021();
   bool InitPower();
   bool InitSdmmc(const char* base_path,
       int max_freq_khz = SDMMC_FREQ_DEFAULT);
-  // bool InitSdspi(const char* base_path, spi_host_device_t host_id,
-  //     int max_freq_khz = SDMMC_FREQ_DEFAULT);
+  bool InitSdspi(const char* base_path, spi_host_device_t host_id,
+      int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
-  // bool DeinitAw86224();
-  // bool DeinitEs8311();
+  bool DeinitAw86224();
   bool DeinitEs8389();
   bool DeinitLr2021();
   bool DeinitS023msafjf10111e1();
   bool DeinitSdmmc();
 
-  // bool IsSy6970Ready() const;
   // bool IsBq27220Ready() const;
   bool IsBq25896Ready() const;
   bool IsSgm38121Ready() const;
   bool IsS023msafjf10111e1Ready() const;
-  // bool IsAw86224Ready() const;
-  // bool IsEs8311Ready() const;
+  bool IsAw86224Ready() const;
   bool IsEs8389Ready() const;
   bool IsLr2021Ready() const;
   bool IsSdmmcReady() const;
 
   // bool SetAw86224Standby();
-  // bool SetEs8311OperatingMode(Es8311OperatingMode mode);
   bool SetEs8389OperatingMode(Es8389OperatingMode mode);
   bool SetLr2021OperatingMode(Lr2021OperatingMode mode);
   bool SetEsp32c5PowerEnabled(bool enabled);
@@ -228,29 +196,24 @@ class TGlassesP4Driver {
   struct Bus {
     // 屏幕与 BQ25896 分别使用 I2C0、I2C1，SGM38121 使用 LP I2C0。
     std::shared_ptr<cpp_bus_driver::HardwareI2c> bq25896_i2c_bus;
-    // std::shared_ptr<cpp_bus_driver::HardwareI2c> sy6970_i2c_bus;
     // 旧版 BQ27220 与充电芯片共享硬件 I2C 的字段参考。
     // std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
     // BQ27220 与 BQ25896 共用引脚，恢复后共享 BQ25896 的硬件总线。
     // 恢复新板时使用下方字段，两个同名字段不可同时启用。
     // std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> sgm38121_i2c_bus;
-    // std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
-    // std::shared_ptr<cpp_bus_driver::HardwareI2c> es8311_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> screen_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
-    // std::shared_ptr<cpp_bus_driver::HardwareI2s> es8311_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> lr2021_spi_bus;
   };
 
   struct Chip {
     std::unique_ptr<cpp_bus_driver::Bq2589x> bq25896;
-    // std::unique_ptr<cpp_bus_driver::Sy6970> sy6970;
     // std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
-    // std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
-    // std::unique_ptr<cpp_bus_driver::Es8311> es8311;
+    std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
     std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
     std::unique_ptr<cpp_bus_driver::S023msafjf10111e1> s023msafjf10111e1;
   };
@@ -260,10 +223,6 @@ class TGlassesP4Driver {
       bool init_flag = false;
     } bq25896;
 
-    // struct {
-    //   bool init_flag = false;
-    // } sy6970;
-    //
     // struct {
     //   bool init_flag = false;
     // } bq27220;
@@ -276,15 +235,11 @@ class TGlassesP4Driver {
       bool init_flag = false;
     } s023msafjf10111e1;
 
-    // struct {
-    //   bool init_flag = false;
-    //   cpp_bus_driver::Aw862xx::RamWaveformSelection ram_waveform_selection;
-    // } aw86224;
-    //
-    // struct {
-    //   bool init_flag = false;
-    // } es8311;
-    //
+    struct {
+      bool init_flag = false;
+      cpp_bus_driver::Aw862xx::RamWaveformInfo ram_waveform_info;
+    } aw86224;
+
     struct {
       bool init_flag = false;
     } es8389;
