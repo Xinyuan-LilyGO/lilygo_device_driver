@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include "bhi2xy_sensorapi_cpp_bus_driver.h"
 #include "cpp_bus_driver.h"
 #include "chip/esp32p4/sd_card.h"
 #include "device/common/async_init_manager.h"
@@ -135,10 +136,8 @@ class TGlassesP4Driver {
   bool InitSgm38121();
   bool InitS023msafjf10111e1();
   bool InitAw86224();
-  // 部分外围暂未实现，保留接口供后续接入。
   bool InitEs8389();
   bool InitBhi260ap();
-  bool InitBmm350();
   bool InitLr2021();
   bool InitPower();
   bool InitSdmmc(const char* base_path,
@@ -147,6 +146,7 @@ class TGlassesP4Driver {
       int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
   bool DeinitAw86224();
+  bool DeinitBhi260ap();
   bool DeinitBq27220();
   bool DeinitEs8389();
   bool DeinitLr2021();
@@ -159,6 +159,7 @@ class TGlassesP4Driver {
   bool IsS023msafjf10111e1Ready() const;
   bool IsAw86224Ready() const;
   bool IsEs8389Ready() const;
+  bool IsBhi260apReady() const;
   bool IsLr2021Ready() const;
   bool IsSdmmcReady() const;
 
@@ -210,6 +211,7 @@ class TGlassesP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c> sgm38121_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> screen_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> bhi260ap_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2s> es8389_i2s_bus;
     std::shared_ptr<cpp_bus_driver::HardwareSpi> lr2021_spi_bus;
@@ -220,6 +222,7 @@ class TGlassesP4Driver {
     std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
     std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
+    std::unique_ptr<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy> bhi260ap;
     std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
     std::unique_ptr<cpp_bus_driver::S023msafjf10111e1> s023msafjf10111e1;
   };

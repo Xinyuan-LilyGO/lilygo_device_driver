@@ -17,6 +17,7 @@ if(CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4)
             "cpp_bus_driver"
             "usp_cpp_bus_driver"
             "esp_codec_dev"
+            "bhi2xy_sensorapi_cpp_bus_driver"
     )
 elseif(CONFIG_LILYGO_DEVICE_DRIVER_T_DISPLAY_P4_AIR)
     set(
@@ -78,3 +79,9 @@ idf_component_register(
         REQUIRES
         ${requires}
     )
+
+if(CONFIG_LILYGO_DEVICE_DRIVER_T_GLASSES_P4)
+    target_add_binary_data(${COMPONENT_LIB}
+        "src/device/t_glasses_p4/firmware/Bosch_Shuttle3_BHI260_BMM350C_BME68x.fw"
+        BINARY RENAME_TO t_glasses_p4_bhi260ap_fw)
+endif()

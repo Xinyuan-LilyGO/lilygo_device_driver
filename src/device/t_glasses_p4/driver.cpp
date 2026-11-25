@@ -17,6 +17,11 @@ namespace gpio = t_glasses_p4::gpio;
 namespace device = t_glasses_p4::device;
 namespace {
 
+extern const uint8_t kBhi260apFirmwareStart[]
+    asm("_binary_t_glasses_p4_bhi260ap_fw_start");
+extern const uint8_t kBhi260apFirmwareEnd[]
+    asm("_binary_t_glasses_p4_bhi260ap_fw_end");
+
 // 设备正常显示时的镜像模式。
 constexpr auto kDefaultScreenMirror =
     cpp_bus_driver::S023msafjf10111e1::MirrorMode::kHorizontal;
@@ -46,6 +51,8 @@ constexpr uint8_t kLr2021ExpectedVersionMajor = 0x01;
 constexpr uint8_t kLr2021ExpectedVersionMinor = 0x18;
 constexpr auto kAw86224RamWaveformLibrary =
     cpp_bus_driver::Aw862xx::RamWaveformLibrary::kRam12k041230_235;
+constexpr uint32_t kBhi260apResetPulseMs = 2;
+constexpr uint32_t kBhi260apStartupDelayMs = 20;
 
 }  // namespace
 
@@ -72,6 +79,10 @@ void TGlassesP4Driver::CreateDrivers() {
   bus_.screen_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
       gpio::s023msafjf10111e1::kSda, gpio::s023msafjf10111e1::kScl,
       device::s023msafjf10111e1::kPort);
+  bus_.bhi260ap_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.screen_i2c_bus);
+  chip_.bhi260ap = std::make_unique<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy>(
+      bus_.bhi260ap_i2c_bus, device::bhi260ap::kI2cAddress);
   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
       gpio::sgm38121::kSda, gpio::sgm38121::kScl, device::sgm38121::kPort);
   bus_.aw86224_i2c_bus =
@@ -469,9 +480,56 @@ bool TGlassesP4Driver::InitAw86224() {
   return result;
 }
 
-bool TGlassesP4Driver::InitBhi260ap() { return false; }
+bool TGlassesP4Driver::InitBhi260ap() {
+  if (IsBhi260apReady()) {
+    return true;
+  }
+  if (!InitMinimal()) {
+    return false;
+  }
 
-bool TGlassesP4Driver::InitBmm350() { return false; }
+  using GpioMode = cpp_bus_driver::PlatformHal::GpioMode;
+  if (!platform_hal_->GpioWrite(gpio::bhi260ap::kRst, 0) ||
+      !platform_hal_->SetGpioMode(gpio::bhi260ap::kRst, GpioMode::kOutput) ||
+      !platform_hal_->SetGpioMode(gpio::bhi260ap::kInt, GpioMode::kInput)) {
+    return false;
+  }
+  platform_hal_->DelayMs(kBhi260apResetPulseMs);
+  if (!platform_hal_->GpioWrite(gpio::bhi260ap::kRst, 1)) {
+    return false;
+  }
+  platform_hal_->DelayMs(kBhi260apStartupDelayMs);
+
+  auto& bhi260ap = *chip_.bhi260ap;
+  if (!bhi260ap.Init(device::bhi260ap::kI2cFrequencyHz)) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "BHI260AP host interface failed (error code: %d)\n",
+        bhi260ap.last_error());
+    platform_hal_->GpioWrite(gpio::bhi260ap::kRst, 0);
+    return false;
+  }
+
+  const auto firmware_size = static_cast<uint32_t>(
+      kBhi260apFirmwareEnd - kBhi260apFirmwareStart);
+  if (!bhi260ap.BootFromRam(kBhi260apFirmwareStart, firmware_size)) {
+    uint8_t firmware_error = 0;
+    const int8_t error_result =
+        bhy2_get_error_value(&firmware_error, bhi260ap.context());
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "BHI260AP RAM boot failed (API: %d, firmware error: 0x%02X, "
+        "error register read: %d)\n",
+        bhi260ap.last_error(), static_cast<unsigned int>(firmware_error),
+        error_result);
+    DeinitBhi260ap();
+    return false;
+  }
+
+  LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
+      "BHI260AP RAM firmware running (kernel: %u, size: %u bytes)\n",
+      static_cast<unsigned int>(bhi260ap.kernel_version()),
+      static_cast<unsigned int>(firmware_size));
+  return true;
+}
 
 bool TGlassesP4Driver::InitLr2021() {
   if (IsLr2021Ready()) {
@@ -727,6 +785,15 @@ bool TGlassesP4Driver::DeinitAw86224() {
   return result;
 }
 
+bool TGlassesP4Driver::DeinitBhi260ap() {
+  if (chip_.bhi260ap == nullptr || !chip_.bhi260ap->initialized()) {
+    return true;
+  }
+  bool result = chip_.bhi260ap->Deinit(false);
+  result &= platform_hal_->GpioWrite(gpio::bhi260ap::kRst, 0);
+  return result;
+}
+
 bool TGlassesP4Driver::DeinitBq27220() {
   if (IsBq27220Ready() && !chip_.bq27220->Deinit(false)) {
     return false;
@@ -823,6 +890,10 @@ bool TGlassesP4Driver::IsS023msafjf10111e1Ready() const {
 
 bool TGlassesP4Driver::IsAw86224Ready() const {
   return chip_status_.aw86224.init_flag && chip_.aw86224 != nullptr;
+}
+
+bool TGlassesP4Driver::IsBhi260apReady() const {
+  return chip_.bhi260ap != nullptr && chip_.bhi260ap->firmware_running();
 }
 
 bool TGlassesP4Driver::IsLr2021Ready() const {
@@ -945,6 +1016,7 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
     return false;
   }
   bool result = true;
+  result &= DeinitBhi260ap();
   result &= DeinitS023msafjf10111e1();
   result &= DeinitEs8389();
   result &= DeinitLr2021();

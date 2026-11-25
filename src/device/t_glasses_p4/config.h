@@ -103,21 +103,12 @@ inline constexpr int kMosi = sdio1::kCmd;
 inline constexpr int kMiso = sdio1::kD0;
 inline constexpr int kCs = sdio1::kD3;
 }  // namespace sd
-//
-// namespace bhi260ap {
-// inline constexpr int kSda = i2c::kPort3Sda;
-// inline constexpr int kScl = i2c::kPort3Scl;
-// inline constexpr int kRst = 53;
-// inline constexpr int kInt = 49;
-// }  // namespace bhi260ap
-//
-// BMM350 经 RM1/RM2 的 0 欧姆电阻连接传感器 I2C，RM3/RM4 未装。
-// namespace bmm350 {
-// inline constexpr int kSda = i2c::kPort3Sda;
-// inline constexpr int kScl = i2c::kPort3Scl;
-// inline constexpr int kInt = 54;
-// }  // namespace bmm350
-//
+
+namespace bhi260ap {
+inline constexpr int kRst = 53;
+inline constexpr int kInt = 54;
+}  // namespace bhi260ap
+
 namespace lr2021 {
 inline constexpr int kCs = 34;
 inline constexpr int kBusy = 28;
@@ -207,19 +198,16 @@ inline constexpr int kBitsPerPixel = 0;
 inline constexpr int kBufferCount = 2;
 }  // namespace camera
 
-// namespace bhi260ap {
-// inline constexpr uint8_t kI2cAddress = 0x28;
-// }  // namespace bhi260ap
-//
+namespace bhi260ap {
+inline constexpr uint8_t kI2cAddress = 0x28;
+inline constexpr uint32_t kI2cFrequencyHz = 400000;
+}  // namespace bhi260ap
+
 namespace aw86224 {
 inline constexpr uint8_t kI2cAddress = 0x58;
 inline constexpr int32_t kI2cFrequencyHz = 100000;
 }  // namespace aw86224
 
-// namespace bmm350 {
-// inline constexpr uint8_t kI2cAddress = 0x14;
-// }  // namespace bmm350
-//
 namespace lr2021 {
 inline constexpr int32_t kSpiFrequencyHz = 10000000;
 }  // namespace lr2021
