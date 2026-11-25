@@ -54,27 +54,26 @@ inline constexpr DeviceModelInfo kDeviceModelInfo = {
     .version = "v1.0",
 };
 
-// 非屏幕设备信息暂不启用，保留定义供后续接入。
-// struct CameraInfo {
-//   CameraType type;
-//   const char* name;
-//   const char* pixel_format;
-//   int bits_per_pixel;
-//   int buffer_count;
-// };
-//
-// inline constexpr CameraInfo kCameraInfo = {
-//     .type = camera::kType,
-//     .name = GetCameraTypeName(camera::kType),
-//     .pixel_format = GetRgbPixelFormatName(camera::kBitsPerPixel),
-//     .bits_per_pixel = camera::kBitsPerPixel,
-//     .buffer_count = camera::kBufferCount,
-// };
+struct CameraInfo {
+  CameraType type;
+  const char* name;
+  const char* pixel_format;
+  int bits_per_pixel;
+  int buffer_count;
+};
+
+inline constexpr CameraInfo kCameraInfo = {
+    .type = camera::kType,
+    .name = GetCameraTypeName(camera::kType),
+    .pixel_format = GetRgbPixelFormatName(camera::kBitsPerPixel),
+    .bits_per_pixel = camera::kBitsPerPixel,
+    .buffer_count = camera::kBufferCount,
+};
 
 struct DeviceInfo {
   DeviceModelInfo model;
   ScreenInfo screen;
-  // CameraInfo camera;
+  CameraInfo camera;
 };
 
 }  // namespace t_glasses_p4::device
@@ -104,9 +103,9 @@ class TGlassesP4Driver {
   }
   t_glasses_p4::device::ScreenType screen_type() const;
   const t_glasses_p4::device::ScreenInfo& screen_info() const;
-  // const t_glasses_p4::device::CameraInfo& camera_info() const {
-  //   return t_glasses_p4::device::kCameraInfo;
-  // }
+  const t_glasses_p4::device::CameraInfo& camera_info() const {
+    return t_glasses_p4::device::kCameraInfo;
+  }
   esp_codec_dev_handle_t es8389_input_codec_dev() const {
     return es8389_input_codec_dev_;
   }
@@ -117,7 +116,7 @@ class TGlassesP4Driver {
     return {
         .model = device_model_info(),
         .screen = screen_info(),
-        // .camera = camera_info(),
+        .camera = camera_info(),
     };
   }
 
@@ -132,11 +131,11 @@ class TGlassesP4Driver {
    */
   bool InitBq25896();
 
+  bool InitBq27220();
   bool InitSgm38121();
   bool InitS023msafjf10111e1();
   bool InitAw86224();
   // 部分外围暂未实现，保留接口供后续接入。
-  bool InitBq27220();
   bool InitEs8389();
   bool InitBhi260ap();
   bool InitBmm350();
@@ -148,13 +147,14 @@ class TGlassesP4Driver {
       int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
   bool DeinitAw86224();
+  bool DeinitBq27220();
   bool DeinitEs8389();
   bool DeinitLr2021();
   bool DeinitS023msafjf10111e1();
   bool DeinitSdmmc();
 
-  // bool IsBq27220Ready() const;
   bool IsBq25896Ready() const;
+  bool IsBq27220Ready() const;
   bool IsSgm38121Ready() const;
   bool IsS023msafjf10111e1Ready() const;
   bool IsAw86224Ready() const;
@@ -203,13 +203,10 @@ class TGlassesP4Driver {
 
  private:
   struct Bus {
-    // 屏幕与 BQ25896 分别使用 I2C0、I2C1，SGM38121 使用 LP I2C0。
+    // BQ25896 与 BQ27220 共用 I2C1 主总线，使用独立设备地址。
     std::shared_ptr<cpp_bus_driver::HardwareI2c> bq25896_i2c_bus;
-    // 旧版 BQ27220 与充电芯片共享硬件 I2C 的字段参考。
-    // std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
-    // BQ27220 与 BQ25896 共用引脚，恢复后共享 BQ25896 的硬件总线。
-    // 恢复新板时使用下方字段，两个同名字段不可同时启用。
-    // std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
+    // SGM38121 使用 LP I2C0。
     std::shared_ptr<cpp_bus_driver::HardwareI2c> sgm38121_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> screen_i2c_bus;
@@ -220,7 +217,7 @@ class TGlassesP4Driver {
 
   struct Chip {
     std::unique_ptr<cpp_bus_driver::Bq2589x> bq25896;
-    // std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
+    std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
     std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
     std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
@@ -232,10 +229,10 @@ class TGlassesP4Driver {
       bool init_flag = false;
     } bq25896;
 
-    // struct {
-    //   bool init_flag = false;
-    // } bq27220;
-    //
+    struct {
+      bool init_flag = false;
+    } bq27220;
+
     struct {
       bool init_flag = false;
     } sgm38121;

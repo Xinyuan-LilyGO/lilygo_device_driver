@@ -5,6 +5,7 @@
 
 #include <cstdint>
 
+#include "chip/i2c/bq2589x/bq2589x.h"
 #include "device/common/camera_type.h"
 
 namespace lilygo_device_driver::t_glasses_p4 {
@@ -79,11 +80,6 @@ inline constexpr int kPort1Miso = 31;
 // inline constexpr int kSdioD2 = sdio2::kD2;
 // inline constexpr int kSdioD3 = sdio2::kD3;
 // }  // namespace esp32c5
-//
-// namespace bq27220 {
-// inline constexpr int kSda = i2c::kPort1Sda;
-// inline constexpr int kScl = i2c::kPort1Scl;
-// }  // namespace bq27220
 //
 namespace es8389 {
 inline constexpr int kSda = i2c::kPort2Sda;
@@ -168,13 +164,19 @@ namespace device {
 namespace bq25896 {
 inline constexpr uint8_t kI2cAddress = 0x6B;
 inline constexpr auto kPort = I2C_NUM_1;
+inline constexpr cpp_bus_driver::Bq2589x::NtcConfig kNtcConfig = {
+    .pull_up_ohm = 5230.0f,
+    .pull_down_ohm = 30100.0f,
+    .resistance_at_25c_ohm = 10000.0f,
+    .beta_kelvin = 3950.0f,
+};
 }  // namespace bq25896
 
-// 以下外围参数暂以注释保留，恢复相应驱动时再启用。
-// namespace bq27220 {
-// inline constexpr uint8_t kI2cAddress = 0x55;
-// }  // namespace bq27220
-//
+namespace bq27220 {
+inline constexpr uint8_t kI2cAddress = 0x55;
+inline constexpr uint16_t kBatteryCapacityMah = 800;
+}  // namespace bq27220
+
 namespace es8389 {
 inline constexpr uint8_t kI2cAddress = 0x10;
 inline constexpr auto kPort = LP_I2C_NUM_0;
@@ -183,34 +185,28 @@ inline constexpr int kSampleRate = 44100;
 inline constexpr int kBitsPerSample = 16;
 inline constexpr int kChannel = 2;
 }  // namespace es8389
-//
-// namespace camera {
-// #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
-// inline constexpr CameraType kType = CameraType::kSc2336;
-// #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
-// inline constexpr CameraType kType = CameraType::kOv2710;
-// #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
-// inline constexpr CameraType kType = CameraType::kOv5645;
-// #else
-// #error "Missing required macro definition."
-// #endif
-//
-// #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB565)
-// inline constexpr int kBitsPerPixel = 16;
-// #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB888)
-// inline constexpr int kBitsPerPixel = 24;
-// #else
-// #error "Missing required macro definition."
-// #endif
-//
-// inline constexpr int kBufferCount = 2;
-// inline constexpr int kWidth = 1280;
-// inline constexpr int kHeight = 720;
-// inline constexpr int kDataLaneNum = 2;
-// inline constexpr int kLaneBitRateMbps = 1000;
-// inline constexpr int kMipiDsiDpiClkMhz = 60;
-// }  // namespace camera
-//
+namespace camera {
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
+inline constexpr CameraType kType = CameraType::kSc2336;
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
+inline constexpr CameraType kType = CameraType::kOv2710;
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
+inline constexpr CameraType kType = CameraType::kOv5645;
+#else
+inline constexpr CameraType kType = CameraType::kUnknown;
+#endif
+
+#if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB565)
+inline constexpr int kBitsPerPixel = 16;
+#elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_PIXEL_FORMAT_RGB888)
+inline constexpr int kBitsPerPixel = 24;
+#else
+inline constexpr int kBitsPerPixel = 0;
+#endif
+
+inline constexpr int kBufferCount = 2;
+}  // namespace camera
+
 // namespace bhi260ap {
 // inline constexpr uint8_t kI2cAddress = 0x28;
 // }  // namespace bhi260ap

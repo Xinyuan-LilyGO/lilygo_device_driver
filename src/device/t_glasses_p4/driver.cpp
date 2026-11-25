@@ -79,6 +79,10 @@ void TGlassesP4Driver::CreateDrivers() {
   chip_.bq25896 = std::make_unique<cpp_bus_driver::Bq2589x>(
       bus_.bq25896_i2c_bus, device::bq25896::kI2cAddress,
       cpp_bus_driver::Bq2589x::ChipModel::kBq25896);
+  bus_.bq27220_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.bq25896_i2c_bus);
+  chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220>(
+      bus_.bq27220_i2c_bus, device::bq27220::kI2cAddress);
   chip_.sgm38121 = std::make_unique<cpp_bus_driver::Sgm38121>(
       bus_.sgm38121_i2c_bus, device::sgm38121::kI2cAddress);
   chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
@@ -94,14 +98,9 @@ void TGlassesP4Driver::CreateDrivers() {
       cpp_bus_driver::HardwareI2s::I2sMode::kStd,
       i2s_clock_src_t::I2S_CLK_SRC_DEFAULT);
 
-  // 新板外围对象创建参考，待硬件完善后连同头文件成员一起恢复。
-  // bus_.bq27220_i2c_bus =
-  //     std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.bq25896_i2c_bus);
   bus_.lr2021_spi_bus =
       std::make_shared<cpp_bus_driver::HardwareSpi>(gpio::lr2021::kMosi,
           gpio::lr2021::kSclk, gpio::lr2021::kMiso, SPI2_HOST, 0);
-  // chip_.bq27220 = std::make_unique<cpp_bus_driver::Bq27220>(
-  //     bus_.bq27220_i2c_bus, device::bq27220::kI2cAddress);
   chip_.lr2021 =
       std::make_unique<usp_cpp_bus_driver::Lr20xx>(bus_.lr2021_spi_bus,
           gpio::lr2021::kBusy, gpio::lr2021::kCs, [this](bool level) {
@@ -149,7 +148,8 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
   if (!InitMinimalDrivers()) {
     return false;
   }
-  bool result = InitSgm38121();
+  bool result = InitBq27220();
+  result &= InitSgm38121();
   async_init_manager_.Reset();
   if (mode == InitMode::kAsync) {
     result &= async_init_manager_.StartTask(
@@ -191,20 +191,8 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
           self->async_init_manager_.FinishTask();
         },
         "InitLr2021Task", 4096, this, 3);
-
-    // 未接入外围的异步初始化参考。
-    // result &= async_init_manager_.StartTask(
-    //     [](void* arg) {
-    //       auto* self = static_cast<TGlassesP4Driver*>(arg);
-    //       if (!self->async_init_manager_.stop_requested()) {
-    //         self->InitBq27220();
-    //       }
-    //       self->async_init_manager_.FinishTask();
-    //     },
-    //     "PeripheralTask", 4096, this, 3);
   } else {
     result &= InitS023msafjf10111e1();
-    // result &= InitBq27220();
     result &= InitAw86224();
     result &= InitLr2021();
     result &= InitEs8389();
@@ -226,6 +214,22 @@ bool TGlassesP4Driver::InitBq25896() {
   chip_status_.bq25896.init_flag = result;
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitBq25896 success\n" : "InitBq25896 failed\n");
+  return result;
+}
+
+bool TGlassesP4Driver::InitBq27220() {
+  if (IsBq27220Ready()) {
+    return true;
+  }
+  if (!power_initialized_ || chip_.bq27220 == nullptr) {
+    return false;
+  }
+  const bool result = chip_.bq27220->Init() &&
+      chip_.bq27220->SetBatteryCapacity(device::bq27220::kBatteryCapacityMah);
+  if (!result) {
+    chip_.bq27220->Deinit(false);
+  }
+  chip_status_.bq27220.init_flag = result;
   return result;
 }
 
@@ -336,9 +340,6 @@ bool TGlassesP4Driver::InitS023msafjf10111e1() {
              : "InitS023msafjf10111e1 failed\n");
   return result;
 }
-
-// 外围函数空壳，后续硬件完善后再接入对应驱动。
-bool TGlassesP4Driver::InitBq27220() { return false; }
 
 bool TGlassesP4Driver::InitEs8389() {
   if (IsEs8389Ready()) {
@@ -726,6 +727,14 @@ bool TGlassesP4Driver::DeinitAw86224() {
   return result;
 }
 
+bool TGlassesP4Driver::DeinitBq27220() {
+  if (IsBq27220Ready() && !chip_.bq27220->Deinit(false)) {
+    return false;
+  }
+  chip_status_.bq27220.init_flag = false;
+  return true;
+}
+
 bool TGlassesP4Driver::DeinitLr2021() {
   bool result = true;
   if (IsLr2021Ready()) {
@@ -795,6 +804,10 @@ bool TGlassesP4Driver::IsSdmmcReady() const {
 
 bool TGlassesP4Driver::IsBq25896Ready() const {
   return chip_status_.bq25896.init_flag && chip_.bq25896 != nullptr;
+}
+
+bool TGlassesP4Driver::IsBq27220Ready() const {
+  return chip_status_.bq27220.init_flag && chip_.bq27220 != nullptr;
 }
 
 bool TGlassesP4Driver::IsSgm38121Ready() const {
@@ -914,6 +927,7 @@ bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
 
 bool TGlassesP4Driver::PrepareMinimalDriversForPowerOff() {
   bool result = DeinitAw86224();
+  result &= DeinitBq27220();
   if (IsBq25896Ready()) {
     // 仅解除驱动和总线初始化，保留充电配置，不断开电池供电。
     result &= chip_.bq25896->Deinit(false);
@@ -937,10 +951,6 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
   result &= SetCameraPowerEnabled(false);
   result &= DeinitSdmmc();
   // result &= SetEsp32c5PowerEnabled(false);
-  // if (IsBq27220Ready()) {
-  //   result &= chip_.bq27220->Deinit(false);
-  //   chip_status_.bq27220.init_flag = false;
-  // }
   if (IsSgm38121Ready()) {
     result &= chip_.sgm38121->SetChannelStatus(
         cpp_bus_driver::Sgm38121::Channel::kAvdd1,
@@ -994,30 +1004,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
   return true;
 }
 // 新板外围实现参考：当前整段停用，尚未完成本板硬件验证。
-// 恢复时须同步恢复头文件成员和依赖，并替换下方同名 false 空壳。
-// BQ27220 保留现有电池配置；ES8389 的功放和极性设置须按本板硬件配置。
-// bool TGlassesP4Driver::InitBq27220() {
-//   CreateDrivers();
-//   if (IsBq27220Ready()) {
-//     return true;
-//   }
-//   if (!InitPower()) {
-//     return false;
-//   }
-//   const bool result = chip_.bq27220->Init();
-//   if (!result) {
-//     chip_.bq27220->Deinit(false);
-//   }
-//   chip_status_.bq27220.init_flag = result;
-//   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
-//       "InitBq27220 %s\n", result ? "success" : "failed");
-//   return result;
-// }
-//
-//
-//
-//
-//
 // bool TGlassesP4Driver::SetEsp32c5PowerEnabled(bool enabled) {
 //   CreateDrivers();
 //   bool result = platform_hal_->SetGpioMode(
@@ -1085,10 +1071,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //   return result;
 // }
 //
-//
-// bool TGlassesP4Driver::IsBq27220Ready() const {
-//   return chip_status_.bq27220.init_flag && chip_.bq27220 != nullptr;
-// }
 //
 // bool TGlassesP4Driver::IsAw86224Ready() const {
 //   return chip_status_.aw86224.init_flag && chip_.aw86224 != nullptr;
@@ -1171,16 +1153,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //         [](void* arg) {
 //           auto* self = static_cast<TGlassesP4Driver*>(arg);
 //           if (!self->async_init_manager_.stop_requested()) {
-//             self->InitBq27220();
-//           }
-//           self->async_init_manager_.FinishTask();
-//         },
-//         "InitBq27220Task", 2048, this, 3);
-//
-//     result &= async_init_manager_.StartTask(
-//         [](void* arg) {
-//           auto* self = static_cast<TGlassesP4Driver*>(arg);
-//           if (!self->async_init_manager_.stop_requested()) {
 //             self->InitAw86224();
 //           }
 //           self->async_init_manager_.FinishTask();
@@ -1198,45 +1170,14 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
 //         "InitSdmmcTask", 4096, this, 3);
 //   } else {
 //     result &= InitS023msafjf10111e1();
-//     InitBq27220();
 //     result &= InitAw86224();
 //
 //     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
 //
 //     result &= chip_status_.sgm38121.init_flag;
-//     result &= chip_status_.bq27220.init_flag;
 //     result &= chip_status_.aw86224.init_flag;
 //   }
 //
-//   return result;
-// }
-//
-// 旧版电量计参数写入参考；恢复前需核对实际电池容量和 NTC 配置。
-// bool TGlassesP4Driver::InitBq27220() {
-//   if (!chip_.bq27220->Init()) {
-//     chip_status_.bq27220.init_flag = false;
-//     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBq27220 failed\n");
-//     return false;
-//   }
-//
-//   cpp_bus_driver::Bq27220::CedvProfile battery_profile;
-//   battery_profile.design_capacity = battery_info().capacity_mah;
-//   battery_profile.full_charge_capacity = battery_info().capacity_mah;
-//   cpp_bus_driver::Bq27220::GaugingConfig gauging_config;
-//
-//   bool result = true;
-//   result &= chip_.bq27220->ApplyBatteryProfileIfNeeded(
-//       battery_profile, gauging_config);
-//   result &= chip_.bq27220->SetTemperatureMode(
-//       cpp_bus_driver::Bq27220::TemperatureMode::kExternalNtc);
-//
-//   chip_status_.bq27220.init_flag = result;
-//   if (result) {
-//     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitBq27220 success\n");
-//   } else {
-//     chip_.bq27220->Deinit(false);
-//     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitBq27220 failed\n");
-//   }
 //   return result;
 // }
 //
