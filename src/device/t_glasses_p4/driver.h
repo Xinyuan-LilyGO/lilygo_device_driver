@@ -92,6 +92,10 @@ class TGlassesP4Driver {
     kStandby,
     kSleep,
   };
+  enum class UartTarget {
+    kEsp32p4,
+    kEsp32c5,
+  };
 
   static TGlassesP4Driver& GetInstance();
 
@@ -195,6 +199,21 @@ class TGlassesP4Driver {
 
   bool PrepareMinimalDriversForPowerOff();
   bool PrepareDriversForPowerOff();
+
+  /**
+   * @brief 开启 ESP32-C5 电源并将 USB 切换至板载 CH343P
+   * @return 最小板级驱动已就绪且 GPIO 操作成功时返回 true
+   * @note 释放 P4 对 C5 EN 的控制，由主机工具通过 CH343P 的 DTR/RTS 进入下载模式。
+   */
+  bool EnterEsp32c5DownloadMode();
+
+  /**
+   * @brief 切换 USB-C 连接的串口设备，不复位处理器
+   * @param target ESP32-P4 原生 USB 串口或 ESP32-C5 的板载 CH343P
+   * @return USB 选择脚配置成功返回 true，否则返回 false
+   * @note 切换后主机重新枚举 USB 设备，需重新连接对应串口。
+   */
+  bool SetUartTarget(UartTarget target);
 
   /**
    * @brief 相对设备默认显示方向设置镜像并核对读回状态

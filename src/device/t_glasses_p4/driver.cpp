@@ -999,8 +999,13 @@ bool TGlassesP4Driver::SetLr2021OperatingMode(Lr2021OperatingMode mode) {
   }
 }
 
-bool TGlassesP4Driver::SetEsp32c5PowerEnabled(bool /*enabled*/) {
-  return false;
+bool TGlassesP4Driver::SetEsp32c5PowerEnabled(bool enabled) {
+  using GpioMode = cpp_bus_driver::PlatformHal::GpioMode;
+  using GpioStatus = cpp_bus_driver::PlatformHal::GpioStatus;
+  return platform_hal_ != nullptr &&
+         platform_hal_->GpioWrite(gpio::esp32c5::kPowerEn, enabled) &&
+         platform_hal_->SetGpioMode(
+             gpio::esp32c5::kPowerEn, GpioMode::kOutput, GpioStatus::kDisable);
 }
 
 bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
@@ -1069,6 +1074,35 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
   return result;
 }
 
+bool TGlassesP4Driver::EnterEsp32c5DownloadMode() {
+  using GpioMode = cpp_bus_driver::PlatformHal::GpioMode;
+  using GpioStatus = cpp_bus_driver::PlatformHal::GpioStatus;
+  if (!minimal_drivers_initialized_ ||
+      !platform_hal_->SetGpioMode(
+          gpio::esp32c5::kEn, GpioMode::kInput, GpioStatus::kDisable) ||
+      !SetUartTarget(UartTarget::kEsp32p4) ||
+      !SetEsp32c5PowerEnabled(true)) {
+    return false;
+  }
+
+  platform_hal_->DelayMs(20);
+  if (!SetUartTarget(UartTarget::kEsp32c5)) {
+    SetEsp32c5PowerEnabled(false);
+    return false;
+  }
+  return true;
+}
+
+bool TGlassesP4Driver::SetUartTarget(UartTarget target) {
+  using GpioMode = cpp_bus_driver::PlatformHal::GpioMode;
+  using GpioStatus = cpp_bus_driver::PlatformHal::GpioStatus;
+  return minimal_drivers_initialized_ &&
+         platform_hal_->GpioWrite(
+             gpio::usb::kSelect, target == UartTarget::kEsp32c5) &&
+         platform_hal_->SetGpioMode(
+             gpio::usb::kSelect, GpioMode::kOutput, GpioStatus::kDisable);
+}
+
 bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
   using Screen = cpp_bus_driver::S023msafjf10111e1;
   if (!IsS023msafjf10111e1Ready()) {
@@ -1108,26 +1142,6 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
   return true;
 }
 // 新板外围实现参考：当前整段停用，尚未完成本板硬件验证。
-// bool TGlassesP4Driver::SetEsp32c5PowerEnabled(bool enabled) {
-//   CreateDrivers();
-//   bool result = platform_hal_->SetGpioMode(
-//       gpio::esp32c5::kEn, cpp_bus_driver::PlatformHal::GpioMode::kOutput);
-//   result &= platform_hal_->GpioWrite(gpio::esp32c5::kEn, 0);
-//   result &= platform_hal_->SetGpioMode(
-//       gpio::esp32c5::kPowerEn,
-//       cpp_bus_driver::PlatformHal::GpioMode::kOutput);
-//   result &= platform_hal_->GpioWrite(gpio::esp32c5::kPowerEn, enabled);
-//   if (enabled && result) {
-//     platform_hal_->DelayMs(10);
-//     result = platform_hal_->GpioWrite(gpio::esp32c5::kEn, 1);
-//   }
-//   if (!result) {
-//     platform_hal_->GpioWrite(gpio::esp32c5::kEn, 0);
-//     platform_hal_->GpioWrite(gpio::esp32c5::kPowerEn, 0);
-//   }
-//   return result;
-// }
-//
 // bool TGlassesP4Driver::InitAw86224() {
 //   if (IsAw86224Ready()) {
 //     return true;

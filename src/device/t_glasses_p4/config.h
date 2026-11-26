@@ -72,19 +72,16 @@ inline constexpr int kPort1Sclk = 33;
 inline constexpr int kPort1Mosi = 32;
 inline constexpr int kPort1Miso = 31;
 }  // namespace spi
-//
-// namespace esp32c5 {
-// inline constexpr int kEn = 12;
-// inline constexpr int kWakeup = 13;
-// inline constexpr int kPowerEn = 48;
-// inline constexpr int kSdioClk = sdio2::kClk;
-// inline constexpr int kSdioCmd = sdio2::kCmd;
-// inline constexpr int kSdioD0 = sdio2::kD0;
-// inline constexpr int kSdioD1 = sdio2::kD1;
-// inline constexpr int kSdioD2 = sdio2::kD2;
-// inline constexpr int kSdioD3 = sdio2::kD3;
-// }  // namespace esp32c5
-//
+
+namespace esp32c5 {
+inline constexpr int kEn = 12;
+inline constexpr int kPowerEn = 48;
+}  // namespace esp32c5
+
+namespace usb {
+inline constexpr int kSelect = 21;
+}  // namespace usb
+
 namespace es8389 {
 inline constexpr int kSda = i2c::kPort2Sda;
 inline constexpr int kScl = i2c::kPort2Scl;
