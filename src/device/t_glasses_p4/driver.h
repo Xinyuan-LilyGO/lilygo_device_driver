@@ -134,6 +134,7 @@ class TGlassesP4Driver {
 
   bool InitBq27220();
   bool InitSgm38121();
+  bool InitRx8130ce();
   bool InitS023msafjf10111e1();
   bool InitAw86224();
   bool InitEs8389();
@@ -150,12 +151,14 @@ class TGlassesP4Driver {
   bool DeinitBq27220();
   bool DeinitEs8389();
   bool DeinitLr2021();
+  bool DeinitRx8130ce();
   bool DeinitS023msafjf10111e1();
   bool DeinitSdmmc();
 
   bool IsBq25896Ready() const;
   bool IsBq27220Ready() const;
   bool IsSgm38121Ready() const;
+  bool IsRx8130ceReady() const;
   bool IsS023msafjf10111e1Ready() const;
   bool IsAw86224Ready() const;
   bool IsEs8389Ready() const;
@@ -209,6 +212,7 @@ class TGlassesP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c> bq27220_i2c_bus;
     // SGM38121 使用 LP I2C0。
     std::shared_ptr<cpp_bus_driver::HardwareI2c> sgm38121_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> rx8130ce_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> screen_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> bhi260ap_i2c_bus;
@@ -221,6 +225,7 @@ class TGlassesP4Driver {
     std::unique_ptr<cpp_bus_driver::Bq2589x> bq25896;
     std::unique_ptr<cpp_bus_driver::Bq27220> bq27220;
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
+    std::unique_ptr<cpp_bus_driver::Rx8130ce> rx8130ce;
     std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
     std::unique_ptr<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy> bhi260ap;
     std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
@@ -239,6 +244,10 @@ class TGlassesP4Driver {
     struct {
       bool init_flag = false;
     } sgm38121;
+
+    struct {
+      bool init_flag = false;
+    } rx8130ce;
 
     struct {
       bool init_flag = false;

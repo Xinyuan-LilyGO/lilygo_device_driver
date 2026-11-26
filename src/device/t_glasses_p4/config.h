@@ -39,6 +39,10 @@ inline constexpr int kSda = i2c::kPort2Sda;
 inline constexpr int kScl = i2c::kPort2Scl;
 }  // namespace sgm38121
 
+namespace rx8130ce {
+inline constexpr int kInt = 22;
+}  // namespace rx8130ce
+
 namespace s023msafjf10111e1 {
 inline constexpr int kSda = i2c::kPort3Sda;
 inline constexpr int kScl = i2c::kPort3Scl;
@@ -220,6 +224,11 @@ namespace sgm38121 {
 inline constexpr uint8_t kI2cAddress = 0x28;
 inline constexpr auto kPort = LP_I2C_NUM_0;
 }  // namespace sgm38121
+
+namespace rx8130ce {
+inline constexpr uint8_t kI2cAddress = 0x32;
+inline constexpr int32_t kI2cFrequencyHz = 100000;
+}  // namespace rx8130ce
 
 namespace s023msafjf10111e1 {
 inline constexpr uint8_t kI2cAddress = 0x54;

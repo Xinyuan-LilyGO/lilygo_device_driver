@@ -85,6 +85,8 @@ void TGlassesP4Driver::CreateDrivers() {
       bus_.bhi260ap_i2c_bus, device::bhi260ap::kI2cAddress);
   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
       gpio::sgm38121::kSda, gpio::sgm38121::kScl, device::sgm38121::kPort);
+  bus_.rx8130ce_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.aw86224_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   chip_.bq25896 = std::make_unique<cpp_bus_driver::Bq2589x>(
@@ -96,6 +98,8 @@ void TGlassesP4Driver::CreateDrivers() {
       bus_.bq27220_i2c_bus, device::bq27220::kI2cAddress);
   chip_.sgm38121 = std::make_unique<cpp_bus_driver::Sgm38121>(
       bus_.sgm38121_i2c_bus, device::sgm38121::kI2cAddress);
+  chip_.rx8130ce = std::make_unique<cpp_bus_driver::Rx8130ce>(
+      bus_.rx8130ce_i2c_bus, device::rx8130ce::kI2cAddress);
   chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
       bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
   chip_.s023msafjf10111e1 = std::make_unique<cpp_bus_driver::S023msafjf10111e1>(
@@ -303,6 +307,21 @@ bool TGlassesP4Driver::InitSgm38121() {
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitSgm38121 success\n" : "InitSgm38121 failed\n");
   return result;
+}
+
+bool TGlassesP4Driver::InitRx8130ce() {
+  if (IsRx8130ceReady()) {
+    return true;
+  }
+  if (!InitMinimal()) {
+    return false;
+  }
+  if (!chip_.rx8130ce->Init(device::rx8130ce::kI2cFrequencyHz)) {
+    chip_.rx8130ce->Deinit(false);
+    return false;
+  }
+  chip_status_.rx8130ce.init_flag = true;
+  return true;
 }
 
 bool TGlassesP4Driver::InitS023msafjf10111e1() {
@@ -841,6 +860,14 @@ bool TGlassesP4Driver::DeinitPower() {
   return result;
 }
 
+bool TGlassesP4Driver::DeinitRx8130ce() {
+  if (IsRx8130ceReady() && !chip_.rx8130ce->Deinit(false)) {
+    return false;
+  }
+  chip_status_.rx8130ce.init_flag = false;
+  return true;
+}
+
 bool TGlassesP4Driver::DeinitS023msafjf10111e1() {
   bool result = true;
   // MIPI 初始化失败时也需要关闭已经初始化的屏幕芯片。
@@ -879,6 +906,10 @@ bool TGlassesP4Driver::IsBq27220Ready() const {
 
 bool TGlassesP4Driver::IsSgm38121Ready() const {
   return chip_status_.sgm38121.init_flag && chip_.sgm38121 != nullptr;
+}
+
+bool TGlassesP4Driver::IsRx8130ceReady() const {
+  return chip_status_.rx8130ce.init_flag && chip_.rx8130ce != nullptr;
 }
 
 bool TGlassesP4Driver::IsS023msafjf10111e1Ready() const {
@@ -998,6 +1029,7 @@ bool TGlassesP4Driver::SetCameraPowerEnabled(bool enabled) {
 
 bool TGlassesP4Driver::PrepareMinimalDriversForPowerOff() {
   bool result = DeinitAw86224();
+  result &= DeinitRx8130ce();
   result &= DeinitBq27220();
   if (IsBq25896Ready()) {
     // 仅解除驱动和总线初始化，保留充电配置，不断开电池供电。
