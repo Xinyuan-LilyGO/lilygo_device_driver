@@ -3,7 +3,6 @@
  */
 #pragma once
 
-// #include <cstdint>
 #include <memory>
 #include <string>
 
@@ -87,7 +86,7 @@ class TGlassesP4Driver {
     kActive,
     kSleep,
   };
-  //
+
   enum class Lr2021OperatingMode {
     kStandby,
     kSleep,
@@ -182,9 +181,9 @@ class TGlassesP4Driver {
    * @return 电平写入成功返回 true，平台未创建或写入失败返回 false
    *
    * 输出模式由 InitPower 配置，此接口只切换电平，不改变 GPIO 模式。
-   * 库内初始化仅开启供电，关闭操作由库外调用方负责；关闭前须停止
-   * 外设通信并释放驱动，将连接到断电外设的信号 IO 配置为无上下拉
-   * 的高阻态，避免反向供电导致断电不完全、下次初始化失败。
+   * 此电源为多个外设共用，板级驱动在初始化时开启，关机准备时不主动关闭。
+   * 关闭前须停止外设通信并释放驱动，调用方须配合信号 IO 高阻隔离，
+   * 避免反向供电导致芯片断电不完全、下次初始化时 I2C 设备无响应。
    */
   bool Set3v3PowerEnabled(bool enabled);
 
@@ -280,11 +279,11 @@ class TGlassesP4Driver {
     struct {
       bool init_flag = false;
     } es8389;
-    //
+
     struct {
       bool init_flag = false;
     } lr2021;
-    //
+
     struct {
       bool init_flag = false;
     } sd_card;
@@ -313,7 +312,6 @@ class TGlassesP4Driver {
   Chip chip_;
   ChipStatus chip_status_;
   SdCard sd_card_;
-  // const t_glasses_p4::device::ScreenInfo* screen_info_ = nullptr;
   bool minimal_drivers_initialized_ = false;
   bool power_initialized_ = false;
 

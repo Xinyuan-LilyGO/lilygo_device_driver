@@ -57,16 +57,16 @@ inline constexpr int kD1 = 40;
 inline constexpr int kD2 = 41;
 inline constexpr int kD3 = 42;
 }  // namespace sdio1
-//
-// namespace sdio2 {
-// inline constexpr int kClk = 18;
-// inline constexpr int kCmd = 19;
-// inline constexpr int kD0 = 14;
-// inline constexpr int kD1 = 15;
-// inline constexpr int kD2 = 16;
-// inline constexpr int kD3 = 17;
-// }  // namespace sdio2
-//
+
+namespace sdio2 {
+inline constexpr int kClk = 18;
+inline constexpr int kCmd = 19;
+inline constexpr int kD0 = 14;
+inline constexpr int kD1 = 15;
+inline constexpr int kD2 = 16;
+inline constexpr int kD3 = 17;
+}  // namespace sdio2
+
 namespace spi {
 inline constexpr int kPort1Sclk = 33;
 inline constexpr int kPort1Mosi = 32;
@@ -91,7 +91,7 @@ inline constexpr int kBclk = 2;
 inline constexpr int kMclk = 3;
 inline constexpr int kWsLrck = 5;
 }  // namespace es8389
-//
+
 namespace sd {
 inline constexpr int kSdioClk = sdio1::kClk;
 inline constexpr int kSdioCmd = sdio1::kCmd;
@@ -120,36 +120,6 @@ inline constexpr int kSclk = spi::kPort1Sclk;
 inline constexpr int kMosi = spi::kPort1Mosi;
 inline constexpr int kMiso = spi::kPort1Miso;
 }  // namespace lr2021
-
-// 以下仅保留旧板参考，不能在新板取消注释启用。
-// 旧板 I2C/电源引脚与当前屏幕和外围引脚有冲突。
-// namespace i2c {
-// inline constexpr int kPort1Sda = 13;
-// inline constexpr int kPort1Scl = 12;
-// inline constexpr int kPort2Sda = 45;
-// inline constexpr int kPort2Scl = 46;
-// }  // namespace i2c
-//
-// inline constexpr int kChipBoot = 35;
-//
-// namespace power {
-// inline constexpr int kEn3v3 = 7;
-// inline constexpr int kEn5v0 = 54;
-// }  // namespace power
-//
-// namespace esp32c6 {
-// inline constexpr int kEn = 53;
-// inline constexpr int kSdioClk = sdio2::kClk;
-// inline constexpr int kSdioCmd = sdio2::kCmd;
-// inline constexpr int kSdioD0 = sdio2::kD0;
-// inline constexpr int kSdioD1 = sdio2::kD1;
-// inline constexpr int kSdioD2 = sdio2::kD2;
-// inline constexpr int kSdioD3 = sdio2::kD3;
-// }  // namespace esp32c6
-//
-// namespace usb {
-// inline constexpr int kHighSpeedEn = 9;
-// }  // namespace usb
 }  // namespace gpio
 
 namespace device {
@@ -212,7 +182,7 @@ inline constexpr int32_t kI2cFrequencyHz = 100000;
 namespace lr2021 {
 inline constexpr int32_t kSpiFrequencyHz = 10000000;
 }  // namespace lr2021
-//
+
 namespace sd {
 inline constexpr const char* kBasePath = "/sdcard";
 }  // namespace sd

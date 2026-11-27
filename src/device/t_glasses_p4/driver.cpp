@@ -9,9 +9,6 @@
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
 
-// 其余外围恢复时再启用这些依赖。
-// #include "driver/gpio.h"
-
 namespace lilygo_device_driver {
 namespace gpio = t_glasses_p4::gpio;
 namespace device = t_glasses_p4::device;
@@ -44,8 +41,6 @@ constexpr device::ScreenInfo kScreenInfo = {
     .lane_bit_rate_mbps = device::screen::kLaneBitRateMbps,
 };
 
-// 旧版 CreateDrivers 的屏幕信息指针配套参考。
-// constexpr const device::ScreenInfo* kDefaultScreenInfo = &kScreenInfo;
 constexpr uint32_t kInitializationShutdownTimeoutMs = 5 * 1000;
 constexpr uint8_t kLr2021ExpectedVersionMajor = 0x01;
 constexpr uint8_t kLr2021ExpectedVersionMinor = 0x18;
@@ -1059,7 +1054,7 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
   result &= DeinitLr2021();
   result &= SetCameraPowerEnabled(false);
   result &= DeinitSdmmc();
-  // result &= SetEsp32c5PowerEnabled(false);
+  result &= SetEsp32c5PowerEnabled(false);
   if (IsSgm38121Ready()) {
     result &= chip_.sgm38121->SetChannelStatus(
         cpp_bus_driver::Sgm38121::Channel::kAvdd1,
@@ -1070,6 +1065,7 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
     result &= chip_.sgm38121->Deinit(false);
   }
   chip_status_.sgm38121.init_flag = false;
+
   result &= PrepareMinimalDriversForPowerOff();
   return result;
 }
@@ -1141,276 +1137,5 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
   }
   return true;
 }
-// 新板外围实现参考：当前整段停用，尚未完成本板硬件验证。
-// bool TGlassesP4Driver::InitAw86224() {
-//   if (IsAw86224Ready()) {
-//     return true;
-//   }
-//   if (!InitMinimal()) {
-//     return false;
-//   }
-//   if (!chip_.aw86224->Init(device::aw86224::kI2cFrequencyHz)) {
-//     chip_status_.aw86224.init_flag = false;
-//     chip_status_.aw86224.ram_waveform_selection =
-//         cpp_bus_driver::Aw862xx::RamWaveformSelection();
-//     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAw86224 failed\n");
-//     return false;
-//   }
-//
-//   cpp_bus_driver::Aw862xx::RamWaveformSelection selection;
-//   bool result = chip_.aw86224->InitRamModeByF0(selection);
-//   if (result) {
-//     result = chip_.aw86224->StopRamPlaybackWaveform();
-//   }
-//   if (!result) {
-//     chip_.aw86224->Deinit(false);
-//   }
-//
-//   chip_status_.aw86224.init_flag = result;
-//   chip_status_.aw86224.ram_waveform_selection =
-//       result ? selection : cpp_bus_driver::Aw862xx::RamWaveformSelection();
-//   if (result) {
-//     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitAw86224 success\n");
-//   } else {
-//     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitAw86224 failed\n");
-//   }
-//   return result;
-// }
-//
-//
-// bool TGlassesP4Driver::DeinitAw86224() {
-//   bool result = true;
-//   if (chip_status_.aw86224.init_flag && chip_.aw86224 != nullptr) {
-//     result &= chip_.aw86224->StopRamPlaybackWaveform();
-//     result &= chip_.aw86224->Deinit(false);
-//   }
-//   chip_status_.aw86224.init_flag = false;
-//   chip_status_.aw86224.ram_waveform_selection = {};
-//   return result;
-// }
-//
-//
-// bool TGlassesP4Driver::IsAw86224Ready() const {
-//   return chip_status_.aw86224.init_flag && chip_.aw86224 != nullptr;
-// }
-
-// 以下为修改前 HEAD 的旧板实现，仅保留追溯，不可直接启用到当前新板。
-// 旧摄像头电源逻辑会关闭共享 AVDD1；恢复应使用上方新板参考实现。
-// void TGlassesP4Driver::CreateDrivers() {
-//   if (platform_hal_ != nullptr) {
-//     return;
-//   }
-//   platform_hal_ = std::make_unique<cpp_bus_driver::PlatformHal>();
-//   screen_info_ = kDefaultScreenInfo;
-//
-//   bus_.sgm38121_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c>(
-//       gpio::sgm38121::kSda, gpio::sgm38121::kScl, I2C_NUM_1);
-//
-//   bus_.aw86224_i2c_bus =
-//       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
-//   bus_.screen_i2c_bus =
-//       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
-//
-//   chip_.sgm38121 = std::make_unique<cpp_bus_driver::Sgm38121>(
-//       bus_.sgm38121_i2c_bus, device::sgm38121::kI2cAddress);
-//   chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
-//       bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
-//   chip_.s023msafjf10111e1 =
-//   std::make_unique<cpp_bus_driver::S023msafjf10111e1>(
-//       bus_.screen_i2c_bus, device::s023msafjf10111e1::kI2cAddress,
-//       gpio::s023msafjf10111e1::kRst);
-// }
-//
-// bool TGlassesP4Driver::Init(InitMode mode) {
-//   CreateDrivers();
-//   const int64_t start_time_us = platform_hal_->GetSystemTimeUs();
-//   const bool result = InitDrivers(mode);
-//   const int64_t elapsed_time_us = platform_hal_->GetSystemTimeUs() -
-//   start_time_us; LogMessage(LogLevel::kInfo, __FILE__, __LINE__,
-//       "TGlassesP4Driver init finished (mode: %s, result: %s, elapsed: "
-//       "%lld ms)\n",
-//       mode == InitMode::kAsync ? "async" : "sync",
-//       result ? "success" : "failed",
-//       static_cast<long long>(elapsed_time_us / 1000));
-//   return result;
-// }
-//
-// bool TGlassesP4Driver::InitMinimal() {
-//   CreateDrivers();
-//   return InitMinimalDrivers();
-// }
-//
-// bool TGlassesP4Driver::InitMinimalDrivers() {
-//   if (minimal_drivers_initialized_) {
-//     return true;
-//   }
-//
-//   bool result = true;
-//   result &= InitPower();
-//   result &= InitSgm38121();
-//   minimal_drivers_initialized_ = result;
-//   return result;
-// }
-//
-// bool TGlassesP4Driver::InitDrivers(InitMode mode) {
-//   bool result = InitMinimalDrivers();
-//   async_init_manager_.Reset();
-//
-//   if (mode == InitMode::kAsync) {
-//     result &= async_init_manager_.StartTask(
-//         [](void* arg) {
-//           auto* self = static_cast<TGlassesP4Driver*>(arg);
-//           if (!self->async_init_manager_.stop_requested()) {
-//             self->InitS023msafjf10111e1();
-//           }
-//           self->async_init_manager_.FinishTask();
-//         },
-//         "ScreenTask", 4096, this, 3);
-//
-//     result &= async_init_manager_.StartTask(
-//         [](void* arg) {
-//           auto* self = static_cast<TGlassesP4Driver*>(arg);
-//           if (!self->async_init_manager_.stop_requested()) {
-//             self->InitAw86224();
-//           }
-//           self->async_init_manager_.FinishTask();
-//         },
-//         "InitAw86224Task", 4096, this, 3);
-//
-//     result &= async_init_manager_.StartTask(
-//         [](void* arg) {
-//           auto* self = static_cast<TGlassesP4Driver*>(arg);
-//           if (!self->async_init_manager_.stop_requested()) {
-//             self->InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
-//           }
-//           self->async_init_manager_.FinishTask();
-//         },
-//         "InitSdmmcTask", 4096, this, 3);
-//   } else {
-//     result &= InitS023msafjf10111e1();
-//     result &= InitAw86224();
-//
-//     InitSdmmc(device::sd::kBasePath, SDMMC_FREQ_52M);
-//
-//     result &= chip_status_.sgm38121.init_flag;
-//     result &= chip_status_.aw86224.init_flag;
-//   }
-//
-//   return result;
-// }
-//
-// bool TGlassesP4Driver::InitPower() {
-//   if (!InitLdoPower(4, 3300)) {
-//     return false;
-//   }
-//   if (!InitLdoPower(3, 2500)) {
-//     DeinitLdoPower(4);
-//     return false;
-//   }
-//
-//   bool gpio_initialized = true;
-//   gpio_initialized &= platform_hal_->SetGpioMode(
-//       gpio::power::kEn5v0, cpp_bus_driver::PlatformHal::GpioMode::kOutput);
-//   gpio_initialized &= platform_hal_->SetGpioMode(
-//       gpio::power::kEn3v3, cpp_bus_driver::PlatformHal::GpioMode::kOutput);
-//   gpio_initialized &= platform_hal_->GpioWrite(gpio::power::kEn5v0, true);
-//   gpio_initialized &= platform_hal_->GpioWrite(gpio::power::kEn3v3, true);
-//   if (!gpio_initialized) {
-//     platform_hal_->GpioWrite(gpio::power::kEn5v0, false);
-//     platform_hal_->GpioWrite(gpio::power::kEn3v3, false);
-//     DeinitLdoPower(3);
-//     DeinitLdoPower(4);
-//     return false;
-//   }
-//   platform_hal_->DelayMs(200);
-//   return true;
-// }
-//
-// bool TGlassesP4Driver::InitSgm38121() {
-//   if (chip_.sgm38121 == nullptr || !chip_.sgm38121->Init()) {
-//     chip_status_.sgm38121.init_flag = false;
-//     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSgm38121
-//     failed\n"); return false;
-//   }
-//
-//   bool result = true;
-// #if defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_SC2336)
-//   result &= chip_.sgm38121->SetChannelStatus(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd1,
-//       cpp_bus_driver::Sgm38121::Status::kOff);
-//   result &= chip_.sgm38121->SetChannelStatus(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd2,
-//       cpp_bus_driver::Sgm38121::Status::kOff);
-//   result &= chip_.sgm38121->SetOutputVoltage(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
-//   result &= chip_.sgm38121->SetOutputVoltage(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
-// #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV2710)
-//   result &= chip_.sgm38121->SetChannelStatus(
-//       cpp_bus_driver::Sgm38121::Channel::kDvdd1,
-//       cpp_bus_driver::Sgm38121::Status::kOff);
-//   result &= chip_.sgm38121->SetChannelStatus(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd1,
-//       cpp_bus_driver::Sgm38121::Status::kOff);
-//   result &= chip_.sgm38121->SetChannelStatus(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd2,
-//       cpp_bus_driver::Sgm38121::Status::kOff);
-//   result &= chip_.sgm38121->SetOutputVoltage(
-//       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
-//   result &= chip_.sgm38121->SetOutputVoltage(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
-//   result &= chip_.sgm38121->SetOutputVoltage(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 3000);
-// #elif defined(CONFIG_LILYGO_DEVICE_DRIVER_CAMERA_TYPE_OV5645)
-//   result &= chip_.sgm38121->SetChannelStatus(
-//       cpp_bus_driver::Sgm38121::Channel::kDvdd1,
-//       cpp_bus_driver::Sgm38121::Status::kOff);
-//   result &= chip_.sgm38121->SetChannelStatus(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd1,
-//       cpp_bus_driver::Sgm38121::Status::kOff);
-//   result &= chip_.sgm38121->SetChannelStatus(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd2,
-//       cpp_bus_driver::Sgm38121::Status::kOff);
-//   result &= chip_.sgm38121->SetOutputVoltage(
-//       cpp_bus_driver::Sgm38121::Channel::kDvdd1, 1500);
-//   result &= chip_.sgm38121->SetOutputVoltage(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd1, 1800);
-//   result &= chip_.sgm38121->SetOutputVoltage(
-//       cpp_bus_driver::Sgm38121::Channel::kAvdd2, 2800);
-// #endif
-//
-//   chip_status_.sgm38121.init_flag = result;
-//   if (!result) {
-//     chip_.sgm38121->Deinit(false);
-//   }
-//   if (result) {
-//     LogMessage(LogLevel::kInfo, __FILE__, __LINE__, "InitSgm38121
-//     success\n");
-//   } else {
-//     LogMessage(LogLevel::kError, __FILE__, __LINE__, "InitSgm38121
-//     failed\n");
-//   }
-//   return result;
-// }
-//
-// bool TGlassesP4Driver::PrepareDriversForPowerOff() {
-//   if (!async_init_manager_.StopAndWait(kInitializationShutdownTimeoutMs)) {
-//     LogMessage(LogLevel::kWarning, __FILE__, __LINE__,
-//         "Wait for asynchronous initialization before power off timed out\n");
-//     return false;
-//   }
-//
-//   bool result = true;
-//   result &= DeinitS023msafjf10111e1();
-//   result &= DeinitAw86224();
-//   result &= SetCameraPowerEnabled(false);
-//   if (IsSdmmcReady()) {
-//     result &= DeinitSdmmc();
-//   }
-//   result &= platform_hal_->GpioWrite(gpio::power::kEn5v0, 0);
-//   result &= platform_hal_->GpioWrite(gpio::power::kEn3v3, 0);
-//   minimal_drivers_initialized_ = false;
-//   return result;
-// }
 
 }  // namespace lilygo_device_driver
