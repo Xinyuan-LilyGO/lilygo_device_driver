@@ -3,6 +3,7 @@
  */
 #pragma once
 
+#include <array>
 #include <cstdint>
 
 #include "chip/i2c/bq2589x/bq2589x.h"
@@ -12,7 +13,8 @@ namespace lilygo_device_driver::t_glasses_p4 {
 namespace gpio {
 namespace button {
 inline constexpr int kEsp32p4Boot = 35;
-// inline constexpr int kKey = 36;
+inline constexpr int kKey = 36;
+inline constexpr int kPower = 9;
 }  // namespace button
 
 namespace power {
@@ -34,12 +36,30 @@ inline constexpr int kSda = i2c::kPort1Sda;
 inline constexpr int kScl = i2c::kPort1Scl;
 }  // namespace bq25896
 
+namespace bq27220 {
+inline constexpr int kSda = i2c::kPort1Sda;
+inline constexpr int kScl = i2c::kPort1Scl;
+}  // namespace bq27220
+
 namespace sgm38121 {
 inline constexpr int kSda = i2c::kPort2Sda;
 inline constexpr int kScl = i2c::kPort2Scl;
 }  // namespace sgm38121
 
+namespace aw86224 {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
+}  // namespace aw86224
+
+namespace aw93307 {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
+inline constexpr int kInt = 26;
+}  // namespace aw93307
+
 namespace rx8130ce {
+inline constexpr int kSda = i2c::kPort2Sda;
+inline constexpr int kScl = i2c::kPort2Scl;
 inline constexpr int kInt = 22;
 }  // namespace rx8130ce
 
@@ -48,6 +68,11 @@ inline constexpr int kSda = i2c::kPort3Sda;
 inline constexpr int kScl = i2c::kPort3Scl;
 inline constexpr int kRst = 52;
 }  // namespace s023msafjf10111e1
+
+namespace camera {
+inline constexpr int kSda = i2c::kPort3Sda;
+inline constexpr int kScl = i2c::kPort3Scl;
+}  // namespace camera
 
 namespace sdio1 {
 inline constexpr int kClk = 43;
@@ -106,6 +131,8 @@ inline constexpr int kCs = sdio1::kD3;
 }  // namespace sd
 
 namespace bhi260ap {
+inline constexpr int kSda = i2c::kPort3Sda;
+inline constexpr int kScl = i2c::kPort3Scl;
 inline constexpr int kRst = 53;
 inline constexpr int kInt = 54;
 }  // namespace bhi260ap
@@ -178,6 +205,26 @@ namespace aw86224 {
 inline constexpr uint8_t kI2cAddress = 0x58;
 inline constexpr int32_t kI2cFrequencyHz = 100000;
 }  // namespace aw86224
+
+namespace aw93307 {
+inline constexpr uint8_t kI2cAddress = 0x12;
+inline constexpr int32_t kI2cFrequencyHz = 400000;
+inline constexpr uint16_t kEnabledChannels = 0x001F;
+inline constexpr uint8_t kButtonChannel = 0;
+inline constexpr uint8_t kSliderFirstChannel = 1;
+inline constexpr uint8_t kSliderChannelCount = 4;
+inline constexpr uint8_t kSliderWidgetIndex = 0;
+inline constexpr uint8_t kButtonWidgetIndex = 1;
+inline constexpr std::array<uint8_t, 5> kElectrodes = {4, 0, 1, 3, 5};
+inline constexpr uint32_t kSliderTouchThreshold = 900000;
+inline constexpr uint32_t kSliderPositionThreshold = 50000;
+inline constexpr uint32_t kButtonTouchThreshold = 360000;
+inline constexpr int32_t kSliderSignalTouchThreshold = 360000000;
+inline constexpr int32_t kSliderSignalReleaseThreshold =
+    kSliderSignalTouchThreshold / 2;
+inline constexpr uint8_t kSliderSignalDebounceSamples = 3;
+inline constexpr uint32_t kCalibrationDelayMs = 500;
+}  // namespace aw93307
 
 namespace lr2021 {
 inline constexpr int32_t kSpiFrequencyHz = 10000000;

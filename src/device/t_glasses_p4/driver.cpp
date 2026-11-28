@@ -3,6 +3,8 @@
  */
 #include "device/t_glasses_p4/driver.h"
 
+#include <algorithm>
+#include <array>
 #include <cstdio>
 
 #include "../../core/logger.h"
@@ -84,6 +86,8 @@ void TGlassesP4Driver::CreateDrivers() {
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   bus_.aw86224_i2c_bus =
       std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
+  bus_.aw93307_i2c_bus =
+      std::make_shared<cpp_bus_driver::HardwareI2c>(bus_.sgm38121_i2c_bus);
   chip_.bq25896 = std::make_unique<cpp_bus_driver::Bq2589x>(
       bus_.bq25896_i2c_bus, device::bq25896::kI2cAddress,
       cpp_bus_driver::Bq2589x::ChipModel::kBq25896);
@@ -97,6 +101,8 @@ void TGlassesP4Driver::CreateDrivers() {
       bus_.rx8130ce_i2c_bus, device::rx8130ce::kI2cAddress);
   chip_.aw86224 = std::make_unique<cpp_bus_driver::Aw862xx>(
       bus_.aw86224_i2c_bus, device::aw86224::kI2cAddress);
+  chip_.aw93307 = std::make_unique<cpp_bus_driver::Aw933xx>(
+      bus_.aw93307_i2c_bus, device::aw93307::kI2cAddress);
   chip_.s023msafjf10111e1 = std::make_unique<cpp_bus_driver::S023msafjf10111e1>(
       bus_.screen_i2c_bus, device::s023msafjf10111e1::kI2cAddress,
       gpio::s023msafjf10111e1::kRst);
@@ -196,6 +202,16 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
         [](void* arg) {
           auto* self = static_cast<TGlassesP4Driver*>(arg);
           if (!self->async_init_manager_.stop_requested()) {
+            self->InitAw93307();
+          }
+          self->async_init_manager_.FinishTask();
+        },
+        "InitAw93307Task", 4096, this, 3);
+
+    result &= async_init_manager_.StartTask(
+        [](void* arg) {
+          auto* self = static_cast<TGlassesP4Driver*>(arg);
+          if (!self->async_init_manager_.stop_requested()) {
             self->InitLr2021();
           }
           self->async_init_manager_.FinishTask();
@@ -204,6 +220,7 @@ bool TGlassesP4Driver::InitDrivers(InitMode mode) {
   } else {
     result &= InitS023msafjf10111e1();
     result &= InitAw86224();
+    result &= InitAw93307();
     result &= InitLr2021();
     result &= InitEs8389();
   }
@@ -491,6 +508,90 @@ bool TGlassesP4Driver::InitAw86224() {
   }
   LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
       result ? "InitAw86224 success\n" : "InitAw86224 failed\n");
+  return result;
+}
+
+bool TGlassesP4Driver::InitAw93307() {
+  if (IsAw93307Ready()) {
+    return true;
+  }
+  if (!InitMinimal()) {
+    return false;
+  }
+
+  using Aw933xx = cpp_bus_driver::Aw933xx;
+  using GpioMode = cpp_bus_driver::PlatformHal::GpioMode;
+  using GpioStatus = cpp_bus_driver::PlatformHal::GpioStatus;
+  if (!platform_hal_->SetGpioMode(
+          gpio::aw93307::kInt, GpioMode::kInput, GpioStatus::kDisable)) {
+    LogMessage(LogLevel::kError, __FILE__, __LINE__,
+        "InitAw93307 failed (interrupt GPIO: %d)\n", gpio::aw93307::kInt);
+    return false;
+  }
+
+  auto& sensor = *chip_.aw93307;
+  if (!sensor.Init(device::aw93307::kI2cFrequencyHz)) {
+    bus_.aw93307_i2c_bus->Deinit(false);
+    return false;
+  }
+
+  bool result = sensor.SetInterruptPin(Aw933xx::InterruptPin::kCs2);
+  std::array<Aw933xx::ElectrodeMode, Aw933xx::kChannelCount> ground_electrodes{};
+  for (uint8_t cs = 0; cs < Aw933xx::kChannelCount; ++cs) {
+    if ((sensor.electrode_mask() & (1U << cs)) != 0 && cs != 2) {
+      ground_electrodes[cs] = Aw933xx::ElectrodeMode::kGround;
+    }
+  }
+  for (uint8_t channel = 0;
+       result && channel < device::aw93307::kElectrodes.size(); ++channel) {
+    auto electrodes = ground_electrodes;
+    electrodes[device::aw93307::kElectrodes[channel]] =
+        Aw933xx::ElectrodeMode::kMeasure;
+    result = sensor.ConfigureElectrodes(channel, electrodes);
+  }
+
+  if (result) {
+    Aw933xx::WidgetConfig slider;
+    slider.first_channel = device::aw93307::kSliderFirstChannel;
+    slider.x_channels = device::aw93307::kSliderChannelCount;
+    slider.touch_threshold = device::aw93307::kSliderTouchThreshold;
+    slider.position_threshold = device::aw93307::kSliderPositionThreshold;
+    slider.scan_period_ms = 20;
+    slider.click_interval_ms = 500;
+
+    Aw933xx::WidgetConfig button;
+    button.widget = Aw933xx::Widget::kButton;
+    button.first_channel = device::aw93307::kButtonChannel;
+    button.x_channels = 1;
+    button.touch_threshold = device::aw93307::kButtonTouchThreshold;
+    button.position_threshold = device::aw93307::kButtonTouchThreshold;
+    button.scan_period_ms = 20;
+    button.click_interval_ms = 500;
+    button.long_press_ms = 2000;
+    button.longer_press_ms = 3000;
+    button.super_long_press_ms = 4000;
+
+    result =
+        sensor.ConfigureWidget(device::aw93307::kSliderWidgetIndex, slider) &&
+        sensor.ConfigureWidget(device::aw93307::kButtonWidgetIndex, button) &&
+        sensor.ConfigureScan(device::aw93307::kEnabledChannels, 20) &&
+        sensor.SetInterruptMask(0x8007F) &&
+        sensor.SetOperatingMode(Aw933xx::OperatingMode::kActive) &&
+        sensor.Calibrate(device::aw93307::kEnabledChannels);
+  }
+
+  if (result) {
+    platform_hal_->DelayMs(device::aw93307::kCalibrationDelayMs + 100);
+    Aw933xx::Events discarded;
+    result = sensor.ReadEvents(&discarded);
+  }
+  if (!result) {
+    sensor.Deinit(false);
+  }
+  chip_status_.aw93307.init_flag = result;
+  LogMessage(result ? LogLevel::kInfo : LogLevel::kError, __FILE__, __LINE__,
+      result ? "InitAw93307 success\n"
+             : "InitAw93307 failed (board configuration or calibration)\n");
   return result;
 }
 
@@ -799,6 +900,14 @@ bool TGlassesP4Driver::DeinitAw86224() {
   return result;
 }
 
+bool TGlassesP4Driver::DeinitAw93307() {
+  const bool result = !IsAw93307Ready() || chip_.aw93307->Deinit(false);
+  chip_status_.aw93307.init_flag = false;
+  aw93307_slider_touched_ = false;
+  aw93307_slider_transition_samples_ = 0;
+  return result;
+}
+
 bool TGlassesP4Driver::DeinitBhi260ap() {
   if (chip_.bhi260ap == nullptr || !chip_.bhi260ap->initialized()) {
     return true;
@@ -916,6 +1025,10 @@ bool TGlassesP4Driver::IsS023msafjf10111e1Ready() const {
 
 bool TGlassesP4Driver::IsAw86224Ready() const {
   return chip_status_.aw86224.init_flag && chip_.aw86224 != nullptr;
+}
+
+bool TGlassesP4Driver::IsAw93307Ready() const {
+  return chip_status_.aw93307.init_flag && chip_.aw93307 != nullptr;
 }
 
 bool TGlassesP4Driver::IsBhi260apReady() const {
@@ -1048,6 +1161,7 @@ bool TGlassesP4Driver::PrepareDriversForPowerOff() {
     return false;
   }
   bool result = true;
+  result &= DeinitAw93307();
   result &= DeinitBhi260ap();
   result &= DeinitS023msafjf10111e1();
   result &= DeinitEs8389();
@@ -1135,6 +1249,73 @@ bool TGlassesP4Driver::SetScreenMirror(bool horizontal, bool vertical) {
         static_cast<int>(target), static_cast<int>(actual));
     return false;
   }
+  return true;
+}
+
+bool TGlassesP4Driver::CalibrateAw93307() {
+  if (!IsAw93307Ready()) {
+    return false;
+  }
+  aw93307_slider_touched_ = false;
+  aw93307_slider_transition_samples_ = 0;
+  if (!chip_.aw93307->Calibrate(device::aw93307::kEnabledChannels)) {
+    return false;
+  }
+  platform_hal_->DelayMs(device::aw93307::kCalibrationDelayMs);
+  cpp_bus_driver::Aw933xx::Events discarded;
+  return chip_.aw93307->ReadEvents(&discarded);
+}
+
+bool TGlassesP4Driver::ReadAw93307Touch(Aw93307TouchState& state) {
+  state = {};
+  if (!IsAw93307Ready()) {
+    return false;
+  }
+
+  const int32_t threshold =
+      aw93307_slider_touched_ ? device::aw93307::kSliderSignalReleaseThreshold
+                             : device::aw93307::kSliderSignalTouchThreshold;
+  auto& sensor = *chip_.aw93307;
+  cpp_bus_driver::Aw933xx::Events events;
+  bool result = sensor.ReadEvents(&events);
+  int64_t total = 0;
+  int64_t weighted = 0;
+  bool above_threshold = false;
+  for (uint8_t slider_index = 0;
+       result && slider_index < device::aw93307::kSliderChannelCount;
+       ++slider_index) {
+    cpp_bus_driver::Aw933xx::ChannelData channel;
+    result = sensor.ReadChannel(
+        device::aw93307::kSliderFirstChannel + slider_index, &channel);
+    const int64_t signal = std::max<int32_t>(0, channel.difference);
+    above_threshold |= signal > threshold;
+    total += signal;
+    weighted += signal * slider_index;
+  }
+  if (!result) {
+    aw93307_slider_touched_ = false;
+    aw93307_slider_transition_samples_ = 0;
+    return false;
+  }
+
+  const bool touched = above_threshold && total > 0;
+  if (touched == aw93307_slider_touched_) {
+    aw93307_slider_transition_samples_ = 0;
+  } else if (++aw93307_slider_transition_samples_ >=
+             device::aw93307::kSliderSignalDebounceSamples) {
+    aw93307_slider_touched_ = touched;
+    aw93307_slider_transition_samples_ = 0;
+  }
+  state.button_touched =
+      (events.proximity0 & (1U << device::aw93307::kButtonChannel)) != 0;
+  state.slider_touched = aw93307_slider_touched_;
+  state.slider_position_valid = aw93307_slider_touched_ && touched;
+  if (state.slider_position_valid) {
+    state.slider_position = static_cast<int32_t>(weighted * 100 /
+        (total * (device::aw93307::kSliderChannelCount - 1)));
+  }
+  state.button_event = events.sliders[device::aw93307::kButtonWidgetIndex];
+  state.slider_event = events.sliders[device::aw93307::kSliderWidgetIndex];
   return true;
 }
 

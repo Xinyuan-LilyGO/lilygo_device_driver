@@ -96,6 +96,17 @@ class TGlassesP4Driver {
     kEsp32c5,
   };
 
+  using Aw93307TouchEvent = cpp_bus_driver::Aw933xx::SliderEvent;
+
+  struct Aw93307TouchState {
+    bool button_touched = false;
+    bool slider_touched = false;
+    bool slider_position_valid = false;
+    int32_t slider_position = 0;
+    Aw93307TouchEvent button_event{};
+    Aw93307TouchEvent slider_event{};
+  };
+
   static TGlassesP4Driver& GetInstance();
 
   const auto& bus() const { return bus_; }
@@ -140,6 +151,7 @@ class TGlassesP4Driver {
   bool InitRx8130ce();
   bool InitS023msafjf10111e1();
   bool InitAw86224();
+  bool InitAw93307();
   bool InitEs8389();
   bool InitBhi260ap();
   bool InitLr2021();
@@ -150,6 +162,7 @@ class TGlassesP4Driver {
       int max_freq_khz = SDMMC_FREQ_DEFAULT);
 
   bool DeinitAw86224();
+  bool DeinitAw93307();
   bool DeinitBhi260ap();
   bool DeinitBq27220();
   bool DeinitEs8389();
@@ -164,6 +177,7 @@ class TGlassesP4Driver {
   bool IsRx8130ceReady() const;
   bool IsS023msafjf10111e1Ready() const;
   bool IsAw86224Ready() const;
+  bool IsAw93307Ready() const;
   bool IsEs8389Ready() const;
   bool IsBhi260apReady() const;
   bool IsLr2021Ready() const;
@@ -223,6 +237,21 @@ class TGlassesP4Driver {
    */
   bool SetScreenMirror(bool horizontal, bool vertical);
 
+  /**
+   * @brief 空载校准触摸按键和滑条，等待校准完成并清除旧手势。
+   * @return 触摸驱动已就绪且校准操作完成返回 true。
+   */
+  bool CalibrateAw93307();
+
+  /**
+   * @brief 轮询触摸按键和滑条，并读清本次硬件手势事件。
+   * @param state 输出触摸状态、手势和从后往前的滑条位置（0~100）。
+   * 仅在 slider_position_valid 为 true 时使用位置；读取失败时输出清零。
+   * @return 读取成功返回 true，无触摸时也返回 true。
+   * @note 由单个任务轮询，不与校准或反初始化并行调用。
+   */
+  bool ReadAw93307Touch(Aw93307TouchState& state);
+
  private:
   struct Bus {
     // BQ25896 与 BQ27220 共用 I2C1 主总线，使用独立设备地址。
@@ -232,6 +261,7 @@ class TGlassesP4Driver {
     std::shared_ptr<cpp_bus_driver::HardwareI2c> sgm38121_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> rx8130ce_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> aw86224_i2c_bus;
+    std::shared_ptr<cpp_bus_driver::HardwareI2c> aw93307_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> screen_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareI2c> bhi260ap_i2c_bus;
     std::shared_ptr<cpp_bus_driver::HardwareMipi> screen_mipi_bus;
@@ -245,6 +275,7 @@ class TGlassesP4Driver {
     std::unique_ptr<cpp_bus_driver::Sgm38121> sgm38121;
     std::unique_ptr<cpp_bus_driver::Rx8130ce> rx8130ce;
     std::unique_ptr<cpp_bus_driver::Aw862xx> aw86224;
+    std::unique_ptr<cpp_bus_driver::Aw933xx> aw93307;
     std::unique_ptr<bhi2xy_sensorapi_cpp_bus_driver::Bhi2xy> bhi260ap;
     std::unique_ptr<usp_cpp_bus_driver::Lr20xx> lr2021;
     std::unique_ptr<cpp_bus_driver::S023msafjf10111e1> s023msafjf10111e1;
@@ -275,6 +306,10 @@ class TGlassesP4Driver {
       bool init_flag = false;
       cpp_bus_driver::Aw862xx::RamWaveformInfo ram_waveform_info;
     } aw86224;
+
+    struct {
+      bool init_flag = false;
+    } aw93307;
 
     struct {
       bool init_flag = false;
@@ -314,6 +349,8 @@ class TGlassesP4Driver {
   SdCard sd_card_;
   bool minimal_drivers_initialized_ = false;
   bool power_initialized_ = false;
+  bool aw93307_slider_touched_ = false;
+  uint8_t aw93307_slider_transition_samples_ = 0;
 
   const audio_codec_ctrl_if_t* es8389_ctrl_if_ = nullptr;
   const audio_codec_data_if_t* es8389_data_if_ = nullptr;
